@@ -252,6 +252,7 @@ ThemeData _buildTheme(Brightness brightness, MamPalette p) {
       color: p.surface,
       elevation: 0,
       margin: EdgeInsets.zero,
+      clipBehavior: Clip.antiAlias,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(14),
         side: BorderSide(color: p.border),

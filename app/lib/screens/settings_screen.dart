@@ -227,6 +227,9 @@ class SettingsScreen extends StatelessWidget {
                     padding: const EdgeInsets.only(bottom: 8),
                     child: Card(
                       child: ListTile(
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
                         leading: CircleAvatar(
                           backgroundColor: p.surfaceSubtle,
                           child: Icon(Icons.groups_2_rounded, size: 18, color: p.ink),
