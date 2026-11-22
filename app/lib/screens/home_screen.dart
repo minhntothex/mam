@@ -532,7 +532,11 @@ class _BillHistoryCard extends StatelessWidget {
                         value: progress,
                         minHeight: 6,
                         backgroundColor: p.surfaceSubtle,
-                        color: settled ? p.success : p.primary,
+                        color: settled
+                            ? p.success
+                            : (Theme.of(context).brightness == Brightness.dark
+                                ? p.warning
+                                : const Color(0xFFF59E0B)),
                       ),
                     ),
                   ),
@@ -540,7 +544,7 @@ class _BillHistoryCard extends StatelessWidget {
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                     decoration: BoxDecoration(
-                      color: settled ? p.successSoft : p.primarySoft,
+                      color: settled ? p.successSoft : p.warningSoft,
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Text(
@@ -550,7 +554,7 @@ class _BillHistoryCard extends StatelessWidget {
                       style: TextStyle(
                         fontSize: 11.5,
                         fontWeight: FontWeight.w700,
-                        color: settled ? p.success : p.primary,
+                        color: settled ? p.success : p.warning,
                       ),
                     ),
                   ),
