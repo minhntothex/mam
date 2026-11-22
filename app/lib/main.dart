@@ -2,6 +2,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'data/local_store.dart';
+import 'l10n/mam_strings.dart';
 import 'screens/home_screen.dart';
 import 'services/ocr_service.dart';
 import 'services/supabase_config.dart';
@@ -56,21 +57,24 @@ class MamApp extends StatelessWidget {
     return ListenableBuilder(
       listenable: controller,
       builder: (context, _) {
-        return MaterialApp(
-          title: 'Mâm',
-          debugShowCheckedModeBanner: false,
-          theme: buildMamLightTheme(),
-          darkTheme: buildMamDarkTheme(),
-          themeMode: controller.themeMode,
-          builder: (context, child) => MamResponsiveShell(
-            child: child ?? const SizedBox.shrink(),
-          ),
-          home: HomeScreen(
-            controller: controller,
-            onOpenScanOcr: (ctx) => ocrService.openScanSheet(ctx),
-            syncAuthSectionBuilder: (_) => SyncAuthCard(
+        return MamStringsScope(
+          strings: controller.strings,
+          child: MaterialApp(
+            title: 'Mâm',
+            debugShowCheckedModeBanner: false,
+            theme: buildMamLightTheme(),
+            darkTheme: buildMamDarkTheme(),
+            themeMode: controller.themeMode,
+            builder: (context, child) => MamResponsiveShell(
+              child: child ?? const SizedBox.shrink(),
+            ),
+            home: HomeScreen(
               controller: controller,
-              syncService: effectiveSync,
+              onOpenScanOcr: (ctx) => ocrService.openScanSheet(ctx),
+              syncAuthSectionBuilder: (_) => SyncAuthCard(
+                controller: controller,
+                syncService: effectiveSync,
+              ),
             ),
           ),
         );

@@ -1,4 +1,4 @@
-// Vietnamese currency, date, and quantity formatters for Mâm.
+// Currency, date, and quantity formatters for Mâm.
 
 String formatVnd(int amount, {bool withSuffix = true}) {
   final negative = amount < 0;
@@ -41,15 +41,23 @@ String formatQty(double qty) {
   return qty.toStringAsFixed(1);
 }
 
-String defaultMealTitle([DateTime? now]) {
+String defaultMealTitle({DateTime? now, bool isVi = false}) {
   final dt = now ?? DateTime.now();
   final h = dt.hour;
-  final label = switch (h) {
-    >= 5 && <= 10 => 'Ăn sáng',
-    >= 11 && <= 14 => 'Ăn trưa',
-    >= 15 && <= 17 => 'Ăn chiều',
-    >= 18 && <= 21 => 'Ăn tối',
-    _ => 'Ăn khuya',
-  };
+  final label = isVi
+      ? switch (h) {
+          >= 5 && <= 10 => 'Ăn sáng',
+          >= 11 && <= 14 => 'Ăn trưa',
+          >= 15 && <= 17 => 'Ăn chiều',
+          >= 18 && <= 21 => 'Ăn tối',
+          _ => 'Ăn khuya',
+        }
+      : switch (h) {
+          >= 5 && <= 10 => 'Breakfast',
+          >= 11 && <= 14 => 'Lunch',
+          >= 15 && <= 17 => 'Afternoon tea',
+          >= 18 && <= 21 => 'Dinner',
+          _ => 'Late-night meal',
+        };
   return '$label ${formatDateVn(dt)}';
 }

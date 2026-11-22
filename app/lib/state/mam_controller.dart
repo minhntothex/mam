@@ -3,6 +3,7 @@ import 'package:uuid/uuid.dart';
 
 import '../core/calculator.dart';
 import '../data/local_store.dart';
+import '../l10n/mam_strings.dart';
 import '../models/bill_models.dart';
 
 enum SyncStatus {
@@ -39,11 +40,14 @@ class MamController extends ChangeNotifier {
   String _currentUserId = LocalStore.localDemoUserId;
   String? _signedInEmail;
   ThemeMode _themeMode = ThemeMode.system;
+  AppLanguage _language = AppLanguage.en;
 
   Future<void> Function()? _onSyncRequested;
 
   bool get initialized => _initialized;
   ThemeMode get themeMode => _themeMode;
+  AppLanguage get language => _language;
+  MamStrings get strings => MamStrings(_language);
   String get currentUserId => _currentUserId;
   String? get signedInEmail => _signedInEmail;
   SyncStatus get syncStatus => _syncStatus;
@@ -119,7 +123,15 @@ class MamController extends ChangeNotifier {
     _pendingSyncKeys = Set<String>.from(snapshot.pendingSyncKeys);
     _lastSyncedAt = snapshot.lastSyncedAt;
     _themeMode = snapshot.themeMode;
+    _language = snapshot.language;
     _initialized = true;
+    notifyListeners();
+  }
+
+  Future<void> setLanguage(AppLanguage language) async {
+    if (_language == language) return;
+    _language = language;
+    await store.saveLanguage(language);
     notifyListeners();
   }
 

@@ -2,6 +2,7 @@ import 'package:material_ui/material_ui.dart';
 
 import '../core/formatters.dart';
 import '../data/bank_bins.dart';
+import '../l10n/mam_strings.dart';
 import '../models/bill_models.dart';
 import '../state/mam_controller.dart';
 import '../theme/mam_theme.dart';
@@ -19,6 +20,7 @@ class SettingsScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final p = context.mam;
+    final s = context.s;
 
     return ListenableBuilder(
       listenable: controller,
@@ -28,14 +30,14 @@ class SettingsScreen extends StatelessWidget {
         final settings = controller.settings;
 
         return Scaffold(
-          appBar: AppBar(title: const Text('Cài đặt')),
+          appBar: AppBar(title: Text(s.settings)),
           body: ListView(
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 40),
             children: [
-              // 0. Appearance (Light / Dark / System)
-              const Text(
-                'Giao diện',
-                style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+              // 0. Appearance & Language
+              Text(
+                s.appearanceSection,
+                style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
               ),
               const SizedBox(height: 8),
               Card(
@@ -44,31 +46,61 @@ class SettingsScreen extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
-                        'Chế độ hiển thị (Sáng / Tối)',
-                        style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+                      Text(
+                        s.themeModeLabel,
+                        style: const TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
                       const SizedBox(height: 8),
                       SizedBox(
                         width: double.infinity,
                         child: SegmentedButton<ThemeMode>(
-                          segments: const [
+                          segments: [
                             ButtonSegment(
                               value: ThemeMode.system,
-                              label: Text('Hệ thống'),
+                              label: Text(s.themeSystem),
                             ),
                             ButtonSegment(
                               value: ThemeMode.light,
-                              label: Text('Sáng'),
+                              label: Text(s.themeLight),
                             ),
                             ButtonSegment(
                               value: ThemeMode.dark,
-                              label: Text('Tối'),
+                              label: Text(s.themeDark),
                             ),
                           ],
                           selected: {controller.themeMode},
-                          onSelectionChanged: (s) =>
-                              controller.setThemeMode(s.first),
+                          onSelectionChanged: (sel) =>
+                              controller.setThemeMode(sel.first),
+                        ),
+                      ),
+                      const SizedBox(height: 14),
+                      Text(
+                        s.languageLabel,
+                        style: const TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      SizedBox(
+                        width: double.infinity,
+                        child: SegmentedButton<AppLanguage>(
+                          segments: [
+                            ButtonSegment(
+                              value: AppLanguage.en,
+                              label: Text(AppLanguage.en.label),
+                            ),
+                            ButtonSegment(
+                              value: AppLanguage.vi,
+                              label: Text(AppLanguage.vi.label),
+                            ),
+                          ],
+                          selected: {controller.language},
+                          onSelectionChanged: (sel) =>
+                              controller.setLanguage(sel.first),
                         ),
                       ),
                     ],
@@ -81,18 +113,21 @@ class SettingsScreen extends StatelessWidget {
               // 1. Bank Accounts
               Row(
                 children: [
-                  const Expanded(
+                  Expanded(
                     child: Text(
-                      'Tài khoản ngân hàng (VietQR)',
+                      s.bankSection,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+                      style: const TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w700,
+                      ),
                     ),
                   ),
                   TextButton.icon(
                     onPressed: () => _openBankEditor(context),
                     icon: const Icon(Icons.add_rounded, size: 18),
-                    label: const Text('Thêm STK'),
+                    label: Text(s.addBankBtn),
                   ),
                 ],
               ),
@@ -101,7 +136,7 @@ class SettingsScreen extends StatelessWidget {
                   child: Padding(
                     padding: const EdgeInsets.all(16),
                     child: Text(
-                      'Chưa có tài khoản nhận tiền. Thêm 1 STK để tạo mã VietQR tự động.',
+                      s.noBankEmpty,
                       style: TextStyle(color: p.muted),
                     ),
                   ),
@@ -112,6 +147,9 @@ class SettingsScreen extends StatelessWidget {
                     padding: const EdgeInsets.only(bottom: 8),
                     child: Card(
                       child: ListTile(
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
                         leading: CircleAvatar(
                           backgroundColor: bank.isDefault
                               ? p.primarySoft
@@ -144,7 +182,7 @@ class SettingsScreen extends StatelessWidget {
                                   borderRadius: BorderRadius.circular(6),
                                 ),
                                 child: Text(
-                                  'Mặc định',
+                                  s.defaultBadge,
                                   style: TextStyle(
                                     fontSize: 10.5,
                                     fontWeight: FontWeight.w700,
@@ -175,14 +213,14 @@ class SettingsScreen extends StatelessWidget {
                           },
                           itemBuilder: (_) => [
                             if (!bank.isDefault)
-                              const PopupMenuItem(
+                              PopupMenuItem(
                                 value: 'default',
-                                child: Text('Đặt làm mặc định'),
+                                child: Text(s.setDefault),
                               ),
-                            const PopupMenuItem(value: 'edit', child: Text('Sửa')),
+                            PopupMenuItem(value: 'edit', child: Text(s.edit)),
                             PopupMenuItem(
                               value: 'delete',
-                              child: Text('Xóa', style: TextStyle(color: p.danger)),
+                              child: Text(s.delete, style: TextStyle(color: p.danger)),
                             ),
                           ],
                         ),
@@ -196,18 +234,21 @@ class SettingsScreen extends StatelessWidget {
               // 2. Friend Groups
               Row(
                 children: [
-                  const Expanded(
+                  Expanded(
                     child: Text(
-                      'Nhóm hay đi ăn cùng',
+                      s.groupsSection,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+                      style: const TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w700,
+                      ),
                     ),
                   ),
                   TextButton.icon(
                     onPressed: () => _openGroupEditor(context),
                     icon: const Icon(Icons.add_rounded, size: 18),
-                    label: const Text('Thêm nhóm'),
+                    label: Text(s.addGroupBtn),
                   ),
                 ],
               ),
@@ -216,7 +257,7 @@ class SettingsScreen extends StatelessWidget {
                   child: Padding(
                     padding: const EdgeInsets.all(16),
                     child: Text(
-                      'Chưa có nhóm nào.',
+                      s.noGroupsEmpty,
                       style: TextStyle(color: p.muted),
                     ),
                   ),
@@ -256,9 +297,9 @@ class SettingsScreen extends StatelessWidget {
               const SizedBox(height: 16),
 
               // 3. Defaults
-              const Text(
-                'Mặc định chia tiền',
-                style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+              Text(
+                s.defaultsSection,
+                style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
               ),
               const SizedBox(height: 8),
               Card(
@@ -267,54 +308,96 @@ class SettingsScreen extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
-                        'Làm tròn mặc định',
-                        style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+                      Text(
+                        s.defaultRoundingLabel,
+                        style: const TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
                       const SizedBox(height: 6),
                       SizedBox(
                         width: double.infinity,
                         child: SegmentedButton<RoundingMode>(
-                          segments: const [
-                            ButtonSegment(value: RoundingMode.none, label: Text('Không')),
-                            ButtonSegment(value: RoundingMode.nearest1000, label: Text('Gần 1k')),
-                            ButtonSegment(value: RoundingMode.ceil1000, label: Text('Lên 1k')),
+                          segments: [
+                            ButtonSegment(
+                              value: RoundingMode.none,
+                              label: Text(s.roundNone),
+                            ),
+                            ButtonSegment(
+                              value: RoundingMode.nearest1000,
+                              label: Text(s.roundNearest1k),
+                            ),
+                            ButtonSegment(
+                              value: RoundingMode.ceil1000,
+                              label: Text(s.roundCeil1k),
+                            ),
                           ],
                           selected: {settings.defaultRounding},
-                          onSelectionChanged: (s) => controller.updateSettings(
-                            settings.copyWith(defaultRounding: s.first),
+                          onSelectionChanged: (sel) => controller.updateSettings(
+                            settings.copyWith(defaultRounding: sel.first),
                           ),
                         ),
                       ),
                       const SizedBox(height: 14),
-                      const Text(
-                        'Chia tiền ship mặc định',
-                        style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+                      Text(
+                        s.defaultShipLabel,
+                        style: const TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
                       const SizedBox(height: 6),
                       SizedBox(
                         width: double.infinity,
                         child: SegmentedButton<ShippingSplitMode>(
-                          segments: const [
-                            ButtonSegment(value: ShippingSplitMode.flat, label: Text('Chia đều')),
-                            ButtonSegment(value: ShippingSplitMode.proRata, label: Text('Theo tỷ lệ')),
+                          segments: [
+                            ButtonSegment(
+                              value: ShippingSplitMode.flat,
+                              label: Text(s.shipFlatFull),
+                            ),
+                            ButtonSegment(
+                              value: ShippingSplitMode.proRata,
+                              label: Text(s.shipProRataFull),
+                            ),
                           ],
                           selected: {settings.defaultShippingMode},
-                          onSelectionChanged: (s) => controller.updateSettings(
-                            settings.copyWith(defaultShippingMode: s.first),
+                          onSelectionChanged: (sel) => controller.updateSettings(
+                            settings.copyWith(defaultShippingMode: sel.first),
                           ),
                         ),
                       ),
                       const SizedBox(height: 14),
-                      ListTile(
-                        contentPadding: EdgeInsets.zero,
-                        title: const Text(
-                          'Mẫu nội dung chuyển khoản',
-                          style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+                      Material(
+                        color: p.surfaceSubtle,
+                        borderRadius: BorderRadius.circular(12),
+                        clipBehavior: Clip.antiAlias,
+                        child: ListTile(
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 4,
+                          ),
+                          title: Text(
+                            s.transferTemplateLabel,
+                            style: const TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          subtitle: Text(
+                            settings.defaultTransferTemplate,
+                            style: TextStyle(fontSize: 12.5, color: p.muted),
+                          ),
+                          trailing: Icon(
+                            Icons.edit_outlined,
+                            size: 18,
+                            color: p.muted,
+                          ),
+                          onTap: () => _editTemplateDialog(context, settings),
                         ),
-                        subtitle: Text(settings.defaultTransferTemplate),
-                        trailing: const Icon(Icons.edit_outlined, size: 18),
-                        onTap: () => _editTemplateDialog(context, settings),
                       ),
                     ],
                   ),
@@ -333,15 +416,23 @@ class SettingsScreen extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text(
-                          'Đồng bộ iOS ↔ Android (Supabase)',
-                          style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
+                        Text(
+                          s.syncSectionTitle,
+                          style: const TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w700,
+                          ),
                         ),
                         const SizedBox(height: 4),
                         Text(
                           controller.lastSyncedAt == null
-                              ? 'Đang chạy chế độ Local-first (offline 100%).'
-                              : 'Đồng bộ gần nhất: ${formatDateVn(controller.lastSyncedAt!, includeYear: true)}',
+                              ? s.syncUnconfiguredBody
+                              : s.lastSyncedOn(
+                                  formatDateVn(
+                                    controller.lastSyncedAt!,
+                                    includeYear: true,
+                                  ),
+                                ),
                           style: TextStyle(fontSize: 12.5, color: p.muted),
                         ),
                       ],
@@ -355,12 +446,12 @@ class SettingsScreen extends StatelessWidget {
                   await controller.resetDemoData();
                   if (context.mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Đã khôi phục dữ liệu mẫu Demo')),
+                      SnackBar(content: Text(s.resetDemoDone)),
                     );
                   }
                 },
                 icon: const Icon(Icons.restore_rounded, size: 18),
-                label: const Text('Khôi phục dữ liệu mẫu Demo'),
+                label: Text(s.resetDemoBtn),
               ),
             ],
           ),
@@ -373,6 +464,7 @@ class SettingsScreen extends StatelessWidget {
     BuildContext context, {
     BankAccount? existing,
   }) async {
+    final s = context.s;
     var selectedBank =
         findBankByBin(existing?.bankBin ?? '970436') ?? kVietnamBanks.first;
     final accNoCtrl = TextEditingController(text: existing?.accountNo ?? '');
@@ -408,14 +500,17 @@ class SettingsScreen extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      existing == null ? 'Thêm tài khoản ngân hàng' : 'Sửa tài khoản',
-                      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+                      existing == null ? s.addBankTitle : s.editBankTitle,
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                      ),
                     ),
                     const SizedBox(height: 12),
                     TextField(
-                      decoration: const InputDecoration(
-                        prefixIcon: Icon(Icons.search_rounded, size: 18),
-                        hintText: 'Tìm ngân hàng (VCB, TCB, MB, Timo...)',
+                      decoration: InputDecoration(
+                        prefixIcon: const Icon(Icons.search_rounded, size: 18),
+                        hintText: s.searchBankHint,
                       ),
                       onChanged: (v) => setModalState(() => query = v),
                     ),
@@ -429,6 +524,9 @@ class SettingsScreen extends StatelessWidget {
                           final active = bank.bin == selectedBank.bin;
                           return ListTile(
                             dense: true,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
                             selected: active,
                             selectedTileColor: p.primarySoft,
                             title: Text('${bank.shortName} (${bank.code})'),
@@ -442,21 +540,21 @@ class SettingsScreen extends StatelessWidget {
                     TextField(
                       controller: accNoCtrl,
                       keyboardType: TextInputType.number,
-                      decoration: const InputDecoration(labelText: 'Số tài khoản'),
+                      decoration: InputDecoration(labelText: s.accountNoLabel),
                     ),
                     const SizedBox(height: 10),
                     TextField(
                       controller: accNameCtrl,
                       textCapitalization: TextCapitalization.characters,
-                      decoration: const InputDecoration(
-                        labelText: 'Tên chủ tài khoản (tùy chọn)',
+                      decoration: InputDecoration(
+                        labelText: s.accountHolderLabel,
                       ),
                     ),
                     CheckboxListTile(
                       contentPadding: EdgeInsets.zero,
                       value: isDefault,
                       onChanged: (v) => setModalState(() => isDefault = v ?? false),
-                      title: const Text('Đặt làm tài khoản mặc định'),
+                      title: Text(s.setAsDefaultAccount),
                     ),
                     SizedBox(
                       width: double.infinity,
@@ -480,7 +578,7 @@ class SettingsScreen extends StatelessWidget {
                           await controller.saveBankAccount(account);
                           if (ctx.mounted) Navigator.pop(ctx);
                         },
-                        child: const Text('Lưu tài khoản'),
+                        child: Text(s.saveAccountBtn),
                       ),
                     ),
                   ],
@@ -499,28 +597,30 @@ class SettingsScreen extends StatelessWidget {
     BuildContext context, {
     FriendGroup? existing,
   }) async {
+    final s = context.s;
     final nameCtrl = TextEditingController(text: existing?.name ?? '');
     final membersCtrl = TextEditingController(
-      text: existing?.members.map((m) => m.name).join(', ') ?? 'Tôi, Minh, Lan',
+      text: existing?.members.map((m) => m.name).join(', ') ??
+          '${s.me}, Minh, Lan',
     );
 
     await showDialog<void>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: Text(existing == null ? 'Thêm nhóm bạn' : 'Sửa nhóm bạn'),
+        title: Text(existing == null ? s.addGroupTitle : s.editGroupTitle),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             TextField(
               controller: nameCtrl,
-              decoration: const InputDecoration(labelText: 'Tên nhóm'),
+              decoration: InputDecoration(labelText: s.groupNameLabel),
             ),
             const SizedBox(height: 10),
             TextField(
               controller: membersCtrl,
-              decoration: const InputDecoration(
-                labelText: 'Thành viên (cách nhau bởi dấu phẩy)',
-                helperText: 'Người đầu tiên mặc định là Chủ xị',
+              decoration: InputDecoration(
+                labelText: s.membersLabel,
+                helperText: s.firstMemberIsHost,
               ),
             ),
           ],
@@ -528,15 +628,15 @@ class SettingsScreen extends StatelessWidget {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('Hủy'),
+            child: Text(s.cancel),
           ),
           FilledButton(
             onPressed: () async {
               final title = nameCtrl.text.trim();
               final names = membersCtrl.text
                   .split(',')
-                  .map((s) => s.trim())
-                  .where((s) => s.isNotEmpty)
+                  .map((e) => e.trim())
+                  .where((e) => e.isNotEmpty)
                   .toList();
               if (title.isEmpty || names.isEmpty) return;
               final now = DateTime.now().toUtc();
@@ -558,7 +658,7 @@ class SettingsScreen extends StatelessWidget {
               await controller.saveFriendGroup(group);
               if (ctx.mounted) Navigator.pop(ctx);
             },
-            child: const Text('Lưu'),
+            child: Text(s.save),
           ),
         ],
       ),
@@ -571,25 +671,26 @@ class SettingsScreen extends StatelessWidget {
     BuildContext context,
     UserSettings settings,
   ) async {
+    final s = context.s;
     final ctrl = TextEditingController(text: settings.defaultTransferTemplate);
     final saved = await showDialog<String>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Mẫu nội dung CK'),
+        title: Text(s.transferTemplateLabel),
         content: TextField(
           controller: ctrl,
-          decoration: const InputDecoration(
-            helperText: 'Dùng {name} (tên người) và {title} (tên bill)',
+          decoration: InputDecoration(
+            helperText: s.transferTemplateHelp,
           ),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('Hủy'),
+            child: Text(s.cancel),
           ),
           FilledButton(
             onPressed: () => Navigator.pop(ctx, ctrl.text.trim()),
-            child: const Text('Lưu'),
+            child: Text(s.save),
           ),
         ],
       ),

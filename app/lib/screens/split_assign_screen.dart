@@ -2,6 +2,7 @@ import 'package:material_ui/material_ui.dart';
 
 import '../core/calculator.dart';
 import '../core/formatters.dart';
+import '../l10n/mam_strings.dart';
 import '../models/bill_models.dart';
 import '../state/mam_controller.dart';
 import '../theme/mam_theme.dart';
@@ -38,6 +39,7 @@ class _SplitAssignScreenState extends State<SplitAssignScreen> {
   void initState() {
     super.initState();
     final existing = widget.existingBill;
+    final s = widget.controller.strings;
     if (existing != null && existing.payload.participants.isNotEmpty) {
       _participants = List<Participant>.from(existing.payload.participants);
     } else if (widget.controller.activeFriendGroups.isNotEmpty) {
@@ -54,7 +56,7 @@ class _SplitAssignScreenState extends State<SplitAssignScreen> {
           .toList();
     } else {
       _participants = [
-        const Participant(id: 'p_me', name: 'Tôi', isHost: true, paid: true),
+        Participant(id: 'p_me', name: s.me, isHost: true, paid: true),
         const Participant(id: 'p_2', name: 'Minh'),
         const Participant(id: 'p_3', name: 'Lan'),
       ];
@@ -139,6 +141,7 @@ class _SplitAssignScreenState extends State<SplitAssignScreen> {
     final item = _items[itemIndex];
     final selected = item.shares.keys.toSet();
     final palette = context.mam;
+    final s = context.s;
 
     await showModalBottomSheet<void>(
       context: context,
@@ -151,7 +154,7 @@ class _SplitAssignScreenState extends State<SplitAssignScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Chia nhanh: ${item.name}',
+                  s.quickSplitItem(item.name),
                   style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
                 ),
                 const SizedBox(height: 12),
@@ -191,7 +194,7 @@ class _SplitAssignScreenState extends State<SplitAssignScreen> {
                       });
                       Navigator.pop(ctx);
                     },
-                    child: const Text('Áp dụng'),
+                    child: Text(s.apply),
                   ),
                 ),
               ],
@@ -203,25 +206,26 @@ class _SplitAssignScreenState extends State<SplitAssignScreen> {
   }
 
   Future<void> _addPersonDialog() async {
+    final s = context.s;
     final ctrl = TextEditingController();
     final name = await showDialog<String>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Thêm người vào mâm'),
+        title: Text(s.addPersonDialogTitle),
         content: TextField(
           controller: ctrl,
           autofocus: true,
-          decoration: const InputDecoration(hintText: 'Tên (vd: Trang)'),
+          decoration: InputDecoration(hintText: s.personNameHint),
           onSubmitted: (v) => Navigator.pop(ctx, v.trim()),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('Hủy'),
+            child: Text(s.cancel),
           ),
           FilledButton(
             onPressed: () => Navigator.pop(ctx, ctrl.text.trim()),
-            child: const Text('Thêm'),
+            child: Text(s.add),
           ),
         ],
       ),
@@ -239,6 +243,7 @@ class _SplitAssignScreenState extends State<SplitAssignScreen> {
   }
 
   Future<void> _pickGroupSheet() async {
+    final s = context.s;
     final groups = widget.controller.activeFriendGroups;
     if (groups.isEmpty) return;
     await showModalBottomSheet<void>(
@@ -248,13 +253,16 @@ class _SplitAssignScreenState extends State<SplitAssignScreen> {
           shrinkWrap: true,
           padding: const EdgeInsets.all(16),
           children: [
-            const Text(
-              'Chọn nhóm hay đi ăn',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+            Text(
+              s.pickGroupTitle,
+              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
             ),
             const SizedBox(height: 10),
             ...groups.map(
               (g) => ListTile(
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
                 leading: const Icon(Icons.groups_2_rounded),
                 title: Text(g.name),
                 subtitle: Text(g.members.map((m) => m.name).join(', ')),
@@ -283,27 +291,31 @@ class _SplitAssignScreenState extends State<SplitAssignScreen> {
   }
 
   Future<void> _saveAndFinish() async {
+    final s = context.s;
     final calc = BillCalculator.calculate(_currentPayload());
     if (calc.hasUnassignedItems) {
       final action = await showDialog<String>(
         context: context,
         builder: (ctx) => AlertDialog(
-          title: const Text('Còn món chưa gán'),
+          title: Text(s.unassignedDialogTitle),
           content: Text(
-            'Còn ${calc.unassignedItems.length} món (${formatVnd(calc.unassignedTotal)}) chưa chọn người ăn.',
+            s.unassignedDialogBody(
+              calc.unassignedItems.length,
+              formatVnd(calc.unassignedTotal),
+            ),
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(ctx, 'cancel'),
-              child: const Text('Quay lại gán'),
+              child: Text(s.backToAssign),
             ),
             TextButton(
               onPressed: () => Navigator.pop(ctx, 'assign_all'),
-              child: const Text('Chia cả bàn'),
+              child: Text(s.splitRemainingAll),
             ),
             FilledButton(
               onPressed: () => Navigator.pop(ctx, 'continue'),
-              child: const Text('Vẫn tiếp tục'),
+              child: Text(s.continueAnyway),
             ),
           ],
         ),
@@ -345,6 +357,7 @@ class _SplitAssignScreenState extends State<SplitAssignScreen> {
   @override
   Widget build(BuildContext context) {
     final p = context.mam;
+    final s = context.s;
     final calc = BillCalculator.calculate(_currentPayload());
     final selectedIdx = _participants
         .indexWhere((e) => e.id == _selectedPersonId)
@@ -353,16 +366,16 @@ class _SplitAssignScreenState extends State<SplitAssignScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Gán món siêu tốc'),
+        title: Text(s.assignTitle),
         actions: [
           if (widget.controller.activeFriendGroups.isNotEmpty)
             TextButton.icon(
               onPressed: _pickGroupSheet,
               icon: const Icon(Icons.groups_2_outlined, size: 18),
-              label: const Text('Nhóm'),
+              label: Text(s.groupsBtn),
             ),
           IconButton(
-            tooltip: 'Thêm người',
+            tooltip: s.addPersonTooltip,
             onPressed: _addPersonDialog,
             icon: const Icon(Icons.person_add_alt_1_rounded),
           ),
@@ -414,7 +427,7 @@ class _SplitAssignScreenState extends State<SplitAssignScreen> {
                     const SizedBox(width: 6),
                     Expanded(
                       child: Text(
-                        'Chạm vào món để gán cho ${_selectedPerson.name} · Giữ lâu để chọn nhiều người',
+                        s.assignGuide(_selectedPerson.name),
                         style: TextStyle(fontSize: 12, color: p.muted),
                       ),
                     ),
@@ -474,7 +487,9 @@ class _SplitAssignScreenState extends State<SplitAssignScreen> {
                                       ),
                                       if (item.itemDiscount > 0)
                                         Text(
-                                          'Đã trừ giảm riêng ${formatVnd(item.itemDiscount)}',
+                                          s.itemDiscountApplied(
+                                            formatVnd(item.itemDiscount),
+                                          ),
                                           style: TextStyle(
                                             fontSize: 11.5,
                                             color: p.success,
@@ -512,7 +527,7 @@ class _SplitAssignScreenState extends State<SplitAssignScreen> {
                                             borderRadius: BorderRadius.circular(8),
                                           ),
                                           child: Text(
-                                            'Chưa gán',
+                                            s.unassigned,
                                             style: TextStyle(
                                               fontSize: 11,
                                               fontWeight: FontWeight.w600,
@@ -571,7 +586,7 @@ class _SplitAssignScreenState extends State<SplitAssignScreen> {
                                       borderRadius: BorderRadius.circular(8),
                                     ),
                                     child: Text(
-                                      'Cả bàn',
+                                      s.splitAllTable,
                                       style: TextStyle(
                                         fontSize: 11.5,
                                         fontWeight: FontWeight.w700,
@@ -625,8 +640,11 @@ class _SplitAssignScreenState extends State<SplitAssignScreen> {
                     Expanded(
                       child: Text(
                         calc.hasUnassignedItems
-                            ? 'Còn ${calc.unassignedItems.length} món (${formatVnd(calc.unassignedTotal)}) chưa gán'
-                            : 'Đã gán đủ tất cả ${_items.length} món',
+                            ? s.unassignedSummary(
+                                calc.unassignedItems.length,
+                                formatVnd(calc.unassignedTotal),
+                              )
+                            : s.allAssignedSummary(_items.length),
                         style: TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.w600,
@@ -636,14 +654,18 @@ class _SplitAssignScreenState extends State<SplitAssignScreen> {
                     ),
                     if (calc.hasUnassignedItems)
                       InkWell(
+                        borderRadius: BorderRadius.circular(6),
                         onTap: _assignRemainingToAll,
-                        child: Text(
-                          'Chia cả bàn',
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w700,
-                            color: p.warning,
-                            decoration: TextDecoration.underline,
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                          child: Text(
+                            s.splitRemainingAll,
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w700,
+                              color: p.warning,
+                              decoration: TextDecoration.underline,
+                            ),
                           ),
                         ),
                       ),
@@ -655,7 +677,7 @@ class _SplitAssignScreenState extends State<SplitAssignScreen> {
                 child: FilledButton.icon(
                   onPressed: _saveAndFinish,
                   icon: const Icon(Icons.check_rounded),
-                  label: const Text('Lưu & Xem kết quả'),
+                  label: Text(s.saveAndViewResult),
                 ),
               ),
             ],
@@ -759,6 +781,7 @@ class _QtyStepper extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           InkWell(
+            borderRadius: BorderRadius.circular(8),
             onTap: onMinus,
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
@@ -774,6 +797,7 @@ class _QtyStepper extends StatelessWidget {
             ),
           ),
           InkWell(
+            borderRadius: BorderRadius.circular(8),
             onTap: onPlus,
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),

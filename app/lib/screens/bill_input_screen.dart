@@ -1,6 +1,7 @@
 import 'package:material_ui/material_ui.dart';
 
 import '../core/formatters.dart';
+import '../l10n/mam_strings.dart';
 import '../models/bill_models.dart';
 import '../state/mam_controller.dart';
 import '../theme/mam_theme.dart';
@@ -31,11 +32,11 @@ class _EditableItemRow {
   final TextEditingController discountCtrl;
   final Map<String, double> existingShares;
 
-  BillItem toBillItem() {
+  BillItem toBillItem(String fallbackName) {
     final qty = double.tryParse(qtyCtrl.text.replaceAll(',', '.')) ?? 1;
     return BillItem(
       id: id,
-      name: nameCtrl.text.trim().isEmpty ? 'Món ăn' : nameCtrl.text.trim(),
+      name: nameCtrl.text.trim().isEmpty ? fallbackName : nameCtrl.text.trim(),
       quantity: qty > 0 ? qty : 1,
       lineTotal: parseVndInput(totalCtrl.text),
       itemDiscount: parseVndInput(discountCtrl.text),
@@ -84,8 +85,11 @@ class _BillInputScreenState extends State<BillInputScreen> {
     super.initState();
     final bill = widget.existingBill;
     final adj = bill?.payload.adjustments;
+    final isVi = widget.controller.strings.isVi;
 
-    _titleCtrl = TextEditingController(text: bill?.title ?? defaultMealTitle());
+    _titleCtrl = TextEditingController(
+      text: bill?.title ?? defaultMealTitle(isVi: isVi),
+    );
     _billDate = bill?.billDate ?? DateTime.now();
     _taxCtrl = TextEditingController(
       text: (adj?.taxAmount ?? 0) > 0 ? adj!.taxAmount.toString() : '',
@@ -144,7 +148,7 @@ class _BillInputScreenState extends State<BillInputScreen> {
 
   int get _itemsSubtotal => _rows.fold<int>(
         0,
-        (sum, r) => sum + r.toBillItem().netTotal,
+        (sum, r) => sum + r.toBillItem('Item').netTotal,
       );
 
   int get _computedGrandTotal {
@@ -231,14 +235,15 @@ class _BillInputScreenState extends State<BillInputScreen> {
   }
 
   void _goToAssign() {
+    final s = context.s;
     final items = _rows
-        .map((r) => r.toBillItem())
+        .map((r) => r.toBillItem(s.defaultItemName))
         .where((i) => i.lineTotal > 0)
         .toList();
 
     if (items.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Cần ít nhất 1 món có giá trị > 0đ')),
+        SnackBar(content: Text(s.needOneItem)),
       );
       return;
     }
@@ -253,7 +258,7 @@ class _BillInputScreenState extends State<BillInputScreen> {
     );
 
     final title = _titleCtrl.text.trim().isEmpty
-        ? defaultMealTitle()
+        ? defaultMealTitle(isVi: s.isVi)
         : _titleCtrl.text.trim();
 
     Navigator.of(context).push(
@@ -273,12 +278,15 @@ class _BillInputScreenState extends State<BillInputScreen> {
   @override
   Widget build(BuildContext context) {
     final p = context.mam;
+    final s = context.s;
     final ocrTotal = _ocrGrandTotal;
     final diff = ocrTotal == null ? null : _computedGrandTotal - ocrTotal;
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.existingBill == null ? 'Nhập hóa đơn' : 'Sửa hóa đơn'),
+        title: Text(
+          widget.existingBill == null ? s.inputBillTitle : s.editBillTitle,
+        ),
       ),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 128),
@@ -315,7 +323,7 @@ class _BillInputScreenState extends State<BillInputScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              'Scan ảnh hóa đơn (AI OCR)',
+                              s.scanOcrTitle,
                               style: TextStyle(
                                 fontWeight: FontWeight.w700,
                                 fontSize: 14.5,
@@ -324,7 +332,7 @@ class _BillInputScreenState extends State<BillInputScreen> {
                             ),
                             const SizedBox(height: 2),
                             Text(
-                              'Chụp bill thật hoặc thử hóa đơn mẫu VN',
+                              s.scanOcrSubtitle,
                               style: TextStyle(
                                 fontSize: 12.5,
                                 color: p.muted,
@@ -348,7 +356,7 @@ class _BillInputScreenState extends State<BillInputScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Tên quán / Bữa ăn',
+                    s.restaurantName,
                     style: TextStyle(
                       fontSize: 12.5,
                       fontWeight: FontWeight.w600,
@@ -358,7 +366,7 @@ class _BillInputScreenState extends State<BillInputScreen> {
                   const SizedBox(height: 6),
                   TextField(
                     controller: _titleCtrl,
-                    decoration: const InputDecoration(hintText: 'vd: Lẩu Haidilao'),
+                    decoration: const InputDecoration(hintText: 'Haidilao Hotpot'),
                   ),
                 ],
               ),
@@ -367,17 +375,17 @@ class _BillInputScreenState extends State<BillInputScreen> {
           const SizedBox(height: 16),
           Row(
             children: [
-              const Expanded(
+              Expanded(
                 child: Text(
-                  'Danh sách món',
+                  s.itemsList,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+                  style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
                 ),
               ),
               const SizedBox(width: 8),
               Text(
-                'Tạm tính: ${formatVnd(_itemsSubtotal)}',
+                s.subtotalText(formatVnd(_itemsSubtotal)),
                 style: kTabularStyle.copyWith(
                   fontSize: 13,
                   fontWeight: FontWeight.w600,
@@ -401,7 +409,7 @@ class _BillInputScreenState extends State<BillInputScreen> {
                             child: TextField(
                               controller: _rows[i].nameCtrl,
                               decoration: InputDecoration(
-                                hintText: 'Tên món #${i + 1}',
+                                hintText: s.itemHint(i + 1),
                               ),
                               onChanged: (_) => setState(() {}),
                             ),
@@ -427,7 +435,7 @@ class _BillInputScreenState extends State<BillInputScreen> {
                               controller: _rows[i].qtyCtrl,
                               keyboardType:
                                   const TextInputType.numberWithOptions(decimal: true),
-                              decoration: const InputDecoration(labelText: 'SL'),
+                              decoration: InputDecoration(labelText: s.qtyLabel),
                               onChanged: (_) => setState(() {}),
                             ),
                           ),
@@ -438,8 +446,8 @@ class _BillInputScreenState extends State<BillInputScreen> {
                               controller: _rows[i].totalCtrl,
                               keyboardType: TextInputType.number,
                               style: kTabularStyle,
-                              decoration: const InputDecoration(
-                                labelText: 'Thành tiền',
+                              decoration: InputDecoration(
+                                labelText: s.lineTotalLabel,
                                 suffixText: 'đ',
                               ),
                               onChanged: (_) => setState(() {}),
@@ -451,8 +459,8 @@ class _BillInputScreenState extends State<BillInputScreen> {
                               controller: _rows[i].discountCtrl,
                               keyboardType: TextInputType.number,
                               style: kTabularStyle,
-                              decoration: const InputDecoration(
-                                labelText: 'Giảm riêng',
+                              decoration: InputDecoration(
+                                labelText: s.itemDiscountLabel,
                               ),
                               onChanged: (_) => setState(() {}),
                             ),
@@ -467,12 +475,12 @@ class _BillInputScreenState extends State<BillInputScreen> {
           OutlinedButton.icon(
             onPressed: _addRow,
             icon: const Icon(Icons.add_rounded, size: 18),
-            label: const Text('Thêm món'),
+            label: Text(s.addItemBtn),
           ),
           const SizedBox(height: 18),
-          const Text(
-            'Thuế, phụ phí & giảm giá',
-            style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+          Text(
+            s.feesAndDiscounts,
+            style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
           ),
           const SizedBox(height: 8),
           Card(
@@ -488,8 +496,8 @@ class _BillInputScreenState extends State<BillInputScreen> {
                           controller: _taxCtrl,
                           keyboardType: TextInputType.number,
                           style: kTabularStyle,
-                          decoration: const InputDecoration(
-                            labelText: 'VAT (VNĐ)',
+                          decoration: InputDecoration(
+                            labelText: s.vatLabel,
                             suffixText: 'đ',
                           ),
                           onChanged: (_) => setState(() {}),
@@ -521,8 +529,8 @@ class _BillInputScreenState extends State<BillInputScreen> {
                           controller: _serviceCtrl,
                           keyboardType: TextInputType.number,
                           style: kTabularStyle,
-                          decoration: const InputDecoration(
-                            labelText: 'Phí phục vụ (VNĐ)',
+                          decoration: InputDecoration(
+                            labelText: s.serviceChargeLabel,
                             suffixText: 'đ',
                           ),
                           onChanged: (_) => setState(() {}),
@@ -547,8 +555,8 @@ class _BillInputScreenState extends State<BillInputScreen> {
                           controller: _shipCtrl,
                           keyboardType: TextInputType.number,
                           style: kTabularStyle,
-                          decoration: const InputDecoration(
-                            labelText: 'Tiền ship (VNĐ)',
+                          decoration: InputDecoration(
+                            labelText: s.shippingLabel,
                             suffixText: 'đ',
                           ),
                           onChanged: (_) => setState(() {}),
@@ -557,13 +565,19 @@ class _BillInputScreenState extends State<BillInputScreen> {
                       const SizedBox(width: 8),
                       SegmentedButton<ShippingSplitMode>(
                         showSelectedIcon: false,
-                        segments: const [
-                          ButtonSegment(value: ShippingSplitMode.flat, label: Text('Đều')),
-                          ButtonSegment(value: ShippingSplitMode.proRata, label: Text('Tỷ lệ')),
+                        segments: [
+                          ButtonSegment(
+                            value: ShippingSplitMode.flat,
+                            label: Text(s.shipFlat),
+                          ),
+                          ButtonSegment(
+                            value: ShippingSplitMode.proRata,
+                            label: Text(s.shipProRata),
+                          ),
                         ],
                         selected: {_shippingMode},
-                        onSelectionChanged: (s) =>
-                            setState(() => _shippingMode = s.first),
+                        onSelectionChanged: (sel) =>
+                            setState(() => _shippingMode = sel.first),
                       ),
                     ],
                   ),
@@ -572,8 +586,8 @@ class _BillInputScreenState extends State<BillInputScreen> {
                     controller: _discountCtrl,
                     keyboardType: TextInputType.number,
                     style: kTabularStyle,
-                    decoration: const InputDecoration(
-                      labelText: 'Giảm giá / Voucher toàn bill (VNĐ)',
+                    decoration: InputDecoration(
+                      labelText: s.billDiscountLabel,
                       suffixText: 'đ',
                     ),
                     onChanged: (_) => setState(() {}),
@@ -583,8 +597,8 @@ class _BillInputScreenState extends State<BillInputScreen> {
                     controller: _ocrTotalCtrl,
                     keyboardType: TextInputType.number,
                     style: kTabularStyle,
-                    decoration: const InputDecoration(
-                      labelText: 'Tổng in trên bill để đối chiếu (không bắt buộc)',
+                    decoration: InputDecoration(
+                      labelText: s.ocrTotalLabel,
                       suffixText: 'đ',
                     ),
                     onChanged: (_) => setState(() {}),
@@ -628,8 +642,11 @@ class _BillInputScreenState extends State<BillInputScreen> {
                       Expanded(
                         child: Text(
                           diff == 0
-                              ? 'Khớp tổng in trên bill (${formatVnd(ocrTotal!)})'
-                              : 'Lệch ${formatSignedVnd(diff)} so với tổng bill (${formatVnd(ocrTotal!)})',
+                              ? s.ocrMatched(formatVnd(ocrTotal!))
+                              : s.ocrMismatch(
+                                  formatSignedVnd(diff),
+                                  formatVnd(ocrTotal!),
+                                ),
                           style: TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.w600,
@@ -648,7 +665,7 @@ class _BillInputScreenState extends State<BillInputScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'Tổng cộng',
+                          s.grandTotal,
                           style: TextStyle(fontSize: 12, color: p.muted),
                         ),
                         Text(
@@ -668,7 +685,7 @@ class _BillInputScreenState extends State<BillInputScreen> {
                   FilledButton.icon(
                     onPressed: _goToAssign,
                     icon: const Icon(Icons.arrow_forward_rounded, size: 18),
-                    label: const Text('Tiếp: Gán món'),
+                    label: Text(s.nextAssign),
                   ),
                 ],
               ),

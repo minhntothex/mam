@@ -2,6 +2,7 @@ import 'package:material_ui/material_ui.dart';
 
 import '../core/calculator.dart';
 import '../core/formatters.dart';
+import '../l10n/mam_strings.dart';
 import '../models/bill_models.dart';
 import '../state/mam_controller.dart';
 import '../theme/mam_theme.dart';
@@ -34,6 +35,7 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     final p = context.mam;
+    final s = context.s;
     final brightness = Theme.of(context).brightness;
 
     return ListenableBuilder(
@@ -68,7 +70,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                 ),
                 const SizedBox(width: 10),
-                const Text('Mâm'),
+                Text(s.appName),
               ],
             ),
             actions: [
@@ -84,8 +86,8 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
               IconButton(
                 tooltip: brightness == Brightness.dark
-                    ? 'Chuyển chế độ Sáng'
-                    : 'Chuyển chế độ Tối',
+                    ? s.switchToLight
+                    : s.switchToDark,
                 icon: Icon(
                   brightness == Brightness.dark
                       ? Icons.light_mode_outlined
@@ -94,7 +96,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 onPressed: () => ctrl.toggleLightDark(brightness),
               ),
               IconButton(
-                tooltip: 'Cài đặt',
+                tooltip: s.settings,
                 icon: const Icon(Icons.tune_rounded),
                 onPressed: () => _openSettings(context),
               ),
@@ -153,7 +155,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     child: OutlinedButton.icon(
                       onPressed: () => _openQuickEqual(context),
                       icon: const Icon(Icons.bolt_rounded, size: 18),
-                      label: const Text('Chia đều'),
+                      label: Text(s.quickEqualBtn),
                     ),
                   ),
                   const SizedBox(width: 10),
@@ -162,7 +164,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     child: FilledButton.icon(
                       onPressed: () => _openNewBill(context),
                       icon: const Icon(Icons.receipt_long_rounded, size: 18),
-                      label: const Text('Tạo bill mới'),
+                      label: Text(s.newBillBtn),
                     ),
                   ),
                 ],
@@ -218,20 +220,21 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _confirmDelete(BuildContext context, BillRecord bill) async {
     final p = context.mam;
+    final s = context.s;
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Xóa hóa đơn?'),
-        content: Text('Xóa "${bill.title}" khỏi lịch sử trên các thiết bị?'),
+        title: Text(s.deleteBillTitle),
+        content: Text(s.deleteBillConfirm(bill.title)),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Hủy'),
+            child: Text(s.cancel),
           ),
           FilledButton(
             style: FilledButton.styleFrom(backgroundColor: p.danger),
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Xóa'),
+            child: Text(s.delete),
           ),
         ],
       ),
@@ -251,33 +254,34 @@ class _SyncBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final p = context.mam;
+    final s = context.s;
     final (label, bg, fg, icon) = switch (status) {
       SyncStatus.localOnly => (
-          'Local',
+          s.syncLocal,
           p.surfaceSubtle,
           p.muted,
           Icons.cloud_off_rounded,
         ),
       SyncStatus.synced => (
-          'Đã sync',
+          s.syncSynced,
           p.successSoft,
           p.success,
           Icons.cloud_done_rounded,
         ),
       SyncStatus.pendingPush => (
-          'Chờ sync',
+          s.syncPending,
           p.warningSoft,
           p.warning,
           Icons.cloud_upload_rounded,
         ),
       SyncStatus.syncing => (
-          'Đang sync',
+          s.syncSyncing,
           p.primarySoft,
           p.primary,
           Icons.sync_rounded,
         ),
       SyncStatus.error => (
-          'Lỗi sync',
+          s.syncError,
           p.dangerSoft,
           p.danger,
           Icons.error_outline_rounded,
@@ -325,6 +329,7 @@ class _UncollectedBanner extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final p = context.mam;
+    final s = context.s;
     final allDone = pendingCount == 0;
     return Container(
       padding: const EdgeInsets.all(18),
@@ -339,7 +344,7 @@ class _UncollectedBanner extends StatelessWidget {
             children: [
               Expanded(
                 child: Text(
-                  allDone ? 'Tất cả bill đã thu đủ' : 'Còn chưa thu',
+                  allDone ? s.allSettledTitle : s.uncollectedTitle,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
@@ -357,7 +362,9 @@ class _UncollectedBanner extends StatelessWidget {
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Text(
-                  allDone ? 'Đã chốt đủ' : '$pendingCount bill đang chờ',
+                  allDone
+                      ? s.allSettledBadge
+                      : s.pendingBillsBadge(pendingCount),
                   style: const TextStyle(
                     color: Colors.white,
                     fontSize: 12,
@@ -400,15 +407,16 @@ class _FilterBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final s = context.s;
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
       child: Row(
         children: [
-          _pill(context, _HomeFilter.all, 'Tất cả ($allCount)'),
+          _pill(context, _HomeFilter.all, s.filterAll(allCount)),
           const SizedBox(width: 8),
-          _pill(context, _HomeFilter.pending, 'Chưa đủ ($pendingCount)'),
+          _pill(context, _HomeFilter.pending, s.filterPending(pendingCount)),
           const SizedBox(width: 8),
-          _pill(context, _HomeFilter.settled, 'Đã xong ($settledCount)'),
+          _pill(context, _HomeFilter.settled, s.filterSettled(settledCount)),
         ],
       ),
     );
@@ -456,6 +464,7 @@ class _BillHistoryCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final p = context.mam;
+    final s = context.s;
     final participants = bill.payload.participants;
     final paidCount = participants.where((e) => e.isHost || e.paid).length;
     final totalPeople = participants.length;
@@ -489,7 +498,7 @@ class _BillHistoryCard extends StatelessWidget {
                         ),
                         const SizedBox(height: 3),
                         Text(
-                          '${formatDateVn(bill.billDate, includeYear: true)} · ${bill.mode == BillMode.quickEqual ? 'Chia đều' : '${bill.payload.items.length} món'}',
+                          '${formatDateVn(bill.billDate, includeYear: true)} · ${bill.mode == BillMode.quickEqual ? s.equalSplitLabel : s.itemsCount(bill.payload.items.length)}',
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(
@@ -513,9 +522,10 @@ class _BillHistoryCard extends StatelessWidget {
                       ),
                       const SizedBox(height: 2),
                       InkWell(
+                        borderRadius: BorderRadius.circular(6),
                         onTap: onDelete,
                         child: Padding(
-                          padding: const EdgeInsets.all(2),
+                          padding: const EdgeInsets.all(3),
                           child: Icon(
                             Icons.delete_outline_rounded,
                             size: 16,
@@ -549,7 +559,9 @@ class _BillHistoryCard extends StatelessWidget {
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Text(
-                      settled ? 'Đã xong' : '$paidCount/$totalPeople đã trả',
+                      settled
+                          ? s.settled
+                          : s.paidProgress(paidCount, totalPeople),
                       style: TextStyle(
                         fontSize: 11.5,
                         fontWeight: FontWeight.w700,
@@ -575,11 +587,11 @@ class _EmptyBillsCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final p = context.mam;
+    final s = context.s;
     final text = switch (filter) {
-      _HomeFilter.all =>
-        'Chưa có hóa đơn nào. Bấm "Tạo bill mới" hoặc "Chia đều" để bắt đầu.',
-      _HomeFilter.pending => 'Không còn bill nào đang chờ thanh toán.',
-      _HomeFilter.settled => 'Chưa có bill nào hoàn tất.',
+      _HomeFilter.all => s.emptyAll,
+      _HomeFilter.pending => s.emptyPending,
+      _HomeFilter.settled => s.emptySettled,
     };
     return Card(
       child: Padding(

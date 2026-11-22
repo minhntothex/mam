@@ -5,6 +5,7 @@ import '../core/calculator.dart';
 import '../core/export_png.dart';
 import '../core/formatters.dart';
 import '../core/vietqr.dart';
+import '../l10n/mam_strings.dart';
 import '../models/bill_models.dart';
 import '../state/mam_controller.dart';
 import '../theme/mam_theme.dart';
@@ -34,6 +35,7 @@ class _ResultScreenState extends State<ResultScreen> {
   @override
   Widget build(BuildContext context) {
     final p = context.mam;
+    final s = context.s;
 
     return ListenableBuilder(
       listenable: widget.controller,
@@ -42,8 +44,8 @@ class _ResultScreenState extends State<ResultScreen> {
         final bill = ctrl.findBillById(widget.billId);
         if (bill == null) {
           return Scaffold(
-            appBar: AppBar(title: const Text('Kết quả')),
-            body: const Center(child: Text('Không tìm thấy hóa đơn.')),
+            appBar: AppBar(title: Text(s.resultTitle)),
+            body: Center(child: Text(s.billNotFound)),
           );
         }
 
@@ -62,7 +64,7 @@ class _ResultScreenState extends State<ResultScreen> {
             actions: [
               if (bill.mode == BillMode.itemized)
                 IconButton(
-                  tooltip: 'Sửa hóa đơn',
+                  tooltip: s.editBillTitle,
                   icon: const Icon(Icons.edit_outlined),
                   onPressed: () {
                     Navigator.of(context).push(
@@ -91,7 +93,7 @@ class _ResultScreenState extends State<ResultScreen> {
                         children: [
                           Expanded(
                             child: Text(
-                              '${formatDateVn(bill.billDate, includeYear: true)} · $paidCount/$totalPeople đã trả',
+                              '${formatDateVn(bill.billDate, includeYear: true)} · ${s.paidProgress(paidCount, totalPeople)}',
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: TextStyle(
@@ -115,23 +117,23 @@ class _ResultScreenState extends State<ResultScreen> {
                       SizedBox(
                         width: double.infinity,
                         child: SegmentedButton<RoundingMode>(
-                          segments: const [
+                          segments: [
                             ButtonSegment(
                               value: RoundingMode.none,
-                              label: Text('Không'),
+                              label: Text(s.roundNone),
                             ),
                             ButtonSegment(
                               value: RoundingMode.nearest1000,
-                              label: Text('Gần 1k'),
+                              label: Text(s.roundNearest1k),
                             ),
                             ButtonSegment(
                               value: RoundingMode.ceil1000,
-                              label: Text('Lên 1k'),
+                              label: Text(s.roundCeil1k),
                             ),
                           ],
                           selected: {bill.payload.roundingMode},
-                          onSelectionChanged: (s) =>
-                              ctrl.updateBillRounding(bill.id, s.first),
+                          onSelectionChanged: (sel) =>
+                              ctrl.updateBillRounding(bill.id, sel.first),
                         ),
                       ),
                       if (calc.roundingDelta != 0) ...[
@@ -148,7 +150,10 @@ class _ResultScreenState extends State<ResultScreen> {
                             border: Border.all(color: p.border),
                           ),
                           child: Text(
-                            'Chênh lệch làm tròn: Chủ xị ${calc.roundingDelta > 0 ? 'dư' : 'bù'} ${formatSignedVnd(calc.roundingDelta)}',
+                            s.roundingDeltaHost(
+                              calc.roundingDelta > 0,
+                              formatSignedVnd(calc.roundingDelta),
+                            ),
                             style: TextStyle(
                               fontSize: 12,
                               fontWeight: FontWeight.w600,
@@ -158,46 +163,50 @@ class _ResultScreenState extends State<ResultScreen> {
                         ),
                       ],
                       const SizedBox(height: 10),
-                      InkWell(
+                      Material(
+                        color: p.primarySoft,
                         borderRadius: BorderRadius.circular(10),
-                        onTap: () => _pickBankSheet(context, bill, activeBanks),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 10,
-                            vertical: 9,
-                          ),
-                          decoration: BoxDecoration(
-                            color: p.primarySoft,
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          child: Row(
-                            children: [
-                              Icon(
-                                Icons.account_balance_rounded,
-                                size: 16,
-                                color: p.primary,
-                              ),
-                              const SizedBox(width: 8),
-                              Expanded(
-                                child: Text(
-                                  bankSnapshot == null
-                                      ? 'Chưa có STK nhận tiền — Chạm để thêm'
-                                      : 'Nhận tiền: ${bankSnapshot.bankShortName} · ${bankSnapshot.accountNo}',
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: TextStyle(
-                                    fontSize: 12.5,
-                                    fontWeight: FontWeight.w600,
-                                    color: p.ink,
+                        clipBehavior: Clip.antiAlias,
+                        child: InkWell(
+                          borderRadius: BorderRadius.circular(10),
+                          onTap: () => _pickBankSheet(context, bill, activeBanks),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 10,
+                            ),
+                            child: Row(
+                              children: [
+                                Icon(
+                                  Icons.account_balance_rounded,
+                                  size: 16,
+                                  color: p.primary,
+                                ),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    bankSnapshot == null
+                                        ? s.noBankAccountTap
+                                        : s.receivingBank(
+                                            bankSnapshot.bankShortName,
+                                            bankSnapshot.accountNo,
+                                          ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: TextStyle(
+                                      fontSize: 12.5,
+                                      fontWeight: FontWeight.w600,
+                                      color: p.ink,
+                                    ),
                                   ),
                                 ),
-                              ),
-                              Icon(
-                                Icons.swap_horiz_rounded,
-                                size: 16,
-                                color: p.primary,
-                              ),
-                            ],
+                                Icon(
+                                  Icons.swap_horiz_rounded,
+                                  size: 16,
+                                  color: p.primary,
+                                ),
+                              ],
+                            ),
                           ),
                         ),
                       ),
@@ -206,9 +215,9 @@ class _ResultScreenState extends State<ResultScreen> {
                 ),
               ),
               const SizedBox(height: 16),
-              const Text(
-                'Chi tiết từng người',
-                style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+              Text(
+                s.perPersonDetails,
+                style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
               ),
               const SizedBox(height: 8),
               for (var i = 0; i < calc.breakdowns.length; i++)
@@ -262,7 +271,7 @@ class _ResultScreenState extends State<ResultScreen> {
                   bank: bankSnapshot,
                 ),
                 icon: const Icon(Icons.share_rounded, size: 18),
-                label: const Text('Xuất Receipt Card tổng (PNG)'),
+                label: Text(s.exportSummaryBtn),
               ),
             ),
           ),
@@ -276,6 +285,7 @@ class _ResultScreenState extends State<ResultScreen> {
     BillRecord bill,
     List<BankAccount> accounts,
   ) async {
+    final s = context.s;
     if (accounts.isEmpty) {
       Navigator.of(context).push(
         MaterialPageRoute(
@@ -292,13 +302,16 @@ class _ResultScreenState extends State<ResultScreen> {
           shrinkWrap: true,
           padding: const EdgeInsets.all(16),
           children: [
-            const Text(
-              'Chọn tài khoản nhận tiền',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+            Text(
+              s.pickBankTitle,
+              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
             ),
             const SizedBox(height: 8),
             ...accounts.map(
               (a) => ListTile(
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
                 leading: const Icon(Icons.account_balance_rounded),
                 title: Text(a.bankShortName),
                 subtitle: Text(a.accountNo),
@@ -323,6 +336,7 @@ class _ResultScreenState extends State<ResultScreen> {
     final boundaryKey = GlobalKey();
     var exporting = false;
     final p = context.mam;
+    final s = context.s;
 
     await showModalBottomSheet<void>(
       context: context,
@@ -341,12 +355,15 @@ class _ResultScreenState extends State<ResultScreen> {
                   padding: const EdgeInsets.fromLTRB(16, 12, 8, 8),
                   child: Row(
                     children: [
-                      const Expanded(
+                      Expanded(
                         child: Text(
-                          'Xem trước Receipt Card',
+                          s.receiptPreviewTitle,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w700,
+                          ),
                         ),
                       ),
                       IconButton(
@@ -390,12 +407,12 @@ class _ResultScreenState extends State<ResultScreen> {
                                   boundaryKey: boundaryKey,
                                   fileName: 'mam_${slug.isEmpty ? 'bill' : slug}.png',
                                   shareText:
-                                      'Mâm — Chia bill ${bill.title} (${formatVnd(calc.computedGrandTotal)})',
+                                      'Mâm — ${bill.title} (${formatVnd(calc.computedGrandTotal)})',
                                 );
                               } catch (e) {
                                 if (ctx.mounted) {
                                   ScaffoldMessenger.of(ctx).showSnackBar(
-                                    SnackBar(content: Text('Không xuất được ảnh: $e')),
+                                    SnackBar(content: Text(s.exportError(e))),
                                   );
                                 }
                               } finally {
@@ -414,11 +431,7 @@ class _ResultScreenState extends State<ResultScreen> {
                               ),
                             )
                           : const Icon(Icons.ios_share_rounded, size: 18),
-                      label: Text(
-                        exporting
-                            ? 'Đang xuất ảnh...'
-                            : 'Chia sẻ ảnh PNG (Zalo / Messenger)',
-                      ),
+                      label: Text(exporting ? s.exportingPng : s.sharePngBtn),
                     ),
                   ),
                 ),
@@ -436,13 +449,10 @@ class _ResultScreenState extends State<ResultScreen> {
     required ParticipantBreakdown breakdown,
     required BankAccountSnapshot? bank,
   }) async {
+    final s = context.s;
     if (bank == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            'Vui lòng thêm tài khoản ngân hàng trong Cài đặt để tạo VietQR',
-          ),
-        ),
+        SnackBar(content: Text(s.addBankFirst)),
       );
       return;
     }
@@ -471,7 +481,7 @@ class _ResultScreenState extends State<ResultScreen> {
                   children: [
                     Expanded(
                       child: Text(
-                        'VietQR cho ${breakdown.participant.name}',
+                        s.personQrTitle(breakdown.participant.name),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
@@ -508,14 +518,12 @@ class _ResultScreenState extends State<ResultScreen> {
                           );
                           if (ctx.mounted) {
                             ScaffoldMessenger.of(ctx).showSnackBar(
-                              const SnackBar(
-                                content: Text('Đã sao chép số tài khoản'),
-                              ),
+                              SnackBar(content: Text(s.copiedAccNo)),
                             );
                           }
                         },
                         icon: const Icon(Icons.copy_rounded, size: 16),
-                        label: const Text('Copy STK'),
+                        label: Text(s.copyAccNo),
                       ),
                     ),
                     const SizedBox(width: 8),
@@ -527,14 +535,12 @@ class _ResultScreenState extends State<ResultScreen> {
                           );
                           if (ctx.mounted) {
                             ScaffoldMessenger.of(ctx).showSnackBar(
-                              const SnackBar(
-                                content: Text('Đã sao chép nội dung CK'),
-                              ),
+                              SnackBar(content: Text(s.copiedNote)),
                             );
                           }
                         },
                         icon: const Icon(Icons.notes_rounded, size: 16),
-                        label: const Text('Copy ND'),
+                        label: Text(s.copyNote),
                       ),
                     ),
                   ],
@@ -562,7 +568,7 @@ class _ResultScreenState extends State<ResultScreen> {
                             } catch (e) {
                               if (ctx.mounted) {
                                 ScaffoldMessenger.of(ctx).showSnackBar(
-                                  SnackBar(content: Text('Không xuất được ảnh: $e')),
+                                  SnackBar(content: Text(s.exportError(e))),
                                 );
                               }
                             } finally {
@@ -573,9 +579,7 @@ class _ResultScreenState extends State<ResultScreen> {
                           },
                     icon: const Icon(Icons.ios_share_rounded, size: 18),
                     label: Text(
-                      exporting
-                          ? 'Đang xuất ảnh...'
-                          : 'Gửi thẻ VietQR riêng (PNG)',
+                      exporting ? s.exportingPng : s.sharePersonQrBtn,
                     ),
                   ),
                 ),
@@ -608,166 +612,186 @@ class _ParticipantResultCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final palette = context.mam;
+    final s = context.s;
     final p = breakdown.participant;
     final paid = p.isHost || p.paid;
+    final hasActionRow = !p.isHost;
 
     return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(13),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            InkWell(
-              onTap: onToggleExpand,
-              child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          InkWell(
+            borderRadius: hasActionRow && !expanded
+                ? const BorderRadius.vertical(top: Radius.circular(14))
+                : BorderRadius.circular(14),
+            onTap: onToggleExpand,
+            child: Padding(
+              padding: const EdgeInsets.all(14),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  CircleAvatar(
-                    radius: 16,
-                    backgroundColor: accentColor.withValues(alpha: 0.16),
-                    child: Text(
-                      p.name.isEmpty ? '?' : p.name[0].toUpperCase(),
-                      style: TextStyle(
-                        color: accentColor,
-                        fontWeight: FontWeight.w800,
-                        fontSize: 13.5,
+                  Row(
+                    children: [
+                      CircleAvatar(
+                        radius: 16,
+                        backgroundColor: accentColor.withValues(alpha: 0.16),
+                        child: Text(
+                          p.name.isEmpty ? '?' : p.name[0].toUpperCase(),
+                          style: TextStyle(
+                            color: accentColor,
+                            fontWeight: FontWeight.w800,
+                            fontSize: 13.5,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Flexible(
+                                  child: Text(
+                                    p.isHost ? '${p.name} (${s.host})' : p.name,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.w700,
+                                      fontSize: 15,
+                                    ),
+                                  ),
+                                ),
+                                if (paid) ...[
+                                  const SizedBox(width: 6),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 6,
+                                      vertical: 2,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: palette.successSoft,
+                                      borderRadius: BorderRadius.circular(6),
+                                    ),
+                                    child: Text(
+                                      s.paid,
+                                      style: TextStyle(
+                                        fontSize: 10.5,
+                                        fontWeight: FontWeight.w700,
+                                        color: palette.success,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ],
+                            ),
+                            Text(
+                              s.tapForDetails(breakdown.itemShares.length),
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: palette.muted,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        formatVnd(breakdown.finalAmount),
+                        style: kTabularStyle.copyWith(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w800,
+                          color: paid ? palette.success : palette.ink,
+                        ),
+                      ),
+                    ],
+                  ),
+                  if (expanded) ...[
+                    const SizedBox(height: 10),
+                    const Divider(),
+                    const SizedBox(height: 8),
+                    ...breakdown.itemShares.map(
+                      (item) => Padding(
+                        padding: const EdgeInsets.only(bottom: 4),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                item.itemName,
+                                style: const TextStyle(fontSize: 12.5),
+                              ),
+                            ),
+                            Text(
+                              formatVnd(item.amount.round()),
+                              style: kTabularStyle.copyWith(
+                                fontSize: 12.5,
+                                color: palette.muted,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
+                    if (breakdown.proRataAdjustment.round() != 0)
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 4),
+                        child: Row(
                           children: [
-                            Flexible(
+                            Expanded(
                               child: Text(
-                                p.isHost ? '${p.name} (Chủ xị)' : p.name,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.w700,
-                                  fontSize: 15,
+                                s.proRataLine,
+                                style: TextStyle(
+                                  fontSize: 12.5,
+                                  color: palette.muted,
                                 ),
                               ),
                             ),
-                            if (paid) ...[
-                              const SizedBox(width: 6),
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 6,
-                                  vertical: 2,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: palette.successSoft,
-                                  borderRadius: BorderRadius.circular(6),
-                                ),
-                                child: Text(
-                                  'Đã trả',
-                                  style: TextStyle(
-                                    fontSize: 10.5,
-                                    fontWeight: FontWeight.w700,
-                                    color: palette.success,
-                                  ),
-                                ),
+                            Text(
+                              formatSignedVnd(
+                                breakdown.proRataAdjustment.round(),
                               ),
-                            ],
+                              style: kTabularStyle.copyWith(
+                                fontSize: 12.5,
+                                color: palette.muted,
+                              ),
+                            ),
                           ],
                         ),
-                        Text(
-                          '${breakdown.itemShares.length} món · Chạm xem chi tiết',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: palette.muted,
-                          ),
+                      ),
+                    if (breakdown.flatAdjustment.round() != 0)
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 4),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                s.flatShipLine,
+                                style: TextStyle(
+                                  fontSize: 12.5,
+                                  color: palette.muted,
+                                ),
+                              ),
+                            ),
+                            Text(
+                              formatSignedVnd(breakdown.flatAdjustment.round()),
+                              style: kTabularStyle.copyWith(
+                                fontSize: 12.5,
+                                color: palette.muted,
+                              ),
+                            ),
+                          ],
                         ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    formatVnd(breakdown.finalAmount),
-                    style: kTabularStyle.copyWith(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w800,
-                      color: paid ? palette.success : palette.ink,
-                    ),
-                  ),
+                      ),
+                  ],
                 ],
               ),
             ),
-            if (expanded) ...[
-              const SizedBox(height: 10),
-              const Divider(),
-              const SizedBox(height: 8),
-              ...breakdown.itemShares.map(
-                (s) => Padding(
-                  padding: const EdgeInsets.only(bottom: 4),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          s.itemName,
-                          style: const TextStyle(fontSize: 12.5),
-                        ),
-                      ),
-                      Text(
-                        formatVnd(s.amount.round()),
-                        style: kTabularStyle.copyWith(
-                          fontSize: 12.5,
-                          color: palette.muted,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              if (breakdown.proRataAdjustment.round() != 0)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 4),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          'Thuế / Phí / Giảm giá (pro-rata)',
-                          style: TextStyle(fontSize: 12.5, color: palette.muted),
-                        ),
-                      ),
-                      Text(
-                        formatSignedVnd(breakdown.proRataAdjustment.round()),
-                        style: kTabularStyle.copyWith(
-                          fontSize: 12.5,
-                          color: palette.muted,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              if (breakdown.flatAdjustment.round() != 0)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 4),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          'Tiền ship (chia đều)',
-                          style: TextStyle(fontSize: 12.5, color: palette.muted),
-                        ),
-                      ),
-                      Text(
-                        formatSignedVnd(breakdown.flatAdjustment.round()),
-                        style: kTabularStyle.copyWith(
-                          fontSize: 12.5,
-                          color: palette.muted,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-            ],
-            if (!p.isHost) ...[
-              const SizedBox(height: 10),
-              Row(
+          ),
+          if (hasActionRow)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(14, 0, 14, 14),
+              child: Row(
                 children: [
                   Expanded(
                     child: OutlinedButton.icon(
@@ -789,7 +813,7 @@ class _ParticipantResultCard extends StatelessWidget {
                             : Icons.radio_button_unchecked_rounded,
                         size: 16,
                       ),
-                      label: Text(paid ? 'Đã trả' : 'Tick đã trả'),
+                      label: Text(paid ? s.paid : s.markPaid),
                     ),
                   ),
                   if (onShowQr != null) ...[
@@ -804,15 +828,14 @@ class _ParticipantResultCard extends StatelessWidget {
                           padding: const EdgeInsets.symmetric(vertical: 8),
                         ),
                         icon: const Icon(Icons.qr_code_2_rounded, size: 17),
-                        label: const Text('VietQR riêng'),
+                        label: Text(s.personQrBtn),
                       ),
                     ),
                   ],
                 ],
               ),
-            ],
-          ],
-        ),
+            ),
+        ],
       ),
     );
   }

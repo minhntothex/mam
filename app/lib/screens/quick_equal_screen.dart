@@ -2,6 +2,7 @@ import 'package:material_ui/material_ui.dart';
 
 import '../core/calculator.dart';
 import '../core/formatters.dart';
+import '../l10n/mam_strings.dart';
 import '../models/bill_models.dart';
 import '../state/mam_controller.dart';
 import '../theme/mam_theme.dart';
@@ -22,17 +23,19 @@ class _QuickEqualScreenState extends State<QuickEqualScreen> {
   final TextEditingController _nameCtrl = TextEditingController();
 
   late RoundingMode _roundingMode;
-  List<Participant> _participants = [
-    const Participant(id: 'p_1', name: 'Tôi', isHost: true, paid: true),
-    const Participant(id: 'p_2', name: 'Bạn 2'),
-    const Participant(id: 'p_3', name: 'Bạn 3'),
-  ];
+  late List<Participant> _participants;
 
   @override
   void initState() {
     super.initState();
-    _titleCtrl = TextEditingController(text: defaultMealTitle());
+    final s = widget.controller.strings;
+    _titleCtrl = TextEditingController(text: defaultMealTitle(isVi: s.isVi));
     _roundingMode = widget.controller.settings.defaultRounding;
+    _participants = [
+      Participant(id: 'p_1', name: s.me, isHost: true, paid: true),
+      Participant(id: 'p_2', name: s.guestLabel(2)),
+      Participant(id: 'p_3', name: s.guestLabel(3)),
+    ];
   }
 
   @override
@@ -45,14 +48,14 @@ class _QuickEqualScreenState extends State<QuickEqualScreen> {
 
   int get _totalAmount => parseVndInput(_totalCtrl.text);
 
-  BillPayload _buildPayload() {
+  BillPayload _buildPayload(MamStrings s) {
     final shares = {for (final p in _participants) p.id: 1.0};
     return BillPayload(
       participants: _participants,
       items: [
         BillItem(
           id: 'equal_total',
-          name: 'Tổng hóa đơn chia đều',
+          name: s.equalTotalItemName,
           quantity: 1,
           lineTotal: _totalAmount,
           shares: shares,
@@ -95,6 +98,7 @@ class _QuickEqualScreenState extends State<QuickEqualScreen> {
 
   void _setCount(int target) {
     if (target < 2 || target > 20) return;
+    final s = context.s;
     setState(() {
       if (target > _participants.length) {
         while (_participants.length < target) {
@@ -102,7 +106,7 @@ class _QuickEqualScreenState extends State<QuickEqualScreen> {
           _participants.add(
             Participant(
               id: 'p_${DateTime.now().microsecondsSinceEpoch}_$n',
-              name: 'Bạn $n',
+              name: s.guestLabel(n),
             ),
           );
         }
@@ -113,9 +117,10 @@ class _QuickEqualScreenState extends State<QuickEqualScreen> {
   }
 
   Future<void> _submit() async {
+    final s = context.s;
     if (_totalAmount <= 0) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Vui lòng nhập tổng số tiền lớn hơn 0đ')),
+        SnackBar(content: Text(s.enterPositiveTotal)),
       );
       return;
     }
@@ -124,7 +129,7 @@ class _QuickEqualScreenState extends State<QuickEqualScreen> {
     final now = DateTime.now().toUtc();
     final today = DateTime(now.year, now.month, now.day);
     final title = _titleCtrl.text.trim().isEmpty
-        ? defaultMealTitle()
+        ? defaultMealTitle(isVi: s.isVi)
         : _titleCtrl.text.trim();
 
     final record = BillRecord(
@@ -134,7 +139,7 @@ class _QuickEqualScreenState extends State<QuickEqualScreen> {
       billDate: today,
       mode: BillMode.quickEqual,
       totalAmount: _totalAmount,
-      payload: _buildPayload(),
+      payload: _buildPayload(s),
       createdAt: now,
       updatedAt: now,
     );
@@ -154,13 +159,14 @@ class _QuickEqualScreenState extends State<QuickEqualScreen> {
   @override
   Widget build(BuildContext context) {
     final p = context.mam;
-    final preview = BillCalculator.calculate(_buildPayload());
+    final s = context.s;
+    final preview = BillCalculator.calculate(_buildPayload(s));
     final perPerson =
         preview.breakdowns.isNotEmpty ? preview.breakdowns.first.finalAmount : 0;
     final groups = widget.controller.activeFriendGroups;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Chia đều siêu tốc')),
+      appBar: AppBar(title: Text(s.quickEqualTitle)),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 100),
         children: [
@@ -171,7 +177,7 @@ class _QuickEqualScreenState extends State<QuickEqualScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Tên bữa ăn',
+                    s.mealName,
                     style: TextStyle(
                       fontSize: 12.5,
                       fontWeight: FontWeight.w600,
@@ -181,11 +187,11 @@ class _QuickEqualScreenState extends State<QuickEqualScreen> {
                   const SizedBox(height: 6),
                   TextField(
                     controller: _titleCtrl,
-                    decoration: const InputDecoration(hintText: 'vd: Cà phê sáng'),
+                    decoration: InputDecoration(hintText: s.mealHint),
                   ),
                   const SizedBox(height: 14),
                   Text(
-                    'Tổng tiền hóa đơn (VNĐ)',
+                    s.totalBillVnd,
                     style: TextStyle(
                       fontSize: 12.5,
                       fontWeight: FontWeight.w600,
@@ -235,7 +241,7 @@ class _QuickEqualScreenState extends State<QuickEqualScreen> {
                     children: [
                       Expanded(
                         child: Text(
-                          'Người tham gia (${_participants.length})',
+                          s.participantsCount(_participants.length),
                           style: const TextStyle(
                             fontSize: 14,
                             fontWeight: FontWeight.w700,
@@ -281,7 +287,7 @@ class _QuickEqualScreenState extends State<QuickEqualScreen> {
                           ),
                           label: Text(
                             _participants[i].isHost
-                                ? '${_participants[i].name} (Chủ xị)'
+                                ? '${_participants[i].name} (${s.host})'
                                 : _participants[i].name,
                           ),
                           selected: _participants[i].isHost,
@@ -309,22 +315,20 @@ class _QuickEqualScreenState extends State<QuickEqualScreen> {
                       Expanded(
                         child: TextField(
                           controller: _nameCtrl,
-                          decoration: const InputDecoration(
-                            hintText: 'Thêm tên người...',
-                          ),
+                          decoration: InputDecoration(hintText: s.addPersonHint),
                           onSubmitted: (_) => _addParticipant(),
                         ),
                       ),
                       const SizedBox(width: 8),
                       OutlinedButton(
                         onPressed: _addParticipant,
-                        child: const Text('Thêm'),
+                        child: Text(s.add),
                       ),
                     ],
                   ),
                   const SizedBox(height: 6),
                   Text(
-                    'Chạm vào tên để đổi người làm Chủ xị.',
+                    s.tapToChangeHost,
                     style: TextStyle(fontSize: 11.5, color: p.muted),
                   ),
                 ],
@@ -338,22 +342,34 @@ class _QuickEqualScreenState extends State<QuickEqualScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
-                    'Làm tròn số tiền',
-                    style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w700),
+                  Text(
+                    s.roundingLabel,
+                    style: const TextStyle(
+                      fontSize: 13.5,
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
                   const SizedBox(height: 8),
                   SizedBox(
                     width: double.infinity,
                     child: SegmentedButton<RoundingMode>(
-                      segments: const [
-                        ButtonSegment(value: RoundingMode.none, label: Text('Không')),
-                        ButtonSegment(value: RoundingMode.nearest1000, label: Text('Gần 1k')),
-                        ButtonSegment(value: RoundingMode.ceil1000, label: Text('Lên 1k')),
+                      segments: [
+                        ButtonSegment(
+                          value: RoundingMode.none,
+                          label: Text(s.roundNone),
+                        ),
+                        ButtonSegment(
+                          value: RoundingMode.nearest1000,
+                          label: Text(s.roundNearest1k),
+                        ),
+                        ButtonSegment(
+                          value: RoundingMode.ceil1000,
+                          label: Text(s.roundCeil1k),
+                        ),
                       ],
                       selected: {_roundingMode},
-                      onSelectionChanged: (s) =>
-                          setState(() => _roundingMode = s.first),
+                      onSelectionChanged: (sel) =>
+                          setState(() => _roundingMode = sel.first),
                     ),
                   ),
                   if (_totalAmount > 0) ...[
@@ -366,10 +382,10 @@ class _QuickEqualScreenState extends State<QuickEqualScreen> {
                       ),
                       child: Row(
                         children: [
-                          const Expanded(
+                          Expanded(
                             child: Text(
-                              'Mỗi người trả:',
-                              style: TextStyle(fontWeight: FontWeight.w600),
+                              s.eachPersonPays,
+                              style: const TextStyle(fontWeight: FontWeight.w600),
                             ),
                           ),
                           Column(
@@ -385,7 +401,9 @@ class _QuickEqualScreenState extends State<QuickEqualScreen> {
                               ),
                               if (preview.roundingDelta != 0)
                                 Text(
-                                  'Lệch làm tròn: ${formatSignedVnd(preview.roundingDelta)}',
+                                  s.roundingDeltaShort(
+                                    formatSignedVnd(preview.roundingDelta),
+                                  ),
                                   style: TextStyle(
                                     fontSize: 11.5,
                                     color: p.muted,
@@ -414,7 +432,7 @@ class _QuickEqualScreenState extends State<QuickEqualScreen> {
           child: FilledButton.icon(
             onPressed: _submit,
             icon: const Icon(Icons.qr_code_2_rounded),
-            label: const Text('Tạo kết quả & VietQR'),
+            label: Text(s.createResultQr),
           ),
         ),
       ),

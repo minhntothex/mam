@@ -1,6 +1,7 @@
 import 'package:material_ui/material_ui.dart';
 
 import '../core/formatters.dart';
+import '../l10n/mam_strings.dart';
 import '../services/sync_service.dart';
 import '../state/mam_controller.dart';
 import '../theme/mam_theme.dart';
@@ -33,10 +34,11 @@ class _SyncAuthCardState extends State<SyncAuthCard> {
   }
 
   Future<void> _submit({required bool isSignUp}) async {
+    final s = context.s;
     final email = _emailCtrl.text.trim();
     final pass = _passCtrl.text;
     if (email.isEmpty || pass.length < 6) {
-      setState(() => _error = 'Nhập email hợp lệ và mật khẩu ≥ 6 ký tự');
+      setState(() => _error = s.invalidAuthInput);
       return;
     }
     setState(() {
@@ -59,6 +61,7 @@ class _SyncAuthCardState extends State<SyncAuthCard> {
   @override
   Widget build(BuildContext context) {
     final p = context.mam;
+    final s = context.s;
     final ctrl = widget.controller;
     final sync = widget.syncService;
 
@@ -73,17 +76,20 @@ class _SyncAuthCardState extends State<SyncAuthCard> {
                 children: [
                   Icon(Icons.cloud_off_rounded, size: 18, color: p.muted),
                   const SizedBox(width: 8),
-                  const Expanded(
+                  Expanded(
                     child: Text(
-                      'Đồng bộ iOS ↔ Android (Supabase)',
-                      style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
+                      s.syncSectionTitle,
+                      style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
+                      ),
                     ),
                   ),
                 ],
               ),
               const SizedBox(height: 6),
               Text(
-                'Đang chạy chế độ Local-first (offline 100%). Để bật đồng bộ cloud giữa iOS & Android, build app kèm --dart-define=SUPABASE_URL=... và SUPABASE_ANON_KEY=...',
+                s.syncUnconfiguredBody,
                 style: TextStyle(fontSize: 12.5, color: p.muted),
               ),
             ],
@@ -117,14 +123,16 @@ class _SyncAuthCardState extends State<SyncAuthCard> {
               const SizedBox(height: 6),
               Text(
                 ctrl.lastSyncedAt == null
-                    ? 'Chưa đồng bộ lần nào'
-                    : 'Đồng bộ gần nhất: ${formatDateVn(ctrl.lastSyncedAt!, includeYear: true)}',
+                    ? s.neverSynced
+                    : s.lastSyncedOn(
+                        formatDateVn(ctrl.lastSyncedAt!, includeYear: true),
+                      ),
                 style: TextStyle(fontSize: 12.5, color: p.muted),
               ),
               if (ctrl.lastSyncError != null) ...[
                 const SizedBox(height: 6),
                 Text(
-                  'Lỗi: ${ctrl.lastSyncError}',
+                  ctrl.lastSyncError!,
                   style: TextStyle(fontSize: 12, color: p.danger),
                 ),
               ],
@@ -137,13 +145,13 @@ class _SyncAuthCardState extends State<SyncAuthCard> {
                           ? null
                           : () => sync.syncAll(),
                       icon: const Icon(Icons.sync_rounded, size: 18),
-                      label: const Text('Đồng bộ ngay'),
+                      label: Text(s.syncNowBtn),
                     ),
                   ),
                   const SizedBox(width: 8),
                   OutlinedButton(
                     onPressed: () => sync.signOut(),
-                    child: const Text('Đăng xuất'),
+                    child: Text(s.signOutBtn),
                   ),
                 ],
               ),
@@ -159,21 +167,21 @@ class _SyncAuthCardState extends State<SyncAuthCard> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              'Đăng nhập đồng bộ iOS ↔ Android',
-              style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
+            Text(
+              s.signInTitle,
+              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
             ),
             const SizedBox(height: 10),
             TextField(
               controller: _emailCtrl,
               keyboardType: TextInputType.emailAddress,
-              decoration: const InputDecoration(labelText: 'Email'),
+              decoration: InputDecoration(labelText: s.emailLabel),
             ),
             const SizedBox(height: 8),
             TextField(
               controller: _passCtrl,
               obscureText: true,
-              decoration: const InputDecoration(labelText: 'Mật khẩu'),
+              decoration: InputDecoration(labelText: s.passwordLabel),
             ),
             if (_error != null) ...[
               const SizedBox(height: 8),
@@ -188,13 +196,13 @@ class _SyncAuthCardState extends State<SyncAuthCard> {
                 Expanded(
                   child: FilledButton(
                     onPressed: _busy ? null : () => _submit(isSignUp: false),
-                    child: Text(_busy ? 'Đang xử lý...' : 'Đăng nhập'),
+                    child: Text(_busy ? s.working : s.signInBtn),
                   ),
                 ),
                 const SizedBox(width: 8),
                 OutlinedButton(
                   onPressed: _busy ? null : () => _submit(isSignUp: true),
-                  child: const Text('Tạo TK'),
+                  child: Text(s.signUpBtn),
                 ),
               ],
             ),

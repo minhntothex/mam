@@ -5,6 +5,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../l10n/mam_strings.dart';
 import '../models/bill_models.dart';
 import '../theme/mam_theme.dart';
 import 'supabase_config.dart';
@@ -16,6 +17,7 @@ class OcrService {
 
   Future<OcrScanResult?> openScanSheet(BuildContext context) async {
     final p = context.mam;
+    final s = context.s;
     return showModalBottomSheet<OcrScanResult>(
       context: context,
       isScrollControlled: true,
@@ -29,10 +31,13 @@ class OcrService {
             children: [
               Row(
                 children: [
-                  const Expanded(
+                  Expanded(
                     child: Text(
-                      'Scan hóa đơn (AI OCR)',
-                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+                      s.ocrSheetTitle,
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                      ),
                     ),
                   ),
                   IconButton(
@@ -44,39 +49,45 @@ class OcrService {
               const SizedBox(height: 6),
               if (!kIsWeb)
                 ListTile(
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                   leading: CircleAvatar(
                     backgroundColor: p.primarySoft,
                     child: Icon(Icons.camera_alt_rounded, color: p.primary),
                   ),
-                  title: const Text(
-                    'Chụp ảnh hóa đơn',
-                    style: TextStyle(fontWeight: FontWeight.w600),
+                  title: Text(
+                    s.takePhotoTitle,
+                    style: const TextStyle(fontWeight: FontWeight.w600),
                   ),
-                  subtitle: const Text('Gửi qua Edge Function /scan-bill'),
-                  onTap: () => _pickAndRun(ctx, ImageSource.camera),
+                  subtitle: Text(s.takePhotoSub),
+                  onTap: () => _pickAndRun(ctx, ImageSource.camera, s),
                 ),
               ListTile(
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
                 leading: CircleAvatar(
                   backgroundColor: p.primarySoft,
                   child: Icon(Icons.photo_library_rounded, color: p.primary),
                 ),
-                title: const Text(
-                  'Chọn ảnh hóa đơn từ máy',
-                  style: TextStyle(fontWeight: FontWeight.w600),
+                title: Text(
+                  s.pickPhotoTitle,
+                  style: const TextStyle(fontWeight: FontWeight.w600),
                 ),
                 subtitle: Text(
                   SupabaseConfig.isConfigured
-                      ? 'Trích xuất tự động bằng Gemini 2.5 Flash'
-                      : 'Cần cấu hình Supabase để gọi AI thật (dùng mẫu Demo bên dưới)',
+                      ? s.pickPhotoSubConfigured
+                      : s.pickPhotoSubUnconfigured,
                 ),
-                onTap: () => _pickAndRun(ctx, ImageSource.gallery),
+                onTap: () => _pickAndRun(ctx, ImageSource.gallery, s),
               ),
               const Padding(
                 padding: EdgeInsets.symmetric(vertical: 8),
                 child: Divider(),
               ),
               Text(
-                'Thử nhanh hóa đơn mẫu VN (Demo Offline)',
+                s.demoPresetsHeading,
                 style: TextStyle(
                   fontSize: 12.5,
                   fontWeight: FontWeight.w700,
@@ -84,10 +95,13 @@ class OcrService {
                 ),
               ),
               const SizedBox(height: 6),
-              ...demoPresets.map(
+              ...demoPresets(isVi: s.isVi).map(
                 (preset) => ListTile(
                   dense: true,
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 6),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 8),
                   leading: Icon(
                     Icons.receipt_long_rounded,
                     color: p.ink,
@@ -112,7 +126,11 @@ class OcrService {
     );
   }
 
-  Future<void> _pickAndRun(BuildContext ctx, ImageSource source) async {
+  Future<void> _pickAndRun(
+    BuildContext ctx,
+    ImageSource source,
+    MamStrings s,
+  ) async {
     final file = await _picker.pickImage(
       source: source,
       maxWidth: 1280,
@@ -123,11 +141,7 @@ class OcrService {
     if (!SupabaseConfig.isConfigured) {
       if (ctx.mounted) {
         ScaffoldMessenger.of(ctx).showSnackBar(
-          const SnackBar(
-            content: Text(
-              'Chưa kết nối Supabase OCR proxy — hãy chọn 1 hóa đơn mẫu Demo để trải nghiệm luồng OCR.',
-            ),
-          ),
+          SnackBar(content: Text(s.ocrNeedsSupabase)),
         );
       }
       return;
@@ -137,9 +151,7 @@ class OcrService {
     if (client.auth.currentSession == null) {
       if (ctx.mounted) {
         ScaffoldMessenger.of(ctx).showSnackBar(
-          const SnackBar(
-            content: Text('Vui lòng đăng nhập trong Cài đặt trước khi scan OCR.'),
-          ),
+          SnackBar(content: Text(s.ocrNeedsLogin)),
         );
       }
       return;
@@ -162,22 +174,26 @@ class OcrService {
         if (ctx.mounted) Navigator.pop(ctx, parsed);
         return;
       }
-      throw StateError('Phản hồi OCR không hợp lệ');
+      throw StateError('Invalid OCR response');
     } catch (e) {
       if (ctx.mounted) {
         ScaffoldMessenger.of(ctx).showSnackBar(
-          SnackBar(content: Text('Lỗi scan OCR: $e')),
+          SnackBar(content: Text('OCR error: $e')),
         );
       }
     }
   }
 
-  static List<DemoOcrPreset> get demoPresets {
+  static List<DemoOcrPreset> demoPresets({bool isVi = false}) {
     final today = DateTime.now();
     return [
       DemoOcrPreset(
-        label: 'Quán Nhậu Bờ Kè (có VAT 8% & lệch 10k OCR)',
-        subtitle: 'Test đối chiếu tổng tự động + chia bia theo lon',
+        label: isVi
+            ? 'Quán Nhậu Bờ Kè (có VAT 8% & lệch 10k OCR)'
+            : 'Bo Ke Street Grill (8% VAT & 10k OCR diff)',
+        subtitle: isVi
+            ? 'Test đối chiếu tổng tự động + chia bia theo lon'
+            : 'Tests reconciliation bar + per-can beer stepper',
         result: OcrScanResult(
           title: 'Quán Nhậu Bờ Kè',
           billDate: today,
@@ -191,14 +207,17 @@ class OcrService {
           serviceChargeAmount: 0,
           shippingAmount: 0,
           billDiscountAmount: 0,
-          // Deliberately +10,000đ off to showcase the red OCR reconciliation warning!
           ocrGrandTotal: 643960,
           confidence: OcrConfidence.medium,
         ),
       ),
       DemoOcrPreset(
-        label: 'GrabFood Bún Đậu Mắm Tôm (Ship 18k + Voucher 25k)',
-        subtitle: 'Test chia ship đều vs tỷ lệ + giảm giá toàn bill',
+        label: isVi
+            ? 'GrabFood Bún Đậu Mắm Tôm (Ship 18k + Voucher 25k)'
+            : 'GrabFood Bun Dau (18k Ship + 25k Voucher)',
+        subtitle: isVi
+            ? 'Test chia ship đều vs tỷ lệ + giảm giá toàn bill'
+            : 'Tests equal vs pro-rata shipping + bill voucher',
         result: OcrScanResult(
           title: 'Bún Đậu Cô Khàn (GrabFood)',
           billDate: today,
@@ -216,8 +235,12 @@ class OcrService {
         ),
       ),
       DemoOcrPreset(
-        label: 'Highlands Coffee (5 ly trà & cà phê)',
-        subtitle: 'Test stepper +/- gán nhanh món số lượng > 1',
+        label: isVi
+            ? 'Highlands Coffee (5 ly trà & cà phê)'
+            : 'Highlands Coffee (5 drinks & snacks)',
+        subtitle: isVi
+            ? 'Test stepper +/- gán nhanh món số lượng > 1'
+            : 'Tests +/- stepper for multi-quantity items',
         result: OcrScanResult(
           title: 'Highlands Coffee',
           billDate: today,

@@ -4,6 +4,7 @@ import 'package:qr_flutter/qr_flutter.dart';
 import '../core/calculator.dart';
 import '../core/formatters.dart';
 import '../core/vietqr.dart';
+import '../l10n/mam_strings.dart';
 import '../models/bill_models.dart';
 import '../theme/mam_theme.dart';
 
@@ -25,6 +26,7 @@ class SummaryReceiptCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final s = context.s;
     String? staticQr;
     if (bank != null) {
       try {
@@ -71,12 +73,12 @@ class SummaryReceiptCard extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 8),
-              const Expanded(
+              Expanded(
                 child: Text(
-                  'PHIẾU CHIA BILL',
+                  s.receiptHeaderTag,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
+                  style: const TextStyle(
                     fontSize: 11,
                     fontWeight: FontWeight.w700,
                     color: MamReceiptColors.muted,
@@ -116,35 +118,37 @@ class SummaryReceiptCard extends StatelessWidget {
           const SizedBox(height: 12),
           const _DashedDivider(),
           const SizedBox(height: 10),
-          _SummaryLine(label: 'Tiền món', value: formatVnd(calc.allItemsSubtotal)),
+          _SummaryLine(
+            label: s.receiptItemsSubtotal,
+            value: formatVnd(calc.allItemsSubtotal),
+          ),
           if (adj.taxAmount > 0)
-            _SummaryLine(label: 'Thuế VAT', value: '+${formatVnd(adj.taxAmount)}'),
+            _SummaryLine(label: s.receiptVat, value: '+${formatVnd(adj.taxAmount)}'),
           if (adj.serviceChargeAmount > 0)
             _SummaryLine(
-              label: 'Phí phục vụ',
+              label: s.receiptService,
               value: '+${formatVnd(adj.serviceChargeAmount)}',
             ),
           if (adj.shippingAmount > 0)
             _SummaryLine(
-              label:
-                  'Tiền ship (${adj.shippingMode == ShippingSplitMode.flat ? 'chia đều' : 'tỷ lệ'})',
+              label: s.receiptShipping(adj.shippingMode == ShippingSplitMode.flat),
               value: '+${formatVnd(adj.shippingAmount)}',
             ),
           if (adj.billDiscountAmount > 0)
             _SummaryLine(
-              label: 'Giảm giá toàn bill',
+              label: s.receiptDiscount,
               value: '-${formatVnd(adj.billDiscountAmount)}',
               valueColor: MamReceiptColors.success,
             ),
           const SizedBox(height: 6),
           Row(
             children: [
-              const Expanded(
+              Expanded(
                 child: Text(
-                  'TỔNG CỘNG',
+                  s.receiptGrandTotal,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
+                  style: const TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.w800,
                     color: MamReceiptColors.ink,
@@ -165,7 +169,7 @@ class SummaryReceiptCard extends StatelessWidget {
           if (calc.roundingDelta != 0) ...[
             const SizedBox(height: 4),
             Text(
-              'Làm tròn 1.000đ · Chênh lệch: ${formatSignedVnd(calc.roundingDelta)}',
+              s.receiptRoundingNote(formatSignedVnd(calc.roundingDelta)),
               style: const TextStyle(
                 fontSize: 11,
                 color: MamReceiptColors.muted,
@@ -197,9 +201,9 @@ class SummaryReceiptCard extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
-                        'QUÉT VIETQR THANH TOÁN',
-                        style: TextStyle(
+                      Text(
+                        s.scanVietQrPay,
+                        style: const TextStyle(
                           fontSize: 10.5,
                           fontWeight: FontWeight.w800,
                           color: MamReceiptColors.primary,
@@ -258,6 +262,7 @@ class PersonQrCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final s = context.s;
     final p = breakdown.participant;
     final transferNote = VietQrGenerator.formatTransferNote(
       template: bill.payload.transferNoteTemplate,
@@ -317,7 +322,7 @@ class PersonQrCard extends StatelessWidget {
           ),
           const SizedBox(height: 12),
           Text(
-            'Phần của ${p.name}',
+            s.shareOfPerson(p.name),
             style: const TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.w700,
@@ -374,7 +379,7 @@ class PersonQrCard extends StatelessWidget {
               borderRadius: BorderRadius.circular(8),
             ),
             child: Text(
-              'ND: $transferNote',
+              s.notePrefix(transferNote),
               style: const TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.w600,
@@ -387,13 +392,13 @@ class PersonQrCard extends StatelessWidget {
             const _DashedDivider(),
             const SizedBox(height: 8),
             ...breakdown.itemShares.take(5).map(
-                  (s) => Padding(
+                  (item) => Padding(
                     padding: const EdgeInsets.only(bottom: 3),
                     child: Row(
                       children: [
                         Expanded(
                           child: Text(
-                            s.itemName,
+                            item.itemName,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: const TextStyle(
@@ -404,7 +409,7 @@ class PersonQrCard extends StatelessWidget {
                         ),
                         const SizedBox(width: 8),
                         Text(
-                          formatVnd(s.amount.round()),
+                          formatVnd(item.amount.round()),
                           style: kTabularStyle.copyWith(
                             fontSize: 11.5,
                             color: MamReceiptColors.muted,
@@ -416,7 +421,7 @@ class PersonQrCard extends StatelessWidget {
                 ),
             if (breakdown.itemShares.length > 5)
               Text(
-                '+ ${breakdown.itemShares.length - 5} món khác',
+                s.moreItemsCount(breakdown.itemShares.length - 5),
                 style: const TextStyle(
                   fontSize: 11,
                   color: MamReceiptColors.muted,
@@ -440,6 +445,7 @@ class _ReceiptPersonRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final s = context.s;
     final p = breakdown.participant;
     final paid = p.isHost || p.paid;
     return Row(
@@ -459,7 +465,7 @@ class _ReceiptPersonRow extends StatelessWidget {
                 children: [
                   Flexible(
                     child: Text(
-                      p.isHost ? '${p.name} (Chủ xị)' : p.name,
+                      p.isHost ? '${p.name} (${s.host})' : p.name,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
@@ -481,7 +487,7 @@ class _ReceiptPersonRow extends StatelessWidget {
               ),
               if (breakdown.itemShares.isNotEmpty)
                 Text(
-                  breakdown.itemShares.map((s) => s.itemName).join(', '),
+                  breakdown.itemShares.map((item) => item.itemName).join(', '),
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
