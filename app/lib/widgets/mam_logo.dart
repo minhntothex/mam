@@ -2,9 +2,9 @@ import 'dart:math' as math;
 
 import 'package:material_ui/material_ui.dart';
 
-/// Vector brand mark for Mâm: a round shared dining tray ("mâm") with one
-/// cleanly detached mint-emerald fair-share wedge inside a Canon fintech blue
-/// squircle.
+/// Vector brand mark for Mâm (Tri-Pastel Share): three pastel slices — sky
+/// periwinkle, fresh mint, and a detached butter-peach fair-share wedge —
+/// arranged as a shared round dining tray ("mâm") inside a cloud-white tile.
 ///
 /// Mirrors `assets/brand/mam-logo.svg` in a normalized 1024×1024 coordinate
 /// space so the AppBar mark, exported PNG Receipt Cards, and platform icons
@@ -46,63 +46,76 @@ class _MamLogoPainter extends CustomPainter {
     canvas.scale(scale);
 
     if (showTile) {
-      final tileRect = const Rect.fromLTWH(0, 0, _designSize, _designSize);
+      const tileRect = Rect.fromLTWH(10, 10, 1004, 1004);
+      final tileRRect = RRect.fromRectAndRadius(
+        tileRect,
+        const Radius.circular(220),
+      );
       final tilePaint = Paint()
         ..isAntiAlias = true
         ..shader = const LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [Color(0xFF0A74FF), Color(0xFF004CE6)],
+          colors: [Color(0xFFFFFFFF), Color(0xFFEFF4FF)],
         ).createShader(tileRect);
-      canvas.drawRRect(
-        RRect.fromRectAndRadius(tileRect, const Radius.circular(224)),
-        tilePaint,
-      );
+      canvas.drawRRect(tileRRect, tilePaint);
+
+      final borderPaint = Paint()
+        ..isAntiAlias = true
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 20
+        ..color = const Color(0xFFDCE5F5);
+      canvas.drawRRect(tileRRect, borderPaint);
     }
 
-    // Main shared tray ring (252° sweep, centered at 496, 528).
-    final trayPath = _annularSector(
-      center: const Offset(496, 528),
+    // Bottom-left Sky Periwinkle slice (15° -> 165°).
+    _drawGradientSlice(
+      canvas,
+      center: const Offset(502, 522),
       rOuter: 304,
       rInner: 134,
-      startDeg: 9,
-      sweepDeg: 252,
+      startDeg: 15,
+      sweepDeg: 150,
+      colors: const [Color(0xFF9CC4FF), Color(0xFF6FA3FA)],
     );
-    final trayPaint = Paint()
-      ..isAntiAlias = true
-      ..color = showTile ? Colors.white : const Color(0xFF0066FF);
-    canvas.drawPath(trayPath, trayPaint);
 
-    // Detached fair-share wedge (76° sweep, offset +44 / -44 at 540, 484).
-    final sharePath = _annularSector(
-      center: const Offset(540, 484),
+    // Top-left Mint slice (177° -> 267°).
+    _drawGradientSlice(
+      canvas,
+      center: const Offset(502, 522),
       rOuter: 304,
       rInner: 134,
-      startDeg: 277,
-      sweepDeg: 76,
+      startDeg: 177,
+      sweepDeg: 90,
+      colors: const [Color(0xFFA6F2D4), Color(0xFF65D9AC)],
     );
-    final sharePaint = Paint()
-      ..isAntiAlias = true
-      ..shader = const LinearGradient(
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-        colors: [Color(0xFF5EEAD4), Color(0xFF10B981)],
-      ).createShader(sharePath.getBounds());
-    canvas.drawPath(sharePath, sharePaint);
+
+    // Detached top-right Butter-Peach fair-share wedge (281° -> 359°).
+    _drawGradientSlice(
+      canvas,
+      center: const Offset(544, 480),
+      rOuter: 304,
+      rInner: 134,
+      startDeg: 281,
+      sweepDeg: 78,
+      colors: const [Color(0xFFFFE89E), Color(0xFFFFBE6B)],
+    );
 
     canvas.restore();
   }
 
-  static Path _annularSector({
+  static void _drawGradientSlice(
+    Canvas canvas, {
     required Offset center,
     required double rOuter,
     required double rInner,
     required double startDeg,
     required double sweepDeg,
+    required List<Color> colors,
   }) {
     final startRad = startDeg * _degToRad;
     final sweepRad = sweepDeg * _degToRad;
-    return Path()
+    final path = Path()
       ..arcTo(
         Rect.fromCircle(center: center, radius: rOuter),
         startRad,
@@ -116,6 +129,15 @@ class _MamLogoPainter extends CustomPainter {
         false,
       )
       ..close();
+
+    final paint = Paint()
+      ..isAntiAlias = true
+      ..shader = LinearGradient(
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+        colors: colors,
+      ).createShader(path.getBounds());
+    canvas.drawPath(path, paint);
   }
 
   @override

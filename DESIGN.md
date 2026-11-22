@@ -64,7 +64,7 @@
 
 ## 5. Brand Mark & App Icons
 
-- **Concept:** A shared round Vietnamese dining tray (*mâm*) rendered as a crisp geometric annular ring (`252°`, `#FFFFFF`) with one cleanly detached fair-share wedge (`76°`, mint-emerald `#5EEAD4 → #10B981`, offset `+44 / -44`) inside a Canon fintech blue squircle (`#0A74FF → #004CE6`, `rx = 224/1024`).
+- **Concept (Tri-Pastel Share):** A shared round Vietnamese dining tray (*mâm*) split into three harmonious pastel slices — sky periwinkle (`#9CC4FF → #6FA3FA`, `150°`), fresh mint (`#A6F2D4 → #65D9AC`, `90°`), and a cleanly detached butter-peach fair-share wedge (`#FFE89E → #FFBE6B`, `78°`, offset `+42 / -42`) — set inside a cloud-white squircle (`#FFFFFF → #EFF4FF`, border `#DCE5F5`).
 - **Vector sources:**
   - [assets/brand/mam-logo.svg](assets/brand/mam-logo.svg) (master squircle)
   - [assets/brand/mam-icon-fullbleed.svg](assets/brand/mam-icon-fullbleed.svg) (iOS AppIcon)
