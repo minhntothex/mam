@@ -359,6 +359,7 @@ final class BillRecord {
     required this.payload,
     required this.createdAt,
     required this.updatedAt,
+    this.archivedAt,
     this.deletedAt,
   });
 
@@ -373,8 +374,10 @@ final class BillRecord {
   final BillPayload payload;
   final DateTime createdAt;
   final DateTime updatedAt;
+  final DateTime? archivedAt;
   final DateTime? deletedAt;
 
+  bool get isArchived => archivedAt != null;
   bool get isDeleted => deletedAt != null;
 
   factory BillRecord.fromJson(Map<String, dynamic> json) {
@@ -392,6 +395,7 @@ final class BillRecord {
       ),
       createdAt: _parseDateTime(json['created_at']),
       updatedAt: _parseDateTime(json['updated_at']),
+      archivedAt: _parseNullableDateTime(json['archived_at']),
       deletedAt: _parseNullableDateTime(json['deleted_at']),
     );
   }
@@ -408,6 +412,7 @@ final class BillRecord {
         'payload': payload.toJson(),
         'created_at': createdAt.toUtc().toIso8601String(),
         'updated_at': updatedAt.toUtc().toIso8601String(),
+        'archived_at': archivedAt?.toUtc().toIso8601String(),
         'deleted_at': deletedAt?.toUtc().toIso8601String(),
       };
 
@@ -423,6 +428,7 @@ final class BillRecord {
     BillPayload? payload,
     DateTime? createdAt,
     DateTime? updatedAt,
+    Object? archivedAt = _unset,
     Object? deletedAt = _unset,
   }) {
     return BillRecord(
@@ -437,6 +443,9 @@ final class BillRecord {
       payload: payload ?? this.payload,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
+      archivedAt: identical(archivedAt, _unset)
+          ? this.archivedAt
+          : archivedAt as DateTime?,
       deletedAt:
           identical(deletedAt, _unset) ? this.deletedAt : deletedAt as DateTime?,
     );

@@ -57,17 +57,7 @@ class SummaryReceiptCard extends StatelessWidget {
         children: [
           Row(
             children: [
-              const MamLogoMark(size: 20),
-              const SizedBox(width: 6),
-              const Text(
-                'MÂM',
-                style: TextStyle(
-                  color: MamReceiptColors.ink,
-                  fontWeight: FontWeight.w800,
-                  fontSize: 12,
-                  letterSpacing: 0.6,
-                ),
-              ),
+              const MamLogoMark(size: 22),
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
@@ -285,17 +275,7 @@ class PersonQrCard extends StatelessWidget {
         children: [
           Row(
             children: [
-              const MamLogoMark(size: 18),
-              const SizedBox(width: 6),
-              const Text(
-                'MÂM',
-                style: TextStyle(
-                  color: MamReceiptColors.ink,
-                  fontWeight: FontWeight.w800,
-                  fontSize: 11.5,
-                  letterSpacing: 0.6,
-                ),
-              ),
+              const MamLogoMark(size: 20),
               const SizedBox(width: 8),
               Expanded(
                 child: Text(

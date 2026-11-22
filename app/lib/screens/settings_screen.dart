@@ -506,12 +506,35 @@ class SettingsScreen extends StatelessWidget {
                         labelText: s.accountHolderLabel,
                       ),
                     ),
-                    CheckboxListTile(
-                      contentPadding: EdgeInsets.zero,
-                      value: isDefault,
-                      onChanged: (v) => setModalState(() => isDefault = v ?? false),
-                      title: Text(s.setAsDefaultAccount),
+                    const SizedBox(height: 10),
+                    Material(
+                      color: p.surface,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        side: BorderSide(color: p.border),
+                      ),
+                      clipBehavior: Clip.antiAlias,
+                      child: CheckboxListTile(
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 2,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        value: isDefault,
+                        onChanged: (v) =>
+                            setModalState(() => isDefault = v ?? false),
+                        title: Text(
+                          s.setAsDefaultAccount,
+                          style: const TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ),
                     ),
+                    const SizedBox(height: 12),
                     SizedBox(
                       width: double.infinity,
                       child: FilledButton(

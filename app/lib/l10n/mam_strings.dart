@@ -36,9 +36,24 @@ class MamStrings {
   String get me => t('Me', 'Tôi');
   String get paid => t('Paid', 'Đã trả');
   String get settled => t('Settled', 'Đã xong');
+  String get archived => t('Archived', 'Lưu trữ');
+  String get undo => t('Undo', 'Hoàn tác');
 
   // Home
   String get settings => t('Settings', 'Cài đặt');
+  String get searchBillsHint => t(
+        'Search bills, members, DD/MM/YY...',
+        'Tìm tên bill, thành viên, DD/MM/YY...',
+      );
+  String get clearSearch => t('Clear search', 'Xóa tìm kiếm');
+  String get archiveAction => t('Archive', 'Lưu trữ');
+  String get restoreAction => t('Restore', 'Khôi phục');
+  String billArchivedSnack(String title) =>
+      isVi ? 'Đã lưu trữ "$title"' : 'Archived "$title"';
+  String billRestoredSnack(String title) =>
+      isVi ? 'Đã khôi phục "$title"' : 'Restored "$title"';
+  String archivedDivider(int count) =>
+      isVi ? 'Đã lưu trữ ($count)' : 'Archived ($count)';
   String get syncLocal => t('Local', 'Local');
   String get syncSynced => t('Synced', 'Đã sync');
   String get syncPending => t('Pending', 'Chờ sync');
@@ -57,6 +72,8 @@ class MamStrings {
       isVi ? 'Chưa đủ ($count)' : 'Pending ($count)';
   String filterSettled(int count) =>
       isVi ? 'Đã xong ($count)' : 'Settled ($count)';
+  String filterArchived(int count) =>
+      isVi ? 'Lưu trữ ($count)' : 'Archived ($count)';
 
   String get equalSplitLabel => t('Equal split', 'Chia đều');
   String itemsCount(int count) =>
@@ -76,6 +93,13 @@ class MamStrings {
         'No settled bills yet.',
         'Chưa có bill nào hoàn tất.',
       );
+  String get emptyArchived => t(
+        'No archived bills yet. Swipe left on a bill to archive it.',
+        'Chưa có bill lưu trữ. Vuốt trái vào 1 bill để lưu trữ.',
+      );
+  String emptySearch(String query) => isVi
+      ? 'Không tìm thấy bill nào khớp "$query".'
+      : 'No bills match "$query".';
 
   String get quickEqualBtn => t('Equal split', 'Chia đều');
   String get newBillBtn => t('New bill', 'Tạo bill mới');

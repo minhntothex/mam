@@ -1,5 +1,6 @@
 import 'package:material_ui/material_ui.dart';
 
+import '../core/bill_query.dart';
 import '../core/calculator.dart';
 import '../core/formatters.dart';
 import '../l10n/mam_strings.dart';
@@ -7,12 +8,13 @@ import '../models/bill_models.dart';
 import '../state/mam_controller.dart';
 import '../theme/mam_theme.dart';
 import '../widgets/mam_logo.dart';
+import '../widgets/swipe_action_card.dart';
 import 'bill_input_screen.dart';
 import 'quick_equal_screen.dart';
 import 'result_screen.dart';
 import 'settings_screen.dart';
 
-enum _HomeFilter { all, pending, settled }
+enum _HomeFilter { all, pending, settled, archived }
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({
@@ -31,32 +33,56 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
+  final TextEditingController _searchCtrl = TextEditingController();
   _HomeFilter _filter = _HomeFilter.all;
+  String? _openSwipeBillId;
+
+  @override
+  void dispose() {
+    _searchCtrl.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     final p = context.mam;
     final s = context.s;
+    final query = _searchCtrl.text.trim();
 
     return ListenableBuilder(
       listenable: widget.controller,
       builder: (context, _) {
         final ctrl = widget.controller;
+        final matchedAll = query.isEmpty
+            ? ctrl.activeBills
+            : ctrl.activeBills
+                .where((b) => matchesBillSearch(b, query))
+                .toList(growable: false);
+        final matchedPending = matchedAll
+            .where((b) => !b.isArchived && b.paymentStatus == PaymentStatus.pending)
+            .toList(growable: false);
+        final matchedSettled = matchedAll
+            .where((b) => !b.isArchived && b.paymentStatus == PaymentStatus.settled)
+            .toList(growable: false);
+        final matchedArchived =
+            matchedAll.where((b) => b.isArchived).toList(growable: false);
+
         final bills = switch (_filter) {
-          _HomeFilter.all => ctrl.activeBills,
-          _HomeFilter.pending => ctrl.pendingBills,
-          _HomeFilter.settled => ctrl.settledBills,
+          _HomeFilter.all => matchedAll,
+          _HomeFilter.pending => matchedPending,
+          _HomeFilter.settled => matchedSettled,
+          _HomeFilter.archived => matchedArchived,
         };
+
+        final showAllWithDivider = _filter == _HomeFilter.all &&
+            matchedArchived.isNotEmpty &&
+            (matchedPending.isNotEmpty || matchedSettled.isNotEmpty);
+        final nonArchivedInAll =
+            showAllWithDivider ? [...matchedPending, ...matchedSettled] : const <BillRecord>[];
 
         return Scaffold(
           appBar: AppBar(
-            title: Row(
-              children: [
-                const MamLogoMark(size: 30),
-                const SizedBox(width: 10),
-                Text(s.appName),
-              ],
-            ),
+            title: const MamLogoMark(size: 32),
             actions: [
               _SyncBadge(
                 status: ctrl.syncStatus,
@@ -82,36 +108,85 @@ class _HomeScreenState extends State<HomeScreen> {
                 await ctrl.triggerSync();
               }
             },
-            child: ListView(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 108),
-              children: [
-                _UncollectedBanner(
-                  amount: ctrl.totalUncollectedAmount,
-                  pendingCount: ctrl.pendingBills.length,
-                ),
-                const SizedBox(height: 16),
-                _FilterBar(
-                  selected: _filter,
-                  allCount: ctrl.activeBills.length,
-                  pendingCount: ctrl.pendingBills.length,
-                  settledCount: ctrl.settledBills.length,
-                  onChanged: (next) => setState(() => _filter = next),
-                ),
-                const SizedBox(height: 12),
-                if (bills.isEmpty)
-                  _EmptyBillsCard(filter: _filter)
-                else
-                  ...bills.map(
-                    (bill) => Padding(
-                      padding: const EdgeInsets.only(bottom: 10),
-                      child: _BillHistoryCard(
-                        bill: bill,
-                        onTap: () => _openResult(context, bill.id),
-                        onDelete: () => _confirmDelete(context, bill),
+            child: NotificationListener<ScrollStartNotification>(
+              onNotification: (_) {
+                if (_openSwipeBillId != null) {
+                  setState(() => _openSwipeBillId = null);
+                }
+                return false;
+              },
+              child: ListView(
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 108),
+                children: [
+                  _UncollectedBanner(
+                    amount: ctrl.totalUncollectedAmount,
+                    pendingCount: ctrl.pendingBills.length,
+                  ),
+                  const SizedBox(height: 14),
+                  TextField(
+                    controller: _searchCtrl,
+                    onChanged: (_) => setState(() => _openSwipeBillId = null),
+                    textInputAction: TextInputAction.search,
+                    decoration: InputDecoration(
+                      prefixIcon: Icon(
+                        Icons.search_rounded,
+                        size: 20,
+                        color: p.muted,
                       ),
+                      hintText: s.searchBillsHint,
+                      suffixIcon: query.isEmpty
+                          ? null
+                          : IconButton(
+                              tooltip: s.clearSearch,
+                              icon: Icon(
+                                Icons.close_rounded,
+                                size: 18,
+                                color: p.muted,
+                              ),
+                              onPressed: () {
+                                _searchCtrl.clear();
+                                setState(() => _openSwipeBillId = null);
+                              },
+                            ),
                     ),
                   ),
-              ],
+                  const SizedBox(height: 12),
+                  _FilterBar(
+                    selected: _filter,
+                    allCount: matchedAll.length,
+                    pendingCount: matchedPending.length,
+                    settledCount: matchedSettled.length,
+                    archivedCount: matchedArchived.length,
+                    onChanged: (next) => setState(() {
+                      _filter = next;
+                      _openSwipeBillId = null;
+                    }),
+                  ),
+                  const SizedBox(height: 12),
+                  if (bills.isEmpty)
+                    _EmptyBillsCard(
+                      filter: _filter,
+                      searchQuery: query,
+                      onClearSearch: query.isEmpty
+                          ? null
+                          : () {
+                              _searchCtrl.clear();
+                              setState(() => _openSwipeBillId = null);
+                            },
+                    )
+                  else if (showAllWithDivider) ...[
+                    for (final bill in nonArchivedInAll)
+                      _buildSwipeBillItem(context, bill),
+                    _ArchivedSectionDivider(
+                      label: s.archivedDivider(matchedArchived.length),
+                    ),
+                    for (final bill in matchedArchived)
+                      _buildSwipeBillItem(context, bill),
+                  ] else
+                    for (final bill in bills)
+                      _buildSwipeBillItem(context, bill),
+                ],
+              ),
             ),
           ),
           bottomNavigationBar: SafeArea(
@@ -189,6 +264,91 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
       ),
     );
+  }
+
+  Widget _buildSwipeBillItem(BuildContext context, BillRecord bill) {
+    final p = context.mam;
+    final s = context.s;
+    final isArchived = bill.isArchived;
+
+    return Padding(
+      key: ValueKey('bill_swipe_${bill.id}'),
+      padding: const EdgeInsets.only(bottom: 10),
+      child: SwipeActionCard(
+        isOpen: _openSwipeBillId == bill.id,
+        onOpenChanged: (open) {
+          setState(() {
+            _openSwipeBillId = open ? bill.id : null;
+          });
+        },
+        actions: [
+          SwipeActionItem(
+            label: isArchived ? s.restoreAction : s.archiveAction,
+            icon: isArchived
+                ? Icons.unarchive_outlined
+                : Icons.archive_outlined,
+            backgroundColor: isArchived ? p.successSoft : p.primarySoft,
+            foregroundColor: isArchived ? p.success : p.primary,
+            onTap: () => isArchived
+                ? _handleRestore(context, bill)
+                : _handleArchive(context, bill),
+          ),
+          SwipeActionItem(
+            label: s.delete,
+            icon: Icons.delete_outline_rounded,
+            backgroundColor: p.dangerSoft,
+            foregroundColor: p.danger,
+            onTap: () => _confirmDelete(context, bill),
+          ),
+        ],
+        child: _BillHistoryCard(
+          bill: bill,
+          onTap: () {
+            if (_openSwipeBillId != null) {
+              setState(() => _openSwipeBillId = null);
+              return;
+            }
+            _openResult(context, bill.id);
+          },
+        ),
+      ),
+    );
+  }
+
+  Future<void> _handleArchive(BuildContext context, BillRecord bill) async {
+    final s = context.s;
+    await widget.controller.archiveBill(bill.id);
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(
+          content: Text(s.billArchivedSnack(bill.title)),
+          action: SnackBarAction(
+            label: s.undo,
+            textColor: const Color(0xFFFFE594),
+            onPressed: () => widget.controller.unarchiveBill(bill.id),
+          ),
+        ),
+      );
+  }
+
+  Future<void> _handleRestore(BuildContext context, BillRecord bill) async {
+    final s = context.s;
+    await widget.controller.unarchiveBill(bill.id);
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(
+          content: Text(s.billRestoredSnack(bill.title)),
+          action: SnackBarAction(
+            label: s.undo,
+            textColor: const Color(0xFFFFE594),
+            onPressed: () => widget.controller.archiveBill(bill.id),
+          ),
+        ),
+      );
   }
 
   Future<void> _confirmDelete(BuildContext context, BillRecord bill) async {
@@ -406,6 +566,7 @@ class _FilterBar extends StatelessWidget {
     required this.allCount,
     required this.pendingCount,
     required this.settledCount,
+    required this.archivedCount,
     required this.onChanged,
   });
 
@@ -413,6 +574,7 @@ class _FilterBar extends StatelessWidget {
   final int allCount;
   final int pendingCount;
   final int settledCount;
+  final int archivedCount;
   final ValueChanged<_HomeFilter> onChanged;
 
   @override
@@ -427,6 +589,8 @@ class _FilterBar extends StatelessWidget {
           _pill(context, _HomeFilter.pending, s.filterPending(pendingCount)),
           const SizedBox(width: 8),
           _pill(context, _HomeFilter.settled, s.filterSettled(settledCount)),
+          const SizedBox(width: 8),
+          _pill(context, _HomeFilter.archived, s.filterArchived(archivedCount)),
         ],
       ),
     );
@@ -460,16 +624,46 @@ class _FilterBar extends StatelessWidget {
   }
 }
 
+class _ArchivedSectionDivider extends StatelessWidget {
+  const _ArchivedSectionDivider({required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    final p = context.mam;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(2, 6, 2, 14),
+      child: Row(
+        children: [
+          Expanded(child: Divider(color: p.border, thickness: 1)),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 10),
+            child: Text(
+              label,
+              style: TextStyle(
+                fontSize: 11.5,
+                fontWeight: FontWeight.w700,
+                color: p.muted,
+                letterSpacing: 0.3,
+              ),
+            ),
+          ),
+          Expanded(child: Divider(color: p.border, thickness: 1)),
+        ],
+      ),
+    );
+  }
+}
+
 class _BillHistoryCard extends StatelessWidget {
   const _BillHistoryCard({
     required this.bill,
     required this.onTap,
-    required this.onDelete,
   });
 
   final BillRecord bill;
   final VoidCallback onTap;
-  final VoidCallback onDelete;
 
   @override
   Widget build(BuildContext context) {
@@ -480,7 +674,21 @@ class _BillHistoryCard extends StatelessWidget {
     final totalPeople = participants.length;
     final progress = totalPeople == 0 ? 0.0 : paidCount / totalPeople;
     final settled = bill.paymentStatus == PaymentStatus.settled;
+    final archived = bill.isArchived;
     final calc = BillCalculator.calculate(bill.payload);
+
+    final barColor = archived
+        ? p.muted.withValues(alpha: 0.45)
+        : (settled ? const Color(0xFF6FE3B5) : const Color(0xFFF7C95C));
+    final badgeBg = archived
+        ? p.surfaceSubtle
+        : (settled ? p.successSoft : p.warningSoft);
+    final badgeFg = archived
+        ? p.muted
+        : (settled ? p.success : p.warning);
+    final badgeLabel = archived
+        ? s.archived
+        : (settled ? s.settled : s.paidProgress(paidCount, totalPeople));
 
     return Card(
       child: InkWell(
@@ -503,7 +711,7 @@ class _BillHistoryCard extends StatelessWidget {
                           style: TextStyle(
                             fontSize: 15.5,
                             fontWeight: FontWeight.w700,
-                            color: p.ink,
+                            color: archived ? p.muted : p.ink,
                           ),
                         ),
                         const SizedBox(height: 3),
@@ -519,31 +727,14 @@ class _BillHistoryCard extends StatelessWidget {
                       ],
                     ),
                   ),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      Text(
-                        formatVnd(calc.computedGrandTotal),
-                        style: kTabularStyle.copyWith(
-                          fontSize: 15.5,
-                          fontWeight: FontWeight.w800,
-                          color: p.ink,
-                        ),
-                      ),
-                      const SizedBox(height: 2),
-                      InkWell(
-                        borderRadius: BorderRadius.circular(6),
-                        onTap: onDelete,
-                        child: Padding(
-                          padding: const EdgeInsets.all(3),
-                          child: Icon(
-                            Icons.delete_outline_rounded,
-                            size: 16,
-                            color: p.muted,
-                          ),
-                        ),
-                      ),
-                    ],
+                  const SizedBox(width: 8),
+                  Text(
+                    formatVnd(calc.computedGrandTotal),
+                    style: kTabularStyle.copyWith(
+                      fontSize: 15.5,
+                      fontWeight: FontWeight.w800,
+                      color: archived ? p.muted : p.ink,
+                    ),
                   ),
                 ],
               ),
@@ -557,9 +748,7 @@ class _BillHistoryCard extends StatelessWidget {
                         value: progress,
                         minHeight: 6,
                         backgroundColor: p.surfaceSubtle,
-                        color: settled
-                            ? const Color(0xFF6FE3B5)
-                            : const Color(0xFFF7C95C),
+                        color: barColor,
                       ),
                     ),
                   ),
@@ -567,17 +756,15 @@ class _BillHistoryCard extends StatelessWidget {
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                     decoration: BoxDecoration(
-                      color: settled ? p.successSoft : p.warningSoft,
+                      color: badgeBg,
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Text(
-                      settled
-                          ? s.settled
-                          : s.paidProgress(paidCount, totalPeople),
+                      badgeLabel,
                       style: TextStyle(
                         fontSize: 11.5,
                         fontWeight: FontWeight.w700,
-                        color: settled ? p.success : p.warning,
+                        color: badgeFg,
                       ),
                     ),
                   ),
@@ -592,31 +779,56 @@ class _BillHistoryCard extends StatelessWidget {
 }
 
 class _EmptyBillsCard extends StatelessWidget {
-  const _EmptyBillsCard({required this.filter});
+  const _EmptyBillsCard({
+    required this.filter,
+    this.searchQuery = '',
+    this.onClearSearch,
+  });
 
   final _HomeFilter filter;
+  final String searchQuery;
+  final VoidCallback? onClearSearch;
 
   @override
   Widget build(BuildContext context) {
     final p = context.mam;
     final s = context.s;
-    final text = switch (filter) {
-      _HomeFilter.all => s.emptyAll,
-      _HomeFilter.pending => s.emptyPending,
-      _HomeFilter.settled => s.emptySettled,
-    };
+    final isSearch = searchQuery.isNotEmpty;
+    final text = isSearch
+        ? s.emptySearch(searchQuery)
+        : switch (filter) {
+            _HomeFilter.all => s.emptyAll,
+            _HomeFilter.pending => s.emptyPending,
+            _HomeFilter.settled => s.emptySettled,
+            _HomeFilter.archived => s.emptyArchived,
+          };
     return Card(
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 32),
         child: Column(
           children: [
-            Icon(Icons.receipt_long_outlined, size: 36, color: p.muted),
+            Icon(
+              isSearch
+                  ? Icons.search_off_rounded
+                  : (filter == _HomeFilter.archived
+                      ? Icons.archive_outlined
+                      : Icons.receipt_long_outlined),
+              size: 36,
+              color: p.muted,
+            ),
             const SizedBox(height: 10),
             Text(
               text,
               textAlign: TextAlign.center,
               style: TextStyle(color: p.muted, fontSize: 13.5),
             ),
+            if (isSearch && onClearSearch != null) ...[
+              const SizedBox(height: 12),
+              OutlinedButton(
+                onPressed: onClearSearch,
+                child: Text(s.clearSearch),
+              ),
+            ],
           ],
         ),
       ),

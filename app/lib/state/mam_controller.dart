@@ -1,6 +1,7 @@
 import 'package:material_ui/material_ui.dart';
 import 'package:uuid/uuid.dart';
 
+import '../core/bill_query.dart';
 import '../core/calculator.dart';
 import '../data/local_store.dart';
 import '../l10n/mam_strings.dart';
@@ -60,19 +61,20 @@ class MamController extends ChangeNotifier {
 
   List<BillRecord> get activeBills {
     final list = _bills.where((b) => !b.isDeleted).toList()
-      ..sort((a, b) {
-        final byDate = b.billDate.compareTo(a.billDate);
-        if (byDate != 0) return byDate;
-        return b.updatedAt.compareTo(a.updatedAt);
-      });
+      ..sort(compareBillsByPriority);
     return List.unmodifiable(list);
   }
 
-  List<BillRecord> get pendingBills =>
-      activeBills.where((b) => b.paymentStatus == PaymentStatus.pending).toList();
+  List<BillRecord> get pendingBills => activeBills
+      .where((b) => !b.isArchived && b.paymentStatus == PaymentStatus.pending)
+      .toList(growable: false);
 
-  List<BillRecord> get settledBills =>
-      activeBills.where((b) => b.paymentStatus == PaymentStatus.settled).toList();
+  List<BillRecord> get settledBills => activeBills
+      .where((b) => !b.isArchived && b.paymentStatus == PaymentStatus.settled)
+      .toList(growable: false);
+
+  List<BillRecord> get archivedBills =>
+      activeBills.where((b) => b.isArchived).toList(growable: false);
 
   List<BankAccount> get activeBankAccounts =>
       _bankAccounts.where((a) => !a.isDeleted).toList(growable: false);
@@ -227,6 +229,28 @@ class MamController extends ChangeNotifier {
     if (idx < 0) return;
     final now = DateTime.now().toUtc();
     _bills[idx] = _bills[idx].copyWith(deletedAt: now, updatedAt: now);
+    _markPending('bill:$billId');
+    await _persistBills();
+    notifyListeners();
+    _triggerSyncBestEffort();
+  }
+
+  Future<void> archiveBill(String billId) async {
+    final idx = _bills.indexWhere((b) => b.id == billId);
+    if (idx < 0 || _bills[idx].isArchived) return;
+    final now = DateTime.now().toUtc();
+    _bills[idx] = _bills[idx].copyWith(archivedAt: now, updatedAt: now);
+    _markPending('bill:$billId');
+    await _persistBills();
+    notifyListeners();
+    _triggerSyncBestEffort();
+  }
+
+  Future<void> unarchiveBill(String billId) async {
+    final idx = _bills.indexWhere((b) => b.id == billId);
+    if (idx < 0 || !_bills[idx].isArchived) return;
+    final now = DateTime.now().toUtc();
+    _bills[idx] = _bills[idx].copyWith(archivedAt: null, updatedAt: now);
     _markPending('bill:$billId');
     await _persistBills();
     notifyListeners();
