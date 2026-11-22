@@ -17,10 +17,12 @@ class HomeScreen extends StatefulWidget {
     super.key,
     required this.controller,
     this.onOpenScanOcr,
+    this.syncAuthSectionBuilder,
   });
 
   final MamController controller;
   final Future<OcrScanResult?> Function(BuildContext context)? onOpenScanOcr;
+  final Widget Function(BuildContext context)? syncAuthSectionBuilder;
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -161,7 +163,10 @@ class _HomeScreenState extends State<HomeScreen> {
   void _openSettings(BuildContext context) {
     Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (_) => SettingsScreen(controller: widget.controller),
+        builder: (_) => SettingsScreen(
+          controller: widget.controller,
+          syncAuthSectionBuilder: widget.syncAuthSectionBuilder,
+        ),
       ),
     );
   }
@@ -191,6 +196,7 @@ class _HomeScreenState extends State<HomeScreen> {
         builder: (_) => ResultScreen(
           controller: widget.controller,
           billId: billId,
+          onOpenScanOcr: widget.onOpenScanOcr,
         ),
       ),
     );
