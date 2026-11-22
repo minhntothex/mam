@@ -2,9 +2,10 @@ import 'dart:math' as math;
 
 import 'package:material_ui/material_ui.dart';
 
-/// Vector brand mark for Mâm (Tri-Pastel Share): three pastel slices — sky
-/// periwinkle, fresh mint, and a detached butter-peach fair-share wedge —
-/// arranged as a shared round dining tray ("mâm") inside a cloud-white tile.
+/// Vector brand mark for Mâm (Tri-Pastel Share): three rich pastel slices —
+/// sky periwinkle, fresh mint, and a detached honey-butter fair-share wedge —
+/// arranged as a shared round dining tray ("mâm") inside a cloud-white tile
+/// with crisp border and subtle elevation shadow.
 ///
 /// Mirrors `assets/brand/mam-logo.svg` in a normalized 1024×1024 coordinate
 /// space so the AppBar mark, exported PNG Receipt Cards, and platform icons
@@ -21,12 +22,33 @@ class MamLogoMark extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
+    final radius = size * (220.0 / 1024.0);
+    final painter = SizedBox(
       width: size,
       height: size,
       child: CustomPaint(
         painter: _MamLogoPainter(showTile: showTile),
       ),
+    );
+    if (!showTile) return painter;
+
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(radius),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x1F1E293B),
+            blurRadius: 6,
+            offset: Offset(0, 2),
+          ),
+          BoxShadow(
+            color: Color(0x0D1E293B),
+            blurRadius: 2,
+            offset: Offset(0, 1),
+          ),
+        ],
+      ),
+      child: painter,
     );
   }
 }
@@ -46,7 +68,7 @@ class _MamLogoPainter extends CustomPainter {
     canvas.scale(scale);
 
     if (showTile) {
-      const tileRect = Rect.fromLTWH(10, 10, 1004, 1004);
+      const tileRect = Rect.fromLTWH(14, 14, 996, 996);
       final tileRRect = RRect.fromRectAndRadius(
         tileRect,
         const Radius.circular(220),
@@ -56,15 +78,15 @@ class _MamLogoPainter extends CustomPainter {
         ..shader = const LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [Color(0xFFFFFFFF), Color(0xFFEFF4FF)],
+          colors: [Color(0xFFFFFFFF), Color(0xFFEAF1FF)],
         ).createShader(tileRect);
       canvas.drawRRect(tileRRect, tilePaint);
 
       final borderPaint = Paint()
         ..isAntiAlias = true
         ..style = PaintingStyle.stroke
-        ..strokeWidth = 20
-        ..color = const Color(0xFFDCE5F5);
+        ..strokeWidth = 28
+        ..color = const Color(0xFFCBD8EE);
       canvas.drawRRect(tileRRect, borderPaint);
     }
 
@@ -76,7 +98,7 @@ class _MamLogoPainter extends CustomPainter {
       rInner: 134,
       startDeg: 15,
       sweepDeg: 150,
-      colors: const [Color(0xFF9CC4FF), Color(0xFF6FA3FA)],
+      colors: const [Color(0xFF72ADFF), Color(0xFF3E7EF5)],
     );
 
     // Top-left Mint slice (177° -> 267°).
@@ -87,10 +109,10 @@ class _MamLogoPainter extends CustomPainter {
       rInner: 134,
       startDeg: 177,
       sweepDeg: 90,
-      colors: const [Color(0xFFA6F2D4), Color(0xFF65D9AC)],
+      colors: const [Color(0xFF69E3B6), Color(0xFF2AC28B)],
     );
 
-    // Detached top-right Butter-Peach fair-share wedge (281° -> 359°).
+    // Detached top-right Honey-Butter fair-share wedge (281° -> 359°).
     _drawGradientSlice(
       canvas,
       center: const Offset(544, 480),
@@ -98,7 +120,7 @@ class _MamLogoPainter extends CustomPainter {
       rInner: 134,
       startDeg: 281,
       sweepDeg: 78,
-      colors: const [Color(0xFFFFE89E), Color(0xFFFFBE6B)],
+      colors: const [Color(0xFFFFD66B), Color(0xFFF79E38)],
     );
 
     canvas.restore();

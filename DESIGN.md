@@ -64,7 +64,7 @@
 
 ## 5. Brand Mark & App Icons
 
-- **Concept (Tri-Pastel Share):** A shared round Vietnamese dining tray (*mâm*) split into three harmonious pastel slices — sky periwinkle (`#9CC4FF → #6FA3FA`, `150°`), fresh mint (`#A6F2D4 → #65D9AC`, `90°`), and a cleanly detached butter-peach fair-share wedge (`#FFE89E → #FFBE6B`, `78°`, offset `+42 / -42`) — set inside a cloud-white squircle (`#FFFFFF → #EFF4FF`, border `#DCE5F5`).
+- **Concept (Tri-Pastel Share):** A shared round Vietnamese dining tray (*mâm*) split into three rich pastel slices — sky periwinkle (`#72ADFF → #3E7EF5`, `150°`), fresh mint (`#69E3B6 → #2AC28B`, `90°`), and a cleanly detached honey-butter fair-share wedge (`#FFD66B → #F79E38`, `78°`, offset `+42 / -42`) — set inside a cloud-white squircle (`#FFFFFF → #EAF1FF`, crisp border `#CBD8EE`, soft drop shadow).
 - **Vector sources:**
   - [assets/brand/mam-logo.svg](assets/brand/mam-logo.svg) (master squircle)
   - [assets/brand/mam-icon-fullbleed.svg](assets/brand/mam-icon-fullbleed.svg) (iOS AppIcon)

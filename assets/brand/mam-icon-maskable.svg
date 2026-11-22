@@ -2,19 +2,19 @@
   <defs>
     <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
       <stop offset="0%" stop-color="#FFFFFF"/>
-      <stop offset="100%" stop-color="#EFF4FF"/>
+      <stop offset="100%" stop-color="#EAF1FF"/>
     </linearGradient>
     <linearGradient id="skyGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#9CC4FF"/>
-      <stop offset="100%" stop-color="#6FA3FA"/>
+      <stop offset="0%" stop-color="#72ADFF"/>
+      <stop offset="100%" stop-color="#3E7EF5"/>
     </linearGradient>
     <linearGradient id="mintGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#A6F2D4"/>
-      <stop offset="100%" stop-color="#65D9AC"/>
+      <stop offset="0%" stop-color="#69E3B6"/>
+      <stop offset="100%" stop-color="#2AC28B"/>
     </linearGradient>
     <linearGradient id="butterGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#FFE89E"/>
-      <stop offset="100%" stop-color="#FFBE6B"/>
+      <stop offset="0%" stop-color="#FFD66B"/>
+      <stop offset="100%" stop-color="#F79E38"/>
     </linearGradient>
   </defs>
   <rect width="1024" height="1024" fill="url(#bgGrad)"/>
