@@ -26,8 +26,8 @@
 | `border` | `#E6EAF2` | 1px hairline elevation (single elevation mechanism) |
 | `ink` | `#1E293B` | Primary headings, item names, VND amounts |
 | `muted` | `#56637A` | Metadata, dates, secondary labels |
-| `primary` / `primaryFill` / `onPrimary` | `#2E5CD6` / `#98C2FF` / `#0F234A` | Pastel cornflower CTA (AAA 8.5:1) & links (≥ 5.2:1 AA) |
-| `primarySoft` | `#EDF3FF` | Tonal buttons, OCR banner, bank selector, selected chips |
+| `primary` / `onPrimary` | `#1E293B` / `#FFFFFF` | Primary CTA buttons, active filter pills, selected segments (AAA 14.6:1) |
+| `primarySoft` | `#E9EFF8` | Tonal buttons (VietQR), OCR banner, bank selector, default badges |
 | `heroBackground` / `onHero` | `#FFF3C4→#FFE594` / `#3B2804` | Uncollected Balance hero slab (butter pastel, AAA ≥ 11.3:1) |
 | `heroSettled` / `onHeroSettled` | `#D4F8E8→#AEEED4` / `#0A3A2B` | All-settled hero slab (mint pastel, AAA ≥ 9.7:1) |
 | `success` / `successSoft` | `#146E52` / `#DDF7EC` | `Paid`, `Settled`, OCR matched (5.5:1 AA) |

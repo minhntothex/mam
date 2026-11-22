@@ -441,16 +441,16 @@ class _FilterBar extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 8),
         decoration: BoxDecoration(
-          color: active ? p.ink : p.surface,
+          color: active ? p.primary : p.surface,
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
-            color: active ? p.ink : p.border,
+            color: active ? p.primary : p.border,
           ),
         ),
         child: Text(
           label,
           style: TextStyle(
-            color: active ? p.ground : p.muted,
+            color: active ? p.onPrimary : p.muted,
             fontSize: 12.5,
             fontWeight: FontWeight.w600,
           ),
