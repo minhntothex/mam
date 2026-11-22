@@ -33,6 +33,8 @@ class _ResultScreenState extends State<ResultScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final p = context.mam;
+
     return ListenableBuilder(
       listenable: widget.controller,
       builder: (context, _) {
@@ -51,7 +53,7 @@ class _ResultScreenState extends State<ResultScreen> {
             bill.payload.bankAccountSnapshot ?? ctrl.defaultBankAccount?.toSnapshot();
 
         final paidCount =
-            bill.payload.participants.where((p) => p.isHost || p.paid).length;
+            bill.payload.participants.where((e) => e.isHost || e.paid).length;
         final totalPeople = bill.payload.participants.length;
 
         return Scaffold(
@@ -79,7 +81,6 @@ class _ResultScreenState extends State<ResultScreen> {
           body: ListView(
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 108),
             children: [
-              // Summary header card
               Card(
                 child: Padding(
                   padding: const EdgeInsets.all(14),
@@ -93,8 +94,8 @@ class _ResultScreenState extends State<ResultScreen> {
                               '${formatDateVn(bill.billDate, includeYear: true)} · $paidCount/$totalPeople đã trả',
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                color: MamColors.muted,
+                              style: TextStyle(
+                                color: p.muted,
                                 fontSize: 13,
                               ),
                             ),
@@ -105,7 +106,7 @@ class _ResultScreenState extends State<ResultScreen> {
                             style: kTabularStyle.copyWith(
                               fontSize: 20,
                               fontWeight: FontWeight.w800,
-                              color: MamColors.ink,
+                              color: p.ink,
                             ),
                           ),
                         ],
@@ -142,40 +143,39 @@ class _ResultScreenState extends State<ResultScreen> {
                             vertical: 7,
                           ),
                           decoration: BoxDecoration(
-                            color: MamColors.paper,
+                            color: p.surfaceSubtle,
                             borderRadius: BorderRadius.circular(10),
-                            border: Border.all(color: MamColors.border),
+                            border: Border.all(color: p.border),
                           ),
                           child: Text(
                             'Chênh lệch làm tròn: Chủ xị ${calc.roundingDelta > 0 ? 'dư' : 'bù'} ${formatSignedVnd(calc.roundingDelta)}',
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 12,
                               fontWeight: FontWeight.w600,
-                              color: MamColors.muted,
+                              color: p.muted,
                             ),
                           ),
                         ),
                       ],
                       const SizedBox(height: 10),
-                      // Receiving bank selector
                       InkWell(
                         borderRadius: BorderRadius.circular(10),
                         onTap: () => _pickBankSheet(context, bill, activeBanks),
                         child: Container(
                           padding: const EdgeInsets.symmetric(
                             horizontal: 10,
-                            vertical: 8,
+                            vertical: 9,
                           ),
                           decoration: BoxDecoration(
-                            color: MamColors.accentSoft,
+                            color: p.primarySoft,
                             borderRadius: BorderRadius.circular(10),
                           ),
                           child: Row(
                             children: [
-                              const Icon(
+                              Icon(
                                 Icons.account_balance_rounded,
                                 size: 16,
-                                color: MamColors.accent,
+                                color: p.primary,
                               ),
                               const SizedBox(width: 8),
                               Expanded(
@@ -185,17 +185,17 @@ class _ResultScreenState extends State<ResultScreen> {
                                       : 'Nhận tiền: ${bankSnapshot.bankShortName} · ${bankSnapshot.accountNo}',
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
-                                  style: const TextStyle(
+                                  style: TextStyle(
                                     fontSize: 12.5,
                                     fontWeight: FontWeight.w600,
-                                    color: MamColors.ink,
+                                    color: p.ink,
                                   ),
                                 ),
                               ),
-                              const Icon(
+                              Icon(
                                 Icons.swap_horiz_rounded,
                                 size: 16,
-                                color: MamColors.accent,
+                                color: p.primary,
                               ),
                             ],
                           ),
@@ -205,20 +205,18 @@ class _ResultScreenState extends State<ResultScreen> {
                   ),
                 ),
               ),
-              const SizedBox(height: 14),
+              const SizedBox(height: 16),
               const Text(
                 'Chi tiết từng người',
                 style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
               ),
               const SizedBox(height: 8),
-
-              // Participant breakdown cards
               for (var i = 0; i < calc.breakdowns.length; i++)
                 Padding(
                   padding: const EdgeInsets.only(bottom: 10),
                   child: _ParticipantResultCard(
                     breakdown: calc.breakdowns[i],
-                    accentColor: MamColors.participantColor(i),
+                    accentColor: p.participantColor(i),
                     expanded: _expandedPersonIds
                         .contains(calc.breakdowns[i].participant.id),
                     onToggleExpand: () {
@@ -252,9 +250,9 @@ class _ResultScreenState extends State<ResultScreen> {
             top: false,
             child: Container(
               padding: const EdgeInsets.fromLTRB(16, 10, 16, 12),
-              decoration: const BoxDecoration(
-                color: MamColors.paper,
-                border: Border(top: BorderSide(color: MamColors.border)),
+              decoration: BoxDecoration(
+                color: p.surface,
+                border: Border(top: BorderSide(color: p.border)),
               ),
               child: FilledButton.icon(
                 onPressed: () => _openSummaryReceiptModal(
@@ -324,11 +322,12 @@ class _ResultScreenState extends State<ResultScreen> {
   }) async {
     final boundaryKey = GlobalKey();
     var exporting = false;
+    final p = context.mam;
 
     await showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
-      backgroundColor: MamColors.paper,
+      backgroundColor: p.ground,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setModalState) => SafeArea(
           child: DraggableScrollableSheet(
@@ -416,7 +415,9 @@ class _ResultScreenState extends State<ResultScreen> {
                             )
                           : const Icon(Icons.ios_share_rounded, size: 18),
                       label: Text(
-                        exporting ? 'Đang xuất ảnh...' : 'Chia sẻ ảnh PNG (Zalo / Messenger)',
+                        exporting
+                            ? 'Đang xuất ảnh...'
+                            : 'Chia sẻ ảnh PNG (Zalo / Messenger)',
                       ),
                     ),
                   ),
@@ -438,7 +439,9 @@ class _ResultScreenState extends State<ResultScreen> {
     if (bank == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Vui lòng thêm tài khoản ngân hàng trong Cài đặt để tạo VietQR'),
+          content: Text(
+            'Vui lòng thêm tài khoản ngân hàng trong Cài đặt để tạo VietQR',
+          ),
         ),
       );
       return;
@@ -451,11 +454,12 @@ class _ResultScreenState extends State<ResultScreen> {
       billTitle: bill.title,
     );
     var exporting = false;
+    final p = context.mam;
 
     await showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
-      backgroundColor: MamColors.paper,
+      backgroundColor: p.ground,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setModalState) => SafeArea(
           child: SingleChildScrollView(
@@ -470,7 +474,10 @@ class _ResultScreenState extends State<ResultScreen> {
                         'VietQR cho ${breakdown.participant.name}',
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
+                        ),
                       ),
                     ),
                     IconButton(
@@ -501,7 +508,9 @@ class _ResultScreenState extends State<ResultScreen> {
                           );
                           if (ctx.mounted) {
                             ScaffoldMessenger.of(ctx).showSnackBar(
-                              const SnackBar(content: Text('Đã sao chép số tài khoản')),
+                              const SnackBar(
+                                content: Text('Đã sao chép số tài khoản'),
+                              ),
                             );
                           }
                         },
@@ -518,7 +527,9 @@ class _ResultScreenState extends State<ResultScreen> {
                           );
                           if (ctx.mounted) {
                             ScaffoldMessenger.of(ctx).showSnackBar(
-                              const SnackBar(content: Text('Đã sao chép nội dung CK')),
+                              const SnackBar(
+                                content: Text('Đã sao chép nội dung CK'),
+                              ),
                             );
                           }
                         },
@@ -543,7 +554,8 @@ class _ResultScreenState extends State<ResultScreen> {
                               ).replaceAll(' ', '_');
                               await ReceiptPngExporter.shareBoundaryAsPng(
                                 boundaryKey: boundaryKey,
-                                fileName: 'mam_qr_${slug.isEmpty ? 'person' : slug}.png',
+                                fileName:
+                                    'mam_qr_${slug.isEmpty ? 'person' : slug}.png',
                                 shareText:
                                     '${breakdown.participant.name}: ${formatVnd(breakdown.finalAmount)} ($transferNote)',
                               );
@@ -561,7 +573,9 @@ class _ResultScreenState extends State<ResultScreen> {
                           },
                     icon: const Icon(Icons.ios_share_rounded, size: 18),
                     label: Text(
-                      exporting ? 'Đang xuất ảnh...' : 'Gửi thẻ VietQR riêng (PNG)',
+                      exporting
+                          ? 'Đang xuất ảnh...'
+                          : 'Gửi thẻ VietQR riêng (PNG)',
                     ),
                   ),
                 ),
@@ -593,6 +607,7 @@ class _ParticipantResultCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = context.mam;
     final p = breakdown.participant;
     final paid = p.isHost || p.paid;
 
@@ -644,15 +659,15 @@ class _ParticipantResultCard extends StatelessWidget {
                                   vertical: 2,
                                 ),
                                 decoration: BoxDecoration(
-                                  color: MamColors.sageSoft,
+                                  color: palette.successSoft,
                                   borderRadius: BorderRadius.circular(6),
                                 ),
-                                child: const Text(
+                                child: Text(
                                   'Đã trả',
                                   style: TextStyle(
                                     fontSize: 10.5,
                                     fontWeight: FontWeight.w700,
-                                    color: MamColors.sage,
+                                    color: palette.success,
                                   ),
                                 ),
                               ),
@@ -661,9 +676,9 @@ class _ParticipantResultCard extends StatelessWidget {
                         ),
                         Text(
                           '${breakdown.itemShares.length} món · Chạm xem chi tiết',
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 12,
-                            color: MamColors.muted,
+                            color: palette.muted,
                           ),
                         ),
                       ],
@@ -675,7 +690,7 @@ class _ParticipantResultCard extends StatelessWidget {
                     style: kTabularStyle.copyWith(
                       fontSize: 16,
                       fontWeight: FontWeight.w800,
-                      color: paid ? MamColors.sage : MamColors.ink,
+                      color: paid ? palette.success : palette.ink,
                     ),
                   ),
                 ],
@@ -700,7 +715,7 @@ class _ParticipantResultCard extends StatelessWidget {
                         formatVnd(s.amount.round()),
                         style: kTabularStyle.copyWith(
                           fontSize: 12.5,
-                          color: MamColors.muted,
+                          color: palette.muted,
                         ),
                       ),
                     ],
@@ -712,17 +727,17 @@ class _ParticipantResultCard extends StatelessWidget {
                   padding: const EdgeInsets.only(bottom: 4),
                   child: Row(
                     children: [
-                      const Expanded(
+                      Expanded(
                         child: Text(
                           'Thuế / Phí / Giảm giá (pro-rata)',
-                          style: TextStyle(fontSize: 12.5, color: MamColors.muted),
+                          style: TextStyle(fontSize: 12.5, color: palette.muted),
                         ),
                       ),
                       Text(
                         formatSignedVnd(breakdown.proRataAdjustment.round()),
                         style: kTabularStyle.copyWith(
                           fontSize: 12.5,
-                          color: MamColors.muted,
+                          color: palette.muted,
                         ),
                       ),
                     ],
@@ -733,17 +748,17 @@ class _ParticipantResultCard extends StatelessWidget {
                   padding: const EdgeInsets.only(bottom: 4),
                   child: Row(
                     children: [
-                      const Expanded(
+                      Expanded(
                         child: Text(
                           'Tiền ship (chia đều)',
-                          style: TextStyle(fontSize: 12.5, color: MamColors.muted),
+                          style: TextStyle(fontSize: 12.5, color: palette.muted),
                         ),
                       ),
                       Text(
                         formatSignedVnd(breakdown.flatAdjustment.round()),
                         style: kTabularStyle.copyWith(
                           fontSize: 12.5,
-                          color: MamColors.muted,
+                          color: palette.muted,
                         ),
                       ),
                     ],
@@ -759,13 +774,14 @@ class _ParticipantResultCard extends StatelessWidget {
                       onPressed: onTogglePaid,
                       style: OutlinedButton.styleFrom(
                         backgroundColor:
-                            paid ? MamColors.sageSoft : MamColors.card,
+                            paid ? palette.successSoft : palette.surface,
                         foregroundColor:
-                            paid ? MamColors.sage : MamColors.ink,
+                            paid ? palette.success : palette.ink,
                         side: BorderSide(
-                          color: paid ? MamColors.sage : MamColors.border,
+                          color: paid ? palette.success : palette.border,
                         ),
-                        padding: const EdgeInsets.symmetric(vertical: 9),
+                        minimumSize: const Size(0, 42),
+                        padding: const EdgeInsets.symmetric(vertical: 8),
                       ),
                       icon: Icon(
                         paid
@@ -773,7 +789,7 @@ class _ParticipantResultCard extends StatelessWidget {
                             : Icons.radio_button_unchecked_rounded,
                         size: 16,
                       ),
-                      label: Text(paid ? 'Đã trả ✓' : 'Tick đã trả'),
+                      label: Text(paid ? 'Đã trả' : 'Tick đã trả'),
                     ),
                   ),
                   if (onShowQr != null) ...[
@@ -782,9 +798,10 @@ class _ParticipantResultCard extends StatelessWidget {
                       child: FilledButton.tonalIcon(
                         onPressed: onShowQr,
                         style: FilledButton.styleFrom(
-                          backgroundColor: MamColors.accentSoft,
-                          foregroundColor: MamColors.accent,
-                          padding: const EdgeInsets.symmetric(vertical: 9),
+                          backgroundColor: palette.primarySoft,
+                          foregroundColor: palette.primary,
+                          minimumSize: const Size(0, 42),
+                          padding: const EdgeInsets.symmetric(vertical: 8),
                         ),
                         icon: const Icon(Icons.qr_code_2_rounded, size: 17),
                         label: const Text('VietQR riêng'),

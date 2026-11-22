@@ -7,6 +7,10 @@ import '../core/vietqr.dart';
 import '../models/bill_models.dart';
 import '../theme/mam_theme.dart';
 
+/// Exported PNG Receipt Cards always use print-safe crisp white stock
+/// (`MamReceiptColors`) so VietQR codes scan reliably from Zalo/Messenger even
+/// when the app itself is used in Dark Mode.
+
 class SummaryReceiptCard extends StatelessWidget {
   const SummaryReceiptCard({
     super.key,
@@ -40,21 +44,20 @@ class SummaryReceiptCard extends StatelessWidget {
       width: 360,
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: MamColors.border),
+        color: MamReceiptColors.paper,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: MamReceiptColors.border),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // Header
           Row(
             children: [
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
-                  color: MamColors.accent,
+                  color: MamReceiptColors.primary,
                   borderRadius: BorderRadius.circular(6),
                 ),
                 child: const Text(
@@ -63,7 +66,7 @@ class SummaryReceiptCard extends StatelessWidget {
                     color: Colors.white,
                     fontWeight: FontWeight.w800,
                     fontSize: 11,
-                    letterSpacing: 1.0,
+                    letterSpacing: 0.8,
                   ),
                 ),
               ),
@@ -76,15 +79,18 @@ class SummaryReceiptCard extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 11,
                     fontWeight: FontWeight.w700,
-                    color: MamColors.muted,
-                    letterSpacing: 0.8,
+                    color: MamReceiptColors.muted,
+                    letterSpacing: 0.6,
                   ),
                 ),
               ),
               const SizedBox(width: 6),
               Text(
                 formatDateVn(bill.billDate, includeYear: true),
-                style: const TextStyle(fontSize: 11.5, color: MamColors.muted),
+                style: const TextStyle(
+                  fontSize: 11.5,
+                  color: MamReceiptColors.muted,
+                ),
               ),
             ],
           ),
@@ -94,27 +100,22 @@ class SummaryReceiptCard extends StatelessWidget {
             style: const TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.w800,
-              color: MamColors.ink,
+              color: MamReceiptColors.ink,
             ),
           ),
           const SizedBox(height: 12),
           const _DashedDivider(),
           const SizedBox(height: 12),
-
-          // Per-person breakdown
           for (var i = 0; i < calc.breakdowns.length; i++) ...[
             _ReceiptPersonRow(
               breakdown: calc.breakdowns[i],
-              accentColor: MamColors.participantColor(i),
+              accentColor: MamPalette.light.participantColor(i),
             ),
             if (i < calc.breakdowns.length - 1) const SizedBox(height: 10),
           ],
-
           const SizedBox(height: 12),
           const _DashedDivider(),
           const SizedBox(height: 10),
-
-          // Summary totals
           _SummaryLine(label: 'Tiền món', value: formatVnd(calc.allItemsSubtotal)),
           if (adj.taxAmount > 0)
             _SummaryLine(label: 'Thuế VAT', value: '+${formatVnd(adj.taxAmount)}'),
@@ -133,7 +134,7 @@ class SummaryReceiptCard extends StatelessWidget {
             _SummaryLine(
               label: 'Giảm giá toàn bill',
               value: '-${formatVnd(adj.billDiscountAmount)}',
-              valueColor: MamColors.sage,
+              valueColor: MamReceiptColors.success,
             ),
           const SizedBox(height: 6),
           Row(
@@ -146,7 +147,7 @@ class SummaryReceiptCard extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.w800,
-                    color: MamColors.ink,
+                    color: MamReceiptColors.ink,
                   ),
                 ),
               ),
@@ -156,7 +157,7 @@ class SummaryReceiptCard extends StatelessWidget {
                 style: kTabularStyle.copyWith(
                   fontSize: 17,
                   fontWeight: FontWeight.w800,
-                  color: MamColors.accent,
+                  color: MamReceiptColors.primary,
                 ),
               ),
             ],
@@ -165,11 +166,12 @@ class SummaryReceiptCard extends StatelessWidget {
             const SizedBox(height: 4),
             Text(
               'Làm tròn 1.000đ · Chênh lệch: ${formatSignedVnd(calc.roundingDelta)}',
-              style: const TextStyle(fontSize: 11, color: MamColors.muted),
+              style: const TextStyle(
+                fontSize: 11,
+                color: MamReceiptColors.muted,
+              ),
             ),
           ],
-
-          // VietQR Footer
           if (bank != null && staticQr != null) ...[
             const SizedBox(height: 14),
             const _DashedDivider(),
@@ -181,7 +183,7 @@ class SummaryReceiptCard extends StatelessWidget {
                   decoration: BoxDecoration(
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: MamColors.border),
+                    border: Border.all(color: MamReceiptColors.border),
                   ),
                   child: QrImageView(
                     data: staticQr,
@@ -200,8 +202,8 @@ class SummaryReceiptCard extends StatelessWidget {
                         style: TextStyle(
                           fontSize: 10.5,
                           fontWeight: FontWeight.w800,
-                          color: MamColors.accent,
-                          letterSpacing: 0.5,
+                          color: MamReceiptColors.primary,
+                          letterSpacing: 0.4,
                         ),
                       ),
                       const SizedBox(height: 4),
@@ -210,6 +212,7 @@ class SummaryReceiptCard extends StatelessWidget {
                         style: const TextStyle(
                           fontSize: 13.5,
                           fontWeight: FontWeight.w700,
+                          color: MamReceiptColors.ink,
                         ),
                       ),
                       Text(
@@ -217,7 +220,7 @@ class SummaryReceiptCard extends StatelessWidget {
                         style: kTabularStyle.copyWith(
                           fontSize: 13,
                           fontWeight: FontWeight.w700,
-                          color: MamColors.ink,
+                          color: MamReceiptColors.ink,
                         ),
                       ),
                       if (bank!.accountName != null &&
@@ -226,7 +229,7 @@ class SummaryReceiptCard extends StatelessWidget {
                           bank!.accountName!,
                           style: const TextStyle(
                             fontSize: 11.5,
-                            color: MamColors.muted,
+                            color: MamReceiptColors.muted,
                           ),
                         ),
                     ],
@@ -272,9 +275,9 @@ class PersonQrCard extends StatelessWidget {
       width: 340,
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: MamColors.border),
+        color: MamReceiptColors.paper,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: MamReceiptColors.border),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -284,7 +287,7 @@ class PersonQrCard extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                 decoration: BoxDecoration(
-                  color: MamColors.accent,
+                  color: MamReceiptColors.primary,
                   borderRadius: BorderRadius.circular(6),
                 ),
                 child: const Text(
@@ -293,7 +296,7 @@ class PersonQrCard extends StatelessWidget {
                     color: Colors.white,
                     fontWeight: FontWeight.w800,
                     fontSize: 10.5,
-                    letterSpacing: 1,
+                    letterSpacing: 0.8,
                   ),
                 ),
               ),
@@ -306,7 +309,7 @@ class PersonQrCard extends StatelessWidget {
                   style: const TextStyle(
                     fontSize: 12.5,
                     fontWeight: FontWeight.w600,
-                    color: MamColors.muted,
+                    color: MamReceiptColors.muted,
                   ),
                 ),
               ),
@@ -318,7 +321,7 @@ class PersonQrCard extends StatelessWidget {
             style: const TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.w700,
-              color: MamColors.ink,
+              color: MamReceiptColors.ink,
             ),
           ),
           const SizedBox(height: 4),
@@ -327,7 +330,7 @@ class PersonQrCard extends StatelessWidget {
             style: kTabularStyle.copyWith(
               fontSize: 28,
               fontWeight: FontWeight.w800,
-              color: MamColors.accent,
+              color: MamReceiptColors.primary,
               letterSpacing: -0.6,
             ),
           ),
@@ -337,7 +340,7 @@ class PersonQrCard extends StatelessWidget {
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: MamColors.border, width: 1.5),
+              border: Border.all(color: MamReceiptColors.border, width: 1.5),
             ),
             child: QrImageView(
               data: dynamicQr,
@@ -352,18 +355,22 @@ class PersonQrCard extends StatelessWidget {
             style: kTabularStyle.copyWith(
               fontSize: 13.5,
               fontWeight: FontWeight.w700,
+              color: MamReceiptColors.ink,
             ),
           ),
           if (bank.accountName != null && bank.accountName!.isNotEmpty)
             Text(
               bank.accountName!,
-              style: const TextStyle(fontSize: 12, color: MamColors.muted),
+              style: const TextStyle(
+                fontSize: 12,
+                color: MamReceiptColors.muted,
+              ),
             ),
           const SizedBox(height: 6),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
             decoration: BoxDecoration(
-              color: MamColors.paper,
+              color: MamReceiptColors.subtle,
               borderRadius: BorderRadius.circular(8),
             ),
             child: Text(
@@ -371,7 +378,7 @@ class PersonQrCard extends StatelessWidget {
               style: const TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.w600,
-                color: MamColors.ink,
+                color: MamReceiptColors.ink,
               ),
             ),
           ),
@@ -391,7 +398,7 @@ class PersonQrCard extends StatelessWidget {
                             overflow: TextOverflow.ellipsis,
                             style: const TextStyle(
                               fontSize: 11.5,
-                              color: MamColors.muted,
+                              color: MamReceiptColors.muted,
                             ),
                           ),
                         ),
@@ -400,7 +407,7 @@ class PersonQrCard extends StatelessWidget {
                           formatVnd(s.amount.round()),
                           style: kTabularStyle.copyWith(
                             fontSize: 11.5,
-                            color: MamColors.muted,
+                            color: MamReceiptColors.muted,
                           ),
                         ),
                       ],
@@ -410,7 +417,10 @@ class PersonQrCard extends StatelessWidget {
             if (breakdown.itemShares.length > 5)
               Text(
                 '+ ${breakdown.itemShares.length - 5} món khác',
-                style: const TextStyle(fontSize: 11, color: MamColors.muted),
+                style: const TextStyle(
+                  fontSize: 11,
+                  color: MamReceiptColors.muted,
+                ),
               ),
           ],
         ],
@@ -455,7 +465,7 @@ class _ReceiptPersonRow extends StatelessWidget {
                       style: const TextStyle(
                         fontSize: 13.5,
                         fontWeight: FontWeight.w700,
-                        color: MamColors.ink,
+                        color: MamReceiptColors.ink,
                       ),
                     ),
                   ),
@@ -464,7 +474,7 @@ class _ReceiptPersonRow extends StatelessWidget {
                     const Icon(
                       Icons.check_circle_rounded,
                       size: 13,
-                      color: MamColors.sage,
+                      color: MamReceiptColors.success,
                     ),
                   ],
                 ],
@@ -474,7 +484,10 @@ class _ReceiptPersonRow extends StatelessWidget {
                   breakdown.itemShares.map((s) => s.itemName).join(', '),
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(fontSize: 11.5, color: MamColors.muted),
+                  style: const TextStyle(
+                    fontSize: 11.5,
+                    color: MamReceiptColors.muted,
+                  ),
                 ),
             ],
           ),
@@ -485,7 +498,7 @@ class _ReceiptPersonRow extends StatelessWidget {
           style: kTabularStyle.copyWith(
             fontSize: 14,
             fontWeight: FontWeight.w800,
-            color: MamColors.ink,
+            color: MamReceiptColors.ink,
           ),
         ),
       ],
@@ -515,7 +528,10 @@ class _SummaryLine extends StatelessWidget {
               label,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(fontSize: 12, color: MamColors.muted),
+              style: const TextStyle(
+                fontSize: 12,
+                color: MamReceiptColors.muted,
+              ),
             ),
           ),
           const SizedBox(width: 8),
@@ -524,7 +540,7 @@ class _SummaryLine extends StatelessWidget {
             style: kTabularStyle.copyWith(
               fontSize: 12,
               fontWeight: FontWeight.w600,
-              color: valueColor ?? MamColors.ink,
+              color: valueColor ?? MamReceiptColors.ink,
             ),
           ),
         ],
@@ -545,7 +561,7 @@ class _DashedDivider extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: List.generate(
             count,
-            (_) => Container(width: 4, height: 1, color: MamColors.border),
+            (_) => Container(width: 4, height: 1, color: MamReceiptColors.border),
           ),
         );
       },

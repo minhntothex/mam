@@ -27,7 +27,6 @@ Future<void> main() async {
   final syncService = SyncService(controller: controller);
   syncService.attachToController();
   if (syncService.currentUser != null) {
-    // Non-blocking background sync on launch
     syncService.syncAll();
   }
 
@@ -54,21 +53,28 @@ class MamApp extends StatelessWidget {
     final effectiveSync = syncService ?? SyncService(controller: controller);
     final ocrService = OcrService();
 
-    return MaterialApp(
-      title: 'Mâm',
-      debugShowCheckedModeBanner: false,
-      theme: buildMamTheme(),
-      builder: (context, child) => MamResponsiveShell(
-        child: child ?? const SizedBox.shrink(),
-      ),
-      home: HomeScreen(
-        controller: controller,
-        onOpenScanOcr: (ctx) => ocrService.openScanSheet(ctx),
-        syncAuthSectionBuilder: (_) => SyncAuthCard(
-          controller: controller,
-          syncService: effectiveSync,
-        ),
-      ),
+    return ListenableBuilder(
+      listenable: controller,
+      builder: (context, _) {
+        return MaterialApp(
+          title: 'Mâm',
+          debugShowCheckedModeBanner: false,
+          theme: buildMamLightTheme(),
+          darkTheme: buildMamDarkTheme(),
+          themeMode: controller.themeMode,
+          builder: (context, child) => MamResponsiveShell(
+            child: child ?? const SizedBox.shrink(),
+          ),
+          home: HomeScreen(
+            controller: controller,
+            onOpenScanOcr: (ctx) => ocrService.openScanSheet(ctx),
+            syncAuthSectionBuilder: (_) => SyncAuthCard(
+              controller: controller,
+              syncService: effectiveSync,
+            ),
+          ),
+        );
+      },
     );
   }
 }

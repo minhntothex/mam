@@ -18,6 +18,8 @@ class SettingsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final p = context.mam;
+
     return ListenableBuilder(
       listenable: controller,
       builder: (context, _) {
@@ -30,14 +32,63 @@ class SettingsScreen extends StatelessWidget {
           body: ListView(
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 40),
             children: [
+              // 0. Appearance (Light / Dark / System)
+              const Text(
+                'Giao diện',
+                style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+              ),
+              const SizedBox(height: 8),
+              Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(14),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Chế độ hiển thị (Sáng / Tối)',
+                        style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+                      ),
+                      const SizedBox(height: 8),
+                      SizedBox(
+                        width: double.infinity,
+                        child: SegmentedButton<ThemeMode>(
+                          segments: const [
+                            ButtonSegment(
+                              value: ThemeMode.system,
+                              label: Text('Hệ thống'),
+                            ),
+                            ButtonSegment(
+                              value: ThemeMode.light,
+                              label: Text('Sáng'),
+                            ),
+                            ButtonSegment(
+                              value: ThemeMode.dark,
+                              label: Text('Tối'),
+                            ),
+                          ],
+                          selected: {controller.themeMode},
+                          onSelectionChanged: (s) =>
+                              controller.setThemeMode(s.first),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: 18),
+
               // 1. Bank Accounts
               Row(
                 children: [
-                  const Text(
-                    'Tài khoản ngân hàng (VietQR)',
-                    style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+                  const Expanded(
+                    child: Text(
+                      'Tài khoản ngân hàng (VietQR)',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+                    ),
                   ),
-                  const Spacer(),
                   TextButton.icon(
                     onPressed: () => _openBankEditor(context),
                     icon: const Icon(Icons.add_rounded, size: 18),
@@ -46,12 +97,12 @@ class SettingsScreen extends StatelessWidget {
                 ],
               ),
               if (banks.isEmpty)
-                const Card(
+                Card(
                   child: Padding(
-                    padding: EdgeInsets.all(16),
+                    padding: const EdgeInsets.all(16),
                     child: Text(
                       'Chưa có tài khoản nhận tiền. Thêm 1 STK để tạo mã VietQR tự động.',
-                      style: TextStyle(color: MamColors.muted),
+                      style: TextStyle(color: p.muted),
                     ),
                   ),
                 )
@@ -63,21 +114,23 @@ class SettingsScreen extends StatelessWidget {
                       child: ListTile(
                         leading: CircleAvatar(
                           backgroundColor: bank.isDefault
-                              ? MamColors.accentSoft
-                              : MamColors.desk,
+                              ? p.primarySoft
+                              : p.surfaceSubtle,
                           child: Icon(
                             Icons.account_balance_rounded,
                             size: 18,
-                            color: bank.isDefault
-                                ? MamColors.accent
-                                : MamColors.muted,
+                            color: bank.isDefault ? p.primary : p.muted,
                           ),
                         ),
                         title: Row(
                           children: [
-                            Text(
-                              bank.bankShortName,
-                              style: const TextStyle(fontWeight: FontWeight.w700),
+                            Flexible(
+                              child: Text(
+                                bank.bankShortName,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(fontWeight: FontWeight.w700),
+                              ),
                             ),
                             if (bank.isDefault) ...[
                               const SizedBox(width: 6),
@@ -87,15 +140,15 @@ class SettingsScreen extends StatelessWidget {
                                   vertical: 2,
                                 ),
                                 decoration: BoxDecoration(
-                                  color: MamColors.accentSoft,
+                                  color: p.primarySoft,
                                   borderRadius: BorderRadius.circular(6),
                                 ),
-                                child: const Text(
+                                child: Text(
                                   'Mặc định',
                                   style: TextStyle(
                                     fontSize: 10.5,
                                     fontWeight: FontWeight.w700,
-                                    color: MamColors.accent,
+                                    color: p.primary,
                                   ),
                                 ),
                               ),
@@ -127,9 +180,9 @@ class SettingsScreen extends StatelessWidget {
                                 child: Text('Đặt làm mặc định'),
                               ),
                             const PopupMenuItem(value: 'edit', child: Text('Sửa')),
-                            const PopupMenuItem(
+                            PopupMenuItem(
                               value: 'delete',
-                              child: Text('Xóa', style: TextStyle(color: MamColors.danger)),
+                              child: Text('Xóa', style: TextStyle(color: p.danger)),
                             ),
                           ],
                         ),
@@ -143,11 +196,14 @@ class SettingsScreen extends StatelessWidget {
               // 2. Friend Groups
               Row(
                 children: [
-                  const Text(
-                    'Nhóm hay đi ăn cùng',
-                    style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+                  const Expanded(
+                    child: Text(
+                      'Nhóm hay đi ăn cùng',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+                    ),
                   ),
-                  const Spacer(),
                   TextButton.icon(
                     onPressed: () => _openGroupEditor(context),
                     icon: const Icon(Icons.add_rounded, size: 18),
@@ -156,12 +212,12 @@ class SettingsScreen extends StatelessWidget {
                 ],
               ),
               if (groups.isEmpty)
-                const Card(
+                Card(
                   child: Padding(
-                    padding: EdgeInsets.all(16),
+                    padding: const EdgeInsets.all(16),
                     child: Text(
                       'Chưa có nhóm nào.',
-                      style: TextStyle(color: MamColors.muted),
+                      style: TextStyle(color: p.muted),
                     ),
                   ),
                 )
@@ -171,9 +227,9 @@ class SettingsScreen extends StatelessWidget {
                     padding: const EdgeInsets.only(bottom: 8),
                     child: Card(
                       child: ListTile(
-                        leading: const CircleAvatar(
-                          backgroundColor: MamColors.desk,
-                          child: Icon(Icons.groups_2_rounded, size: 18, color: MamColors.ink),
+                        leading: CircleAvatar(
+                          backgroundColor: p.surfaceSubtle,
+                          child: Icon(Icons.groups_2_rounded, size: 18, color: p.ink),
                         ),
                         title: Text(
                           g.name,
@@ -213,15 +269,18 @@ class SettingsScreen extends StatelessWidget {
                         style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
                       ),
                       const SizedBox(height: 6),
-                      SegmentedButton<RoundingMode>(
-                        segments: const [
-                          ButtonSegment(value: RoundingMode.none, label: Text('Không')),
-                          ButtonSegment(value: RoundingMode.nearest1000, label: Text('Gần 1k')),
-                          ButtonSegment(value: RoundingMode.ceil1000, label: Text('Lên 1k')),
-                        ],
-                        selected: {settings.defaultRounding},
-                        onSelectionChanged: (s) => controller.updateSettings(
-                          settings.copyWith(defaultRounding: s.first),
+                      SizedBox(
+                        width: double.infinity,
+                        child: SegmentedButton<RoundingMode>(
+                          segments: const [
+                            ButtonSegment(value: RoundingMode.none, label: Text('Không')),
+                            ButtonSegment(value: RoundingMode.nearest1000, label: Text('Gần 1k')),
+                            ButtonSegment(value: RoundingMode.ceil1000, label: Text('Lên 1k')),
+                          ],
+                          selected: {settings.defaultRounding},
+                          onSelectionChanged: (s) => controller.updateSettings(
+                            settings.copyWith(defaultRounding: s.first),
+                          ),
                         ),
                       ),
                       const SizedBox(height: 14),
@@ -230,14 +289,17 @@ class SettingsScreen extends StatelessWidget {
                         style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
                       ),
                       const SizedBox(height: 6),
-                      SegmentedButton<ShippingSplitMode>(
-                        segments: const [
-                          ButtonSegment(value: ShippingSplitMode.flat, label: Text('Chia đều')),
-                          ButtonSegment(value: ShippingSplitMode.proRata, label: Text('Theo tỷ lệ')),
-                        ],
-                        selected: {settings.defaultShippingMode},
-                        onSelectionChanged: (s) => controller.updateSettings(
-                          settings.copyWith(defaultShippingMode: s.first),
+                      SizedBox(
+                        width: double.infinity,
+                        child: SegmentedButton<ShippingSplitMode>(
+                          segments: const [
+                            ButtonSegment(value: ShippingSplitMode.flat, label: Text('Chia đều')),
+                            ButtonSegment(value: ShippingSplitMode.proRata, label: Text('Theo tỷ lệ')),
+                          ],
+                          selected: {settings.defaultShippingMode},
+                          onSelectionChanged: (s) => controller.updateSettings(
+                            settings.copyWith(defaultShippingMode: s.first),
+                          ),
                         ),
                       ),
                       const SizedBox(height: 14),
@@ -277,7 +339,7 @@ class SettingsScreen extends StatelessWidget {
                           controller.lastSyncedAt == null
                               ? 'Đang chạy chế độ Local-first (offline 100%).'
                               : 'Đồng bộ gần nhất: ${formatDateVn(controller.lastSyncedAt!, includeYear: true)}',
-                          style: const TextStyle(fontSize: 12.5, color: MamColors.muted),
+                          style: TextStyle(fontSize: 12.5, color: p.muted),
                         ),
                       ],
                     ),
@@ -308,7 +370,8 @@ class SettingsScreen extends StatelessWidget {
     BuildContext context, {
     BankAccount? existing,
   }) async {
-    var selectedBank = findBankByBin(existing?.bankBin ?? '970436') ?? kVietnamBanks.first;
+    var selectedBank =
+        findBankByBin(existing?.bankBin ?? '970436') ?? kVietnamBanks.first;
     final accNoCtrl = TextEditingController(text: existing?.accountNo ?? '');
     final accNameCtrl = TextEditingController(text: existing?.accountName ?? '');
     var isDefault = existing?.isDefault ?? controller.activeBankAccounts.isEmpty;
@@ -317,110 +380,113 @@ class SettingsScreen extends StatelessWidget {
     await showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setModalState) {
-          final filtered = kVietnamBanks.where((b) {
-            if (query.isEmpty) return true;
-            final q = query.toLowerCase();
-            return b.shortName.toLowerCase().contains(q) ||
-                b.code.toLowerCase().contains(q) ||
-                b.bin.contains(q);
-          }).toList();
+      builder: (ctx) {
+        final p = ctx.mam;
+        return StatefulBuilder(
+          builder: (ctx, setModalState) {
+            final filtered = kVietnamBanks.where((b) {
+              if (query.isEmpty) return true;
+              final q = query.toLowerCase();
+              return b.shortName.toLowerCase().contains(q) ||
+                  b.code.toLowerCase().contains(q) ||
+                  b.bin.contains(q);
+            }).toList();
 
-          return Padding(
-            padding: EdgeInsets.fromLTRB(
-              16,
-              16,
-              16,
-              MediaQuery.of(ctx).viewInsets.bottom + 16,
-            ),
-            child: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    existing == null ? 'Thêm tài khoản ngân hàng' : 'Sửa tài khoản',
-                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
-                  ),
-                  const SizedBox(height: 12),
-                  TextField(
-                    decoration: const InputDecoration(
-                      prefixIcon: Icon(Icons.search_rounded, size: 18),
-                      hintText: 'Tìm ngân hàng (VCB, TCB, MB, Timo...)',
-                    ),
-                    onChanged: (v) => setModalState(() => query = v),
-                  ),
-                  const SizedBox(height: 8),
-                  SizedBox(
-                    height: 120,
-                    child: ListView.builder(
-                      itemCount: filtered.length,
-                      itemBuilder: (_, idx) {
-                        final bank = filtered[idx];
-                        final active = bank.bin == selectedBank.bin;
-                        return ListTile(
-                          dense: true,
-                          selected: active,
-                          selectedTileColor: MamColors.accentSoft,
-                          title: Text('${bank.shortName} (${bank.code})'),
-                          trailing: Text(bank.bin, style: kTabularStyle),
-                          onTap: () => setModalState(() => selectedBank = bank),
-                        );
-                      },
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  TextField(
-                    controller: accNoCtrl,
-                    keyboardType: TextInputType.number,
-                    decoration: const InputDecoration(labelText: 'Số tài khoản'),
-                  ),
-                  const SizedBox(height: 10),
-                  TextField(
-                    controller: accNameCtrl,
-                    textCapitalization: TextCapitalization.characters,
-                    decoration: const InputDecoration(
-                      labelText: 'Tên chủ tài khoản (tùy chọn)',
-                    ),
-                  ),
-                  CheckboxListTile(
-                    contentPadding: EdgeInsets.zero,
-                    value: isDefault,
-                    onChanged: (v) => setModalState(() => isDefault = v ?? false),
-                    title: const Text('Đặt làm tài khoản mặc định'),
-                  ),
-                  SizedBox(
-                    width: double.infinity,
-                    child: FilledButton(
-                      onPressed: () async {
-                        if (accNoCtrl.text.trim().isEmpty) return;
-                        final now = DateTime.now().toUtc();
-                        final account = BankAccount(
-                          id: existing?.id ?? controller.newId(),
-                          userId: controller.currentUserId,
-                          bankBin: selectedBank.bin,
-                          bankShortName: selectedBank.shortName,
-                          accountNo: accNoCtrl.text.trim(),
-                          accountName: accNameCtrl.text.trim().isEmpty
-                              ? null
-                              : accNameCtrl.text.trim().toUpperCase(),
-                          isDefault: isDefault,
-                          createdAt: existing?.createdAt ?? now,
-                          updatedAt: now,
-                        );
-                        await controller.saveBankAccount(account);
-                        if (ctx.mounted) Navigator.pop(ctx);
-                      },
-                      child: const Text('Lưu tài khoản'),
-                    ),
-                  ),
-                ],
+            return Padding(
+              padding: EdgeInsets.fromLTRB(
+                16,
+                16,
+                16,
+                MediaQuery.of(ctx).viewInsets.bottom + 16,
               ),
-            ),
-          );
-        },
-      ),
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      existing == null ? 'Thêm tài khoản ngân hàng' : 'Sửa tài khoản',
+                      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      decoration: const InputDecoration(
+                        prefixIcon: Icon(Icons.search_rounded, size: 18),
+                        hintText: 'Tìm ngân hàng (VCB, TCB, MB, Timo...)',
+                      ),
+                      onChanged: (v) => setModalState(() => query = v),
+                    ),
+                    const SizedBox(height: 8),
+                    SizedBox(
+                      height: 120,
+                      child: ListView.builder(
+                        itemCount: filtered.length,
+                        itemBuilder: (_, idx) {
+                          final bank = filtered[idx];
+                          final active = bank.bin == selectedBank.bin;
+                          return ListTile(
+                            dense: true,
+                            selected: active,
+                            selectedTileColor: p.primarySoft,
+                            title: Text('${bank.shortName} (${bank.code})'),
+                            trailing: Text(bank.bin, style: kTabularStyle),
+                            onTap: () => setModalState(() => selectedBank = bank),
+                          );
+                        },
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    TextField(
+                      controller: accNoCtrl,
+                      keyboardType: TextInputType.number,
+                      decoration: const InputDecoration(labelText: 'Số tài khoản'),
+                    ),
+                    const SizedBox(height: 10),
+                    TextField(
+                      controller: accNameCtrl,
+                      textCapitalization: TextCapitalization.characters,
+                      decoration: const InputDecoration(
+                        labelText: 'Tên chủ tài khoản (tùy chọn)',
+                      ),
+                    ),
+                    CheckboxListTile(
+                      contentPadding: EdgeInsets.zero,
+                      value: isDefault,
+                      onChanged: (v) => setModalState(() => isDefault = v ?? false),
+                      title: const Text('Đặt làm tài khoản mặc định'),
+                    ),
+                    SizedBox(
+                      width: double.infinity,
+                      child: FilledButton(
+                        onPressed: () async {
+                          if (accNoCtrl.text.trim().isEmpty) return;
+                          final now = DateTime.now().toUtc();
+                          final account = BankAccount(
+                            id: existing?.id ?? controller.newId(),
+                            userId: controller.currentUserId,
+                            bankBin: selectedBank.bin,
+                            bankShortName: selectedBank.shortName,
+                            accountNo: accNoCtrl.text.trim(),
+                            accountName: accNameCtrl.text.trim().isEmpty
+                                ? null
+                                : accNameCtrl.text.trim().toUpperCase(),
+                            isDefault: isDefault,
+                            createdAt: existing?.createdAt ?? now,
+                            updatedAt: now,
+                          );
+                          await controller.saveBankAccount(account);
+                          if (ctx.mounted) Navigator.pop(ctx);
+                        },
+                        child: const Text('Lưu tài khoản'),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
     );
     accNoCtrl.dispose();
     accNameCtrl.dispose();

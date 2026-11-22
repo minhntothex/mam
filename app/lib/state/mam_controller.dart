@@ -1,4 +1,4 @@
-import 'package:flutter/foundation.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:uuid/uuid.dart';
 
 import '../core/calculator.dart';
@@ -38,10 +38,12 @@ class MamController extends ChangeNotifier {
   String? _lastSyncError;
   String _currentUserId = LocalStore.localDemoUserId;
   String? _signedInEmail;
+  ThemeMode _themeMode = ThemeMode.system;
 
   Future<void> Function()? _onSyncRequested;
 
   bool get initialized => _initialized;
+  ThemeMode get themeMode => _themeMode;
   String get currentUserId => _currentUserId;
   String? get signedInEmail => _signedInEmail;
   SyncStatus get syncStatus => _syncStatus;
@@ -116,8 +118,23 @@ class MamController extends ChangeNotifier {
     _settings = snapshot.settings;
     _pendingSyncKeys = Set<String>.from(snapshot.pendingSyncKeys);
     _lastSyncedAt = snapshot.lastSyncedAt;
+    _themeMode = snapshot.themeMode;
     _initialized = true;
     notifyListeners();
+  }
+
+  Future<void> setThemeMode(ThemeMode mode) async {
+    if (_themeMode == mode) return;
+    _themeMode = mode;
+    await store.saveThemeMode(mode);
+    notifyListeners();
+  }
+
+  Future<void> toggleLightDark(Brightness currentBrightness) async {
+    final next = currentBrightness == Brightness.dark
+        ? ThemeMode.light
+        : ThemeMode.dark;
+    await setThemeMode(next);
   }
 
   void attachSyncHandler({

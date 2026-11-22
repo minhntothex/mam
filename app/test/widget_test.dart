@@ -2,6 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mam/data/local_store.dart';
 import 'package:mam/main.dart';
 import 'package:mam/state/mam_controller.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -70,5 +71,25 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Gán món siêu tốc'), findsOneWidget);
     expect(find.textContaining('chưa gán'), findsOneWidget);
+  });
+
+  testWidgets('Light and Dark theme toggle switches cleanly with zero overflow', (tester) async {
+    SharedPreferences.setMockInitialValues({});
+    final store = await LocalStore.open();
+    final controller = MamController(store: store);
+    await controller.init();
+
+    await tester.pumpWidget(MamApp(controller: controller));
+    await tester.pumpAndSettle();
+
+    expect(controller.themeMode, ThemeMode.system);
+    await tester.tap(find.byTooltip('Chuyển chế độ Tối'));
+    await tester.pumpAndSettle();
+    expect(controller.themeMode, ThemeMode.dark);
+    expect(find.text('Lẩu Haidilao Bitexco'), findsOneWidget);
+
+    await tester.tap(find.byTooltip('Chuyển chế độ Sáng'));
+    await tester.pumpAndSettle();
+    expect(controller.themeMode, ThemeMode.light);
   });
 }

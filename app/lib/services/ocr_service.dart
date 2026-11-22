@@ -15,10 +15,11 @@ class OcrService {
   final ImagePicker _picker;
 
   Future<OcrScanResult?> openScanSheet(BuildContext context) async {
+    final p = context.mam;
     return showModalBottomSheet<OcrScanResult>(
       context: context,
       isScrollControlled: true,
-      backgroundColor: MamColors.paper,
+      backgroundColor: p.surface,
       builder: (ctx) => SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.fromLTRB(16, 14, 16, 20),
@@ -43,9 +44,9 @@ class OcrService {
               const SizedBox(height: 6),
               if (!kIsWeb)
                 ListTile(
-                  leading: const CircleAvatar(
-                    backgroundColor: MamColors.accentSoft,
-                    child: Icon(Icons.camera_alt_rounded, color: MamColors.accent),
+                  leading: CircleAvatar(
+                    backgroundColor: p.primarySoft,
+                    child: Icon(Icons.camera_alt_rounded, color: p.primary),
                   ),
                   title: const Text(
                     'Chụp ảnh hóa đơn',
@@ -55,9 +56,9 @@ class OcrService {
                   onTap: () => _pickAndRun(ctx, ImageSource.camera),
                 ),
               ListTile(
-                leading: const CircleAvatar(
-                  backgroundColor: MamColors.accentSoft,
-                  child: Icon(Icons.photo_library_rounded, color: MamColors.accent),
+                leading: CircleAvatar(
+                  backgroundColor: p.primarySoft,
+                  child: Icon(Icons.photo_library_rounded, color: p.primary),
                 ),
                 title: const Text(
                   'Chọn ảnh hóa đơn từ máy',
@@ -74,12 +75,12 @@ class OcrService {
                 padding: EdgeInsets.symmetric(vertical: 8),
                 child: Divider(),
               ),
-              const Text(
+              Text(
                 'Thử nhanh hóa đơn mẫu VN (Demo Offline)',
                 style: TextStyle(
                   fontSize: 12.5,
                   fontWeight: FontWeight.w700,
-                  color: MamColors.muted,
+                  color: p.muted,
                 ),
               ),
               const SizedBox(height: 6),
@@ -87,9 +88,9 @@ class OcrService {
                 (preset) => ListTile(
                   dense: true,
                   contentPadding: const EdgeInsets.symmetric(horizontal: 6),
-                  leading: const Icon(
+                  leading: Icon(
                     Icons.receipt_long_rounded,
-                    color: MamColors.ink,
+                    color: p.ink,
                     size: 20,
                   ),
                   title: Text(

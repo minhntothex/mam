@@ -24,3 +24,6 @@ app/android/local.properties
 # Supabase local
 supabase/.temp/
 supabase/.branches/
+
+# Impeccable temporary mocks
+.impeccable/mocks/

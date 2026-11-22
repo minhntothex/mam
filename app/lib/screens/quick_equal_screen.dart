@@ -100,7 +100,10 @@ class _QuickEqualScreenState extends State<QuickEqualScreen> {
         while (_participants.length < target) {
           final n = _participants.length + 1;
           _participants.add(
-            Participant(id: 'p_${DateTime.now().microsecondsSinceEpoch}_$n', name: 'Bạn $n'),
+            Participant(
+              id: 'p_${DateTime.now().microsecondsSinceEpoch}_$n',
+              name: 'Bạn $n',
+            ),
           );
         }
       } else {
@@ -150,6 +153,7 @@ class _QuickEqualScreenState extends State<QuickEqualScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final p = context.mam;
     final preview = BillCalculator.calculate(_buildPayload());
     final perPerson =
         preview.breakdowns.isNotEmpty ? preview.breakdowns.first.finalAmount : 0;
@@ -166,9 +170,13 @@ class _QuickEqualScreenState extends State<QuickEqualScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
+                  Text(
                     'Tên bữa ăn',
-                    style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600, color: MamColors.muted),
+                    style: TextStyle(
+                      fontSize: 12.5,
+                      fontWeight: FontWeight.w600,
+                      color: p.muted,
+                    ),
                   ),
                   const SizedBox(height: 6),
                   TextField(
@@ -176,15 +184,22 @@ class _QuickEqualScreenState extends State<QuickEqualScreen> {
                     decoration: const InputDecoration(hintText: 'vd: Cà phê sáng'),
                   ),
                   const SizedBox(height: 14),
-                  const Text(
+                  Text(
                     'Tổng tiền hóa đơn (VNĐ)',
-                    style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600, color: MamColors.muted),
+                    style: TextStyle(
+                      fontSize: 12.5,
+                      fontWeight: FontWeight.w600,
+                      color: p.muted,
+                    ),
                   ),
                   const SizedBox(height: 6),
                   TextField(
                     controller: _totalCtrl,
                     keyboardType: TextInputType.number,
-                    style: kTabularStyle.copyWith(fontSize: 22, fontWeight: FontWeight.w800),
+                    style: kTabularStyle.copyWith(
+                      fontSize: 22,
+                      fontWeight: FontWeight.w800,
+                    ),
                     decoration: const InputDecoration(
                       hintText: '300000',
                       suffixText: 'đ',
@@ -218,11 +233,15 @@ class _QuickEqualScreenState extends State<QuickEqualScreen> {
                 children: [
                   Row(
                     children: [
-                      Text(
-                        'Người tham gia (${_participants.length})',
-                        style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
+                      Expanded(
+                        child: Text(
+                          'Người tham gia (${_participants.length})',
+                          style: const TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
                       ),
-                      const Spacer(),
                       IconButton(
                         visualDensity: VisualDensity.compact,
                         onPressed: () => _setCount(_participants.length - 1),
@@ -257,7 +276,7 @@ class _QuickEqualScreenState extends State<QuickEqualScreen> {
                       for (var i = 0; i < _participants.length; i++)
                         InputChip(
                           avatar: CircleAvatar(
-                            backgroundColor: MamColors.participantColor(i),
+                            backgroundColor: p.participantColor(i),
                             radius: 6,
                           ),
                           label: Text(
@@ -266,7 +285,7 @@ class _QuickEqualScreenState extends State<QuickEqualScreen> {
                                 : _participants[i].name,
                           ),
                           selected: _participants[i].isHost,
-                          selectedColor: MamColors.accentSoft,
+                          selectedColor: p.primarySoft,
                           onPressed: () {
                             setState(() {
                               _participants = [
@@ -290,7 +309,9 @@ class _QuickEqualScreenState extends State<QuickEqualScreen> {
                       Expanded(
                         child: TextField(
                           controller: _nameCtrl,
-                          decoration: const InputDecoration(hintText: 'Thêm tên người...'),
+                          decoration: const InputDecoration(
+                            hintText: 'Thêm tên người...',
+                          ),
                           onSubmitted: (_) => _addParticipant(),
                         ),
                       ),
@@ -302,9 +323,9 @@ class _QuickEqualScreenState extends State<QuickEqualScreen> {
                     ],
                   ),
                   const SizedBox(height: 6),
-                  const Text(
-                    'Mẹo: Chạm vào chip để đổi người làm Chủ xị.',
-                    style: TextStyle(fontSize: 11.5, color: MamColors.muted),
+                  Text(
+                    'Chạm vào tên để đổi người làm Chủ xị.',
+                    style: TextStyle(fontSize: 11.5, color: p.muted),
                   ),
                 ],
               ),
@@ -322,30 +343,35 @@ class _QuickEqualScreenState extends State<QuickEqualScreen> {
                     style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w700),
                   ),
                   const SizedBox(height: 8),
-                  SegmentedButton<RoundingMode>(
-                    segments: const [
-                      ButtonSegment(value: RoundingMode.none, label: Text('Không')),
-                      ButtonSegment(value: RoundingMode.nearest1000, label: Text('Gần 1k')),
-                      ButtonSegment(value: RoundingMode.ceil1000, label: Text('Lên 1k')),
-                    ],
-                    selected: {_roundingMode},
-                    onSelectionChanged: (s) => setState(() => _roundingMode = s.first),
+                  SizedBox(
+                    width: double.infinity,
+                    child: SegmentedButton<RoundingMode>(
+                      segments: const [
+                        ButtonSegment(value: RoundingMode.none, label: Text('Không')),
+                        ButtonSegment(value: RoundingMode.nearest1000, label: Text('Gần 1k')),
+                        ButtonSegment(value: RoundingMode.ceil1000, label: Text('Lên 1k')),
+                      ],
+                      selected: {_roundingMode},
+                      onSelectionChanged: (s) =>
+                          setState(() => _roundingMode = s.first),
+                    ),
                   ),
                   if (_totalAmount > 0) ...[
                     const SizedBox(height: 14),
                     Container(
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
-                        color: MamColors.accentSoft,
+                        color: p.primarySoft,
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Row(
                         children: [
-                          const Text(
-                            'Mỗi người trả:',
-                            style: TextStyle(fontWeight: FontWeight.w600),
+                          const Expanded(
+                            child: Text(
+                              'Mỗi người trả:',
+                              style: TextStyle(fontWeight: FontWeight.w600),
+                            ),
                           ),
-                          const Spacer(),
                           Column(
                             crossAxisAlignment: CrossAxisAlignment.end,
                             children: [
@@ -354,15 +380,15 @@ class _QuickEqualScreenState extends State<QuickEqualScreen> {
                                 style: kTabularStyle.copyWith(
                                   fontSize: 18,
                                   fontWeight: FontWeight.w800,
-                                  color: MamColors.accent,
+                                  color: p.primary,
                                 ),
                               ),
                               if (preview.roundingDelta != 0)
                                 Text(
                                   'Lệch làm tròn: ${formatSignedVnd(preview.roundingDelta)}',
-                                  style: const TextStyle(
+                                  style: TextStyle(
                                     fontSize: 11.5,
-                                    color: MamColors.muted,
+                                    color: p.muted,
                                   ),
                                 ),
                             ],
@@ -381,9 +407,9 @@ class _QuickEqualScreenState extends State<QuickEqualScreen> {
         top: false,
         child: Container(
           padding: const EdgeInsets.fromLTRB(16, 10, 16, 12),
-          decoration: const BoxDecoration(
-            color: MamColors.paper,
-            border: Border(top: BorderSide(color: MamColors.border)),
+          decoration: BoxDecoration(
+            color: p.surface,
+            border: Border(top: BorderSide(color: p.border)),
           ),
           child: FilledButton.icon(
             onPressed: _submit,

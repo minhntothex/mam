@@ -138,6 +138,7 @@ class _SplitAssignScreenState extends State<SplitAssignScreen> {
   Future<void> _openMultiSelectSheet(int itemIndex) async {
     final item = _items[itemIndex];
     final selected = item.shares.keys.toSet();
+    final palette = context.mam;
 
     await showModalBottomSheet<void>(
       context: context,
@@ -161,7 +162,7 @@ class _SplitAssignScreenState extends State<SplitAssignScreen> {
                     for (var i = 0; i < _participants.length; i++)
                       FilterChip(
                         avatar: CircleAvatar(
-                          backgroundColor: MamColors.participantColor(i),
+                          backgroundColor: palette.participantColor(i),
                           radius: 6,
                         ),
                         label: Text(_participants[i].name),
@@ -343,10 +344,12 @@ class _SplitAssignScreenState extends State<SplitAssignScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final p = context.mam;
     final calc = BillCalculator.calculate(_currentPayload());
-    final selectedIdx =
-        _participants.indexWhere((p) => p.id == _selectedPersonId).clamp(0, _participants.length - 1);
-    final selectedColor = MamColors.participantColor(selectedIdx);
+    final selectedIdx = _participants
+        .indexWhere((e) => e.id == _selectedPersonId)
+        .clamp(0, _participants.length - 1);
+    final selectedColor = p.participantColor(selectedIdx);
 
     return Scaffold(
       appBar: AppBar(
@@ -367,13 +370,12 @@ class _SplitAssignScreenState extends State<SplitAssignScreen> {
       ),
       body: Column(
         children: [
-          // Sticky top participant selector
           Container(
             width: double.infinity,
             padding: const EdgeInsets.fromLTRB(12, 6, 12, 10),
-            decoration: const BoxDecoration(
-              color: MamColors.paper,
-              border: Border(bottom: BorderSide(color: MamColors.border)),
+            decoration: BoxDecoration(
+              color: p.surface,
+              border: Border(bottom: BorderSide(color: p.border)),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -385,9 +387,10 @@ class _SplitAssignScreenState extends State<SplitAssignScreen> {
                       for (var i = 0; i < _participants.length; i++) ...[
                         _ParticipantTabChip(
                           participant: _participants[i],
-                          color: MamColors.participantColor(i),
+                          color: p.participantColor(i),
                           selected: _participants[i].id == _selectedPersonId,
-                          subtotal: calc.breakdownFor(_participants[i].id)?.finalAmount ?? 0,
+                          subtotal:
+                              calc.breakdownFor(_participants[i].id)?.finalAmount ?? 0,
                           onTap: () => setState(
                             () => _selectedPersonId = _participants[i].id,
                           ),
@@ -412,7 +415,7 @@ class _SplitAssignScreenState extends State<SplitAssignScreen> {
                     Expanded(
                       child: Text(
                         'Chạm vào món để gán cho ${_selectedPerson.name} · Giữ lâu để chọn nhiều người',
-                        style: const TextStyle(fontSize: 12, color: MamColors.muted),
+                        style: TextStyle(fontSize: 12, color: p.muted),
                       ),
                     ),
                   ],
@@ -420,7 +423,6 @@ class _SplitAssignScreenState extends State<SplitAssignScreen> {
               ],
             ),
           ),
-          // Item list
           Expanded(
             child: ListView.builder(
               padding: const EdgeInsets.fromLTRB(14, 12, 14, 100),
@@ -430,23 +432,23 @@ class _SplitAssignScreenState extends State<SplitAssignScreen> {
                 final myWeight = item.shares[_selectedPersonId] ?? 0;
                 final isMine = myWeight > 0;
                 final allAssigned = _participants.every(
-                  (p) => (item.shares[p.id] ?? 0) > 0,
+                  (person) => (item.shares[person.id] ?? 0) > 0,
                 );
 
                 return Padding(
                   padding: const EdgeInsets.only(bottom: 10),
                   child: Card(
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
+                      borderRadius: BorderRadius.circular(14),
                       side: BorderSide(
                         color: isMine
                             ? selectedColor
-                            : (item.isAssigned ? MamColors.border : MamColors.amber),
+                            : (item.isAssigned ? p.border : p.warning),
                         width: isMine ? 1.8 : 1,
                       ),
                     ),
                     child: InkWell(
-                      borderRadius: BorderRadius.circular(16),
+                      borderRadius: BorderRadius.circular(14),
                       onTap: () => _togglePersonOnItem(index),
                       onLongPress: () => _openMultiSelectSheet(index),
                       child: Padding(
@@ -473,9 +475,9 @@ class _SplitAssignScreenState extends State<SplitAssignScreen> {
                                       if (item.itemDiscount > 0)
                                         Text(
                                           'Đã trừ giảm riêng ${formatVnd(item.itemDiscount)}',
-                                          style: const TextStyle(
+                                          style: TextStyle(
                                             fontSize: 11.5,
-                                            color: MamColors.sage,
+                                            color: p.success,
                                           ),
                                         ),
                                     ],
@@ -506,15 +508,15 @@ class _SplitAssignScreenState extends State<SplitAssignScreen> {
                                             vertical: 3,
                                           ),
                                           decoration: BoxDecoration(
-                                            color: MamColors.amberSoft,
+                                            color: p.warningSoft,
                                             borderRadius: BorderRadius.circular(8),
                                           ),
-                                          child: const Text(
+                                          child: Text(
                                             'Chưa gán',
                                             style: TextStyle(
                                               fontSize: 11,
                                               fontWeight: FontWeight.w600,
-                                              color: MamColors.amber,
+                                              color: p.warning,
                                             ),
                                           ),
                                         )
@@ -527,7 +529,8 @@ class _SplitAssignScreenState extends State<SplitAssignScreen> {
                                                 vertical: 3,
                                               ),
                                               decoration: BoxDecoration(
-                                                color: MamColors.participantColor(i)
+                                                color: p
+                                                    .participantColor(i)
                                                     .withValues(alpha: 0.14),
                                                 borderRadius: BorderRadius.circular(8),
                                               ),
@@ -538,7 +541,7 @@ class _SplitAssignScreenState extends State<SplitAssignScreen> {
                                                 style: TextStyle(
                                                   fontSize: 11.5,
                                                   fontWeight: FontWeight.w700,
-                                                  color: MamColors.participantColor(i),
+                                                  color: p.participantColor(i),
                                                 ),
                                               ),
                                             ),
@@ -564,9 +567,7 @@ class _SplitAssignScreenState extends State<SplitAssignScreen> {
                                       vertical: 5,
                                     ),
                                     decoration: BoxDecoration(
-                                      color: allAssigned
-                                          ? MamColors.ink
-                                          : MamColors.desk,
+                                      color: allAssigned ? p.ink : p.surfaceSubtle,
                                       borderRadius: BorderRadius.circular(8),
                                     ),
                                     child: Text(
@@ -574,9 +575,7 @@ class _SplitAssignScreenState extends State<SplitAssignScreen> {
                                       style: TextStyle(
                                         fontSize: 11.5,
                                         fontWeight: FontWeight.w700,
-                                        color: allAssigned
-                                            ? Colors.white
-                                            : MamColors.ink,
+                                        color: allAssigned ? p.ground : p.ink,
                                       ),
                                     ),
                                   ),
@@ -598,9 +597,9 @@ class _SplitAssignScreenState extends State<SplitAssignScreen> {
         top: false,
         child: Container(
           padding: const EdgeInsets.fromLTRB(16, 10, 16, 12),
-          decoration: const BoxDecoration(
-            color: MamColors.paper,
-            border: Border(top: BorderSide(color: MamColors.border)),
+          decoration: BoxDecoration(
+            color: p.surface,
+            border: Border(top: BorderSide(color: p.border)),
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -608,11 +607,9 @@ class _SplitAssignScreenState extends State<SplitAssignScreen> {
               Container(
                 width: double.infinity,
                 margin: const EdgeInsets.only(bottom: 8),
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
                 decoration: BoxDecoration(
-                  color: calc.hasUnassignedItems
-                      ? MamColors.amberSoft
-                      : MamColors.sageSoft,
+                  color: calc.hasUnassignedItems ? p.warningSoft : p.successSoft,
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Row(
@@ -622,9 +619,7 @@ class _SplitAssignScreenState extends State<SplitAssignScreen> {
                           ? Icons.info_outline_rounded
                           : Icons.check_circle_outline_rounded,
                       size: 16,
-                      color: calc.hasUnassignedItems
-                          ? MamColors.amber
-                          : MamColors.sage,
+                      color: calc.hasUnassignedItems ? p.warning : p.success,
                     ),
                     const SizedBox(width: 6),
                     Expanded(
@@ -635,21 +630,19 @@ class _SplitAssignScreenState extends State<SplitAssignScreen> {
                         style: TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.w600,
-                          color: calc.hasUnassignedItems
-                              ? MamColors.amber
-                              : MamColors.sage,
+                          color: calc.hasUnassignedItems ? p.warning : p.success,
                         ),
                       ),
                     ),
                     if (calc.hasUnassignedItems)
                       InkWell(
                         onTap: _assignRemainingToAll,
-                        child: const Text(
+                        child: Text(
                           'Chia cả bàn',
                           style: TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.w700,
-                            color: MamColors.amber,
+                            color: p.warning,
                             decoration: TextDecoration.underline,
                           ),
                         ),
@@ -690,16 +683,17 @@ class _ParticipantTabChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final p = context.mam;
     return InkWell(
-      borderRadius: BorderRadius.circular(14),
+      borderRadius: BorderRadius.circular(12),
       onTap: onTap,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 140),
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         decoration: BoxDecoration(
-          color: selected ? color : MamColors.card,
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: selected ? color : MamColors.border),
+          color: selected ? color : p.surfaceSubtle,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: selected ? color : p.border),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -710,7 +704,7 @@ class _ParticipantTabChip extends StatelessWidget {
                 Text(
                   participant.name,
                   style: TextStyle(
-                    color: selected ? Colors.white : MamColors.ink,
+                    color: selected ? Colors.white : p.ink,
                     fontWeight: FontWeight.w700,
                     fontSize: 13.5,
                   ),
@@ -729,7 +723,7 @@ class _ParticipantTabChip extends StatelessWidget {
             Text(
               formatVnd(subtotal),
               style: kTabularStyle.copyWith(
-                color: selected ? Colors.white.withValues(alpha: 0.9) : MamColors.muted,
+                color: selected ? Colors.white.withValues(alpha: 0.9) : p.muted,
                 fontSize: 11.5,
                 fontWeight: FontWeight.w600,
               ),
@@ -758,7 +752,7 @@ class _QtyStepper extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.1),
+        color: color.withValues(alpha: 0.12),
         borderRadius: BorderRadius.circular(8),
       ),
       child: Row(

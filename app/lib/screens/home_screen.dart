@@ -33,6 +33,9 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final p = context.mam;
+    final brightness = Theme.of(context).brightness;
+
     return ListenableBuilder(
       listenable: widget.controller,
       builder: (context, _) {
@@ -48,11 +51,11 @@ class _HomeScreenState extends State<HomeScreen> {
             title: Row(
               children: [
                 Container(
-                  width: 30,
-                  height: 30,
+                  width: 28,
+                  height: 28,
                   decoration: BoxDecoration(
-                    color: MamColors.accent,
-                    borderRadius: BorderRadius.circular(9),
+                    color: p.primary,
+                    borderRadius: BorderRadius.circular(8),
                   ),
                   alignment: Alignment.center,
                   child: const Text(
@@ -60,7 +63,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     style: TextStyle(
                       color: Colors.white,
                       fontWeight: FontWeight.w800,
-                      fontSize: 16,
+                      fontSize: 15,
                     ),
                   ),
                 ),
@@ -78,6 +81,17 @@ class _HomeScreenState extends State<HomeScreen> {
                     _openSettings(context);
                   }
                 },
+              ),
+              IconButton(
+                tooltip: brightness == Brightness.dark
+                    ? 'Chuyển chế độ Sáng'
+                    : 'Chuyển chế độ Tối',
+                icon: Icon(
+                  brightness == Brightness.dark
+                      ? Icons.light_mode_outlined
+                      : Icons.dark_mode_outlined,
+                ),
+                onPressed: () => ctrl.toggleLightDark(brightness),
               ),
               IconButton(
                 tooltip: 'Cài đặt',
@@ -129,9 +143,9 @@ class _HomeScreenState extends State<HomeScreen> {
             top: false,
             child: Container(
               padding: const EdgeInsets.fromLTRB(16, 10, 16, 12),
-              decoration: const BoxDecoration(
-                color: MamColors.paper,
-                border: Border(top: BorderSide(color: MamColors.border)),
+              decoration: BoxDecoration(
+                color: p.surface,
+                border: Border(top: BorderSide(color: p.border)),
               ),
               child: Row(
                 children: [
@@ -203,6 +217,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _confirmDelete(BuildContext context, BillRecord bill) async {
+    final p = context.mam;
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -214,7 +229,7 @@ class _HomeScreenState extends State<HomeScreen> {
             child: const Text('Hủy'),
           ),
           FilledButton(
-            style: FilledButton.styleFrom(backgroundColor: MamColors.danger),
+            style: FilledButton.styleFrom(backgroundColor: p.danger),
             onPressed: () => Navigator.pop(ctx, true),
             child: const Text('Xóa'),
           ),
@@ -235,35 +250,36 @@ class _SyncBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final p = context.mam;
     final (label, bg, fg, icon) = switch (status) {
       SyncStatus.localOnly => (
           'Local',
-          MamColors.desk,
-          MamColors.muted,
+          p.surfaceSubtle,
+          p.muted,
           Icons.cloud_off_rounded,
         ),
       SyncStatus.synced => (
           'Đã sync',
-          MamColors.sageSoft,
-          MamColors.sage,
+          p.successSoft,
+          p.success,
           Icons.cloud_done_rounded,
         ),
       SyncStatus.pendingPush => (
           'Chờ sync',
-          MamColors.amberSoft,
-          MamColors.amber,
+          p.warningSoft,
+          p.warning,
           Icons.cloud_upload_rounded,
         ),
       SyncStatus.syncing => (
           'Đang sync',
-          MamColors.accentSoft,
-          MamColors.accent,
+          p.primarySoft,
+          p.primary,
           Icons.sync_rounded,
         ),
       SyncStatus.error => (
           'Lỗi sync',
-          MamColors.dangerSoft,
-          MamColors.danger,
+          p.dangerSoft,
+          p.danger,
           Icons.error_outline_rounded,
         ),
     };
@@ -308,12 +324,13 @@ class _UncollectedBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final p = context.mam;
     final allDone = pendingCount == 0;
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: allDone ? MamColors.sage : MamColors.ink,
-        borderRadius: BorderRadius.circular(20),
+        color: allDone ? p.heroSettled : p.heroBackground,
+        borderRadius: BorderRadius.circular(16),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -326,7 +343,7 @@ class _UncollectedBanner extends StatelessWidget {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
-                    color: Colors.white.withValues(alpha: 0.78),
+                    color: Colors.white.withValues(alpha: 0.85),
                     fontSize: 13,
                     fontWeight: FontWeight.w500,
                   ),
@@ -334,13 +351,13 @@ class _UncollectedBanner extends StatelessWidget {
               ),
               const SizedBox(width: 8),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
+                padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
                 decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.14),
-                  borderRadius: BorderRadius.circular(12),
+                  color: Colors.white.withValues(alpha: 0.16),
+                  borderRadius: BorderRadius.circular(10),
                 ),
                 child: Text(
-                  allDone ? 'Gọn sổ ✓' : '$pendingCount bill đang chờ',
+                  allDone ? 'Đã chốt đủ' : '$pendingCount bill đang chờ',
                   style: const TextStyle(
                     color: Colors.white,
                     fontSize: 12,
@@ -355,7 +372,7 @@ class _UncollectedBanner extends StatelessWidget {
             formatVnd(amount),
             style: kTabularStyle.copyWith(
               color: Colors.white,
-              fontSize: 28,
+              fontSize: 30,
               fontWeight: FontWeight.w800,
               letterSpacing: -0.6,
             ),
@@ -387,34 +404,35 @@ class _FilterBar extends StatelessWidget {
       scrollDirection: Axis.horizontal,
       child: Row(
         children: [
-          _pill(_HomeFilter.all, 'Tất cả ($allCount)'),
+          _pill(context, _HomeFilter.all, 'Tất cả ($allCount)'),
           const SizedBox(width: 8),
-          _pill(_HomeFilter.pending, 'Chưa đủ ($pendingCount)'),
+          _pill(context, _HomeFilter.pending, 'Chưa đủ ($pendingCount)'),
           const SizedBox(width: 8),
-          _pill(_HomeFilter.settled, 'Đã xong ($settledCount)'),
+          _pill(context, _HomeFilter.settled, 'Đã xong ($settledCount)'),
         ],
       ),
     );
   }
 
-  Widget _pill(_HomeFilter value, String label) {
+  Widget _pill(BuildContext context, _HomeFilter value, String label) {
+    final p = context.mam;
     final active = selected == value;
     return InkWell(
       borderRadius: BorderRadius.circular(20),
       onTap: () => onChanged(value),
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+        padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 8),
         decoration: BoxDecoration(
-          color: active ? MamColors.ink : MamColors.card,
+          color: active ? p.ink : p.surface,
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
-            color: active ? MamColors.ink : MamColors.border,
+            color: active ? p.ink : p.border,
           ),
         ),
         child: Text(
           label,
           style: TextStyle(
-            color: active ? Colors.white : MamColors.muted,
+            color: active ? p.ground : p.muted,
             fontSize: 12.5,
             fontWeight: FontWeight.w600,
           ),
@@ -437,8 +455,9 @@ class _BillHistoryCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final p = context.mam;
     final participants = bill.payload.participants;
-    final paidCount = participants.where((p) => p.isHost || p.paid).length;
+    final paidCount = participants.where((e) => e.isHost || e.paid).length;
     final totalPeople = participants.length;
     final progress = totalPeople == 0 ? 0.0 : paidCount / totalPeople;
     final settled = bill.paymentStatus == PaymentStatus.settled;
@@ -446,7 +465,7 @@ class _BillHistoryCard extends StatelessWidget {
 
     return Card(
       child: InkWell(
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(14),
         onTap: onTap,
         child: Padding(
           padding: const EdgeInsets.all(14),
@@ -462,10 +481,10 @@ class _BillHistoryCard extends StatelessWidget {
                       children: [
                         Text(
                           bill.title,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 15.5,
                             fontWeight: FontWeight.w700,
-                            color: MamColors.ink,
+                            color: p.ink,
                           ),
                         ),
                         const SizedBox(height: 3),
@@ -473,9 +492,9 @@ class _BillHistoryCard extends StatelessWidget {
                           '${formatDateVn(bill.billDate, includeYear: true)} · ${bill.mode == BillMode.quickEqual ? 'Chia đều' : '${bill.payload.items.length} món'}',
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 12.5,
-                            color: MamColors.muted,
+                            color: p.muted,
                           ),
                         ),
                       ],
@@ -489,18 +508,18 @@ class _BillHistoryCard extends StatelessWidget {
                         style: kTabularStyle.copyWith(
                           fontSize: 15.5,
                           fontWeight: FontWeight.w800,
-                          color: MamColors.ink,
+                          color: p.ink,
                         ),
                       ),
                       const SizedBox(height: 2),
                       InkWell(
                         onTap: onDelete,
-                        child: const Padding(
-                          padding: EdgeInsets.all(2),
+                        child: Padding(
+                          padding: const EdgeInsets.all(2),
                           child: Icon(
                             Icons.delete_outline_rounded,
                             size: 16,
-                            color: MamColors.muted,
+                            color: p.muted,
                           ),
                         ),
                       ),
@@ -517,8 +536,8 @@ class _BillHistoryCard extends StatelessWidget {
                       child: LinearProgressIndicator(
                         value: progress,
                         minHeight: 6,
-                        backgroundColor: MamColors.desk,
-                        color: settled ? MamColors.sage : MamColors.accent,
+                        backgroundColor: p.surfaceSubtle,
+                        color: settled ? p.success : p.primary,
                       ),
                     ),
                   ),
@@ -526,15 +545,15 @@ class _BillHistoryCard extends StatelessWidget {
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                     decoration: BoxDecoration(
-                      color: settled ? MamColors.sageSoft : MamColors.accentSoft,
-                      borderRadius: BorderRadius.circular(10),
+                      color: settled ? p.successSoft : p.primarySoft,
+                      borderRadius: BorderRadius.circular(8),
                     ),
                     child: Text(
-                      settled ? 'Đã xong ✓' : '$paidCount/$totalPeople đã trả',
+                      settled ? 'Đã xong' : '$paidCount/$totalPeople đã trả',
                       style: TextStyle(
                         fontSize: 11.5,
                         fontWeight: FontWeight.w700,
-                        color: settled ? MamColors.sage : MamColors.accent,
+                        color: settled ? p.success : p.primary,
                       ),
                     ),
                   ),
@@ -555,9 +574,11 @@ class _EmptyBillsCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final p = context.mam;
     final text = switch (filter) {
-      _HomeFilter.all => 'Chưa có hóa đơn nào. Bấm "Tạo bill mới" hoặc "Chia đều" để bắt đầu.',
-      _HomeFilter.pending => 'Tuyệt vời! Không còn bill nào đang chờ thanh toán.',
+      _HomeFilter.all =>
+        'Chưa có hóa đơn nào. Bấm "Tạo bill mới" hoặc "Chia đều" để bắt đầu.',
+      _HomeFilter.pending => 'Không còn bill nào đang chờ thanh toán.',
       _HomeFilter.settled => 'Chưa có bill nào hoàn tất.',
     };
     return Card(
@@ -565,12 +586,12 @@ class _EmptyBillsCard extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 32),
         child: Column(
           children: [
-            const Icon(Icons.receipt_long_outlined, size: 36, color: MamColors.muted),
+            Icon(Icons.receipt_long_outlined, size: 36, color: p.muted),
             const SizedBox(height: 10),
             Text(
               text,
               textAlign: TextAlign.center,
-              style: const TextStyle(color: MamColors.muted, fontSize: 13.5),
+              style: TextStyle(color: p.muted, fontSize: 13.5),
             ),
           ],
         ),

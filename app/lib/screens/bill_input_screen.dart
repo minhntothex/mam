@@ -2,8 +2,8 @@ import 'package:material_ui/material_ui.dart';
 
 import '../core/formatters.dart';
 import '../models/bill_models.dart';
-import '../theme/mam_theme.dart';
 import '../state/mam_controller.dart';
+import '../theme/mam_theme.dart';
 import 'split_assign_screen.dart';
 
 class _EditableItemRow {
@@ -272,6 +272,7 @@ class _BillInputScreenState extends State<BillInputScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final p = context.mam;
     final ocrTotal = _ocrGrandTotal;
     final diff = ocrTotal == null ? null : _computedGrandTotal - ocrTotal;
 
@@ -284,10 +285,14 @@ class _BillInputScreenState extends State<BillInputScreen> {
         children: [
           if (widget.onOpenScanOcr != null) ...[
             Card(
-              color: MamColors.accentSoft,
+              color: p.primarySoft,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(14),
+                side: BorderSide(color: p.primary.withValues(alpha: 0.25)),
+              ),
               child: InkWell(
-                borderRadius: BorderRadius.circular(16),
-                onTap: _scanning ? null : _handleScanOcr,
+                borderRadius: BorderRadius.circular(14),
+                onTap: _handleScanOcr,
                 child: Padding(
                   padding: const EdgeInsets.all(14),
                   child: Row(
@@ -296,24 +301,16 @@ class _BillInputScreenState extends State<BillInputScreen> {
                         width: 42,
                         height: 42,
                         decoration: BoxDecoration(
-                          color: MamColors.accent,
+                          color: p.primary,
                           borderRadius: BorderRadius.circular(12),
                         ),
-                        child: _scanning
-                            ? const Padding(
-                                padding: EdgeInsets.all(10),
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2.2,
-                                  color: Colors.white,
-                                ),
-                              )
-                            : const Icon(
-                                Icons.document_scanner_rounded,
-                                color: Colors.white,
-                              ),
+                        child: const Icon(
+                          Icons.document_scanner_rounded,
+                          color: Colors.white,
+                        ),
                       ),
                       const SizedBox(width: 12),
-                      const Expanded(
+                      Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
@@ -322,21 +319,21 @@ class _BillInputScreenState extends State<BillInputScreen> {
                               style: TextStyle(
                                 fontWeight: FontWeight.w700,
                                 fontSize: 14.5,
-                                color: MamColors.ink,
+                                color: p.ink,
                               ),
                             ),
-                            SizedBox(height: 2),
+                            const SizedBox(height: 2),
                             Text(
                               'Chụp bill thật hoặc thử hóa đơn mẫu VN',
                               style: TextStyle(
                                 fontSize: 12.5,
-                                color: MamColors.muted,
+                                color: p.muted,
                               ),
                             ),
                           ],
                         ),
                       ),
-                      const Icon(Icons.chevron_right_rounded, color: MamColors.accent),
+                      Icon(Icons.chevron_right_rounded, color: p.primary),
                     ],
                   ),
                 ),
@@ -350,9 +347,13 @@ class _BillInputScreenState extends State<BillInputScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
+                  Text(
                     'Tên quán / Bữa ăn',
-                    style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600, color: MamColors.muted),
+                    style: TextStyle(
+                      fontSize: 12.5,
+                      fontWeight: FontWeight.w600,
+                      color: p.muted,
+                    ),
                   ),
                   const SizedBox(height: 6),
                   TextField(
@@ -363,7 +364,7 @@ class _BillInputScreenState extends State<BillInputScreen> {
               ),
             ),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 16),
           Row(
             children: [
               const Expanded(
@@ -380,7 +381,7 @@ class _BillInputScreenState extends State<BillInputScreen> {
                 style: kTabularStyle.copyWith(
                   fontSize: 13,
                   fontWeight: FontWeight.w600,
-                  color: MamColors.muted,
+                  color: p.muted,
                 ),
               ),
             ],
@@ -409,10 +410,10 @@ class _BillInputScreenState extends State<BillInputScreen> {
                             IconButton(
                               visualDensity: VisualDensity.compact,
                               onPressed: () => _removeRow(i),
-                              icon: const Icon(
+                              icon: Icon(
                                 Icons.close_rounded,
                                 size: 18,
-                                color: MamColors.muted,
+                                color: p.muted,
                               ),
                             ),
                         ],
@@ -424,7 +425,8 @@ class _BillInputScreenState extends State<BillInputScreen> {
                             width: 68,
                             child: TextField(
                               controller: _rows[i].qtyCtrl,
-                              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                              keyboardType:
+                                  const TextInputType.numberWithOptions(decimal: true),
                               decoration: const InputDecoration(labelText: 'SL'),
                               onChanged: (_) => setState(() {}),
                             ),
@@ -467,7 +469,7 @@ class _BillInputScreenState extends State<BillInputScreen> {
             icon: const Icon(Icons.add_rounded, size: 18),
             label: const Text('Thêm món'),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 18),
           const Text(
             'Thuế, phụ phí & giảm giá',
             style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
@@ -530,7 +532,8 @@ class _BillInputScreenState extends State<BillInputScreen> {
                       ActionChip(
                         label: const Text('+5%'),
                         onPressed: () {
-                          _serviceCtrl.text = (_itemsSubtotal * 0.05).round().toString();
+                          _serviceCtrl.text =
+                              (_itemsSubtotal * 0.05).round().toString();
                           setState(() {});
                         },
                       ),
@@ -559,7 +562,8 @@ class _BillInputScreenState extends State<BillInputScreen> {
                           ButtonSegment(value: ShippingSplitMode.proRata, label: Text('Tỷ lệ')),
                         ],
                         selected: {_shippingMode},
-                        onSelectionChanged: (s) => setState(() => _shippingMode = s.first),
+                        onSelectionChanged: (s) =>
+                            setState(() => _shippingMode = s.first),
                       ),
                     ],
                   ),
@@ -595,9 +599,9 @@ class _BillInputScreenState extends State<BillInputScreen> {
         top: false,
         child: Container(
           padding: const EdgeInsets.fromLTRB(16, 10, 16, 12),
-          decoration: const BoxDecoration(
-            color: MamColors.paper,
-            border: Border(top: BorderSide(color: MamColors.border)),
+          decoration: BoxDecoration(
+            color: p.surface,
+            border: Border(top: BorderSide(color: p.border)),
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -606,9 +610,9 @@ class _BillInputScreenState extends State<BillInputScreen> {
                 Container(
                   width: double.infinity,
                   margin: const EdgeInsets.only(bottom: 8),
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
                   decoration: BoxDecoration(
-                    color: diff == 0 ? MamColors.sageSoft : MamColors.dangerSoft,
+                    color: diff == 0 ? p.successSoft : p.dangerSoft,
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: Row(
@@ -618,7 +622,7 @@ class _BillInputScreenState extends State<BillInputScreen> {
                             ? Icons.check_circle_outline_rounded
                             : Icons.warning_amber_rounded,
                         size: 16,
-                        color: diff == 0 ? MamColors.sage : MamColors.danger,
+                        color: diff == 0 ? p.success : p.danger,
                       ),
                       const SizedBox(width: 6),
                       Expanded(
@@ -629,7 +633,7 @@ class _BillInputScreenState extends State<BillInputScreen> {
                           style: TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.w600,
-                            color: diff == 0 ? MamColors.sage : MamColors.danger,
+                            color: diff == 0 ? p.success : p.danger,
                           ),
                         ),
                       ),
@@ -643,9 +647,9 @@ class _BillInputScreenState extends State<BillInputScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text(
+                        Text(
                           'Tổng cộng',
-                          style: TextStyle(fontSize: 12, color: MamColors.muted),
+                          style: TextStyle(fontSize: 12, color: p.muted),
                         ),
                         Text(
                           formatVnd(_computedGrandTotal),
@@ -654,6 +658,7 @@ class _BillInputScreenState extends State<BillInputScreen> {
                           style: kTabularStyle.copyWith(
                             fontSize: 18,
                             fontWeight: FontWeight.w800,
+                            color: p.ink,
                           ),
                         ),
                       ],

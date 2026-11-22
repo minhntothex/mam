@@ -58,6 +58,7 @@ class _SyncAuthCardState extends State<SyncAuthCard> {
 
   @override
   Widget build(BuildContext context) {
+    final p = context.mam;
     final ctrl = widget.controller;
     final sync = widget.syncService;
 
@@ -68,11 +69,11 @@ class _SyncAuthCardState extends State<SyncAuthCard> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Row(
+              Row(
                 children: [
-                  Icon(Icons.cloud_off_rounded, size: 18, color: MamColors.muted),
-                  SizedBox(width: 8),
-                  Expanded(
+                  Icon(Icons.cloud_off_rounded, size: 18, color: p.muted),
+                  const SizedBox(width: 8),
+                  const Expanded(
                     child: Text(
                       'Đồng bộ iOS ↔ Android (Supabase)',
                       style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
@@ -81,9 +82,9 @@ class _SyncAuthCardState extends State<SyncAuthCard> {
                 ],
               ),
               const SizedBox(height: 6),
-              const Text(
+              Text(
                 'Đang chạy chế độ Local-first (offline 100%). Để bật đồng bộ cloud giữa iOS & Android, build app kèm --dart-define=SUPABASE_URL=... và SUPABASE_ANON_KEY=...',
-                style: TextStyle(fontSize: 12.5, color: MamColors.muted),
+                style: TextStyle(fontSize: 12.5, color: p.muted),
               ),
             ],
           ),
@@ -101,7 +102,7 @@ class _SyncAuthCardState extends State<SyncAuthCard> {
             children: [
               Row(
                 children: [
-                  const Icon(Icons.cloud_done_rounded, size: 18, color: MamColors.sage),
+                  Icon(Icons.cloud_done_rounded, size: 18, color: p.success),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
@@ -118,13 +119,13 @@ class _SyncAuthCardState extends State<SyncAuthCard> {
                 ctrl.lastSyncedAt == null
                     ? 'Chưa đồng bộ lần nào'
                     : 'Đồng bộ gần nhất: ${formatDateVn(ctrl.lastSyncedAt!, includeYear: true)}',
-                style: const TextStyle(fontSize: 12.5, color: MamColors.muted),
+                style: TextStyle(fontSize: 12.5, color: p.muted),
               ),
               if (ctrl.lastSyncError != null) ...[
                 const SizedBox(height: 6),
                 Text(
                   'Lỗi: ${ctrl.lastSyncError}',
-                  style: const TextStyle(fontSize: 12, color: MamColors.danger),
+                  style: TextStyle(fontSize: 12, color: p.danger),
                 ),
               ],
               const SizedBox(height: 10),
@@ -178,7 +179,7 @@ class _SyncAuthCardState extends State<SyncAuthCard> {
               const SizedBox(height: 8),
               Text(
                 _error!,
-                style: const TextStyle(fontSize: 12, color: MamColors.danger),
+                style: TextStyle(fontSize: 12, color: p.danger),
               ),
             ],
             const SizedBox(height: 10),
