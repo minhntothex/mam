@@ -20,19 +20,19 @@
 
 | Semantic Role | Light Mode | Dark Mode | Usage |
 |---|---|---|---|
-| `ground` | `#F4F6FA` | `#0B0F17` | Screen scaffold background |
-| `surface` | `#FFFFFF` | `#131A26` | Cards, bottom bars, dialogs, sheets |
-| `surfaceSubtle` | `#EDF1F7` | `#1C2536` | Secondary pills, progress tracks, dark inputs |
-| `border` | `#E2E8F0` | `#243044` | 1px hairline elevation (single elevation mechanism) |
-| `ink` | `#0F172A` | `#F8FAFC` | Primary headings, item names, VND amounts |
-| `muted` | `#475569` | `#94A3B8` | Metadata, dates, secondary labels |
-| `primary` / `onPrimary` | `#0060F0` / `#FFFFFF` | `#5AA3FF` / `#061529` | Primary CTA, active links, active states (≥ 5.3:1 AA) |
-| `primarySoft` | `#EEF4FF` | `#132544` | Tonal buttons, OCR banner, bank selector, selected chips |
-| `heroBackground` / `onHero` | `#FFD23F→#FFB400` / `#0F172A` | `#FCC62B→#F59E0B` / `#0F172A` | Uncollected Balance hero slab (AAA ≥ 8.3:1) |
-| `heroSettled` / `onHeroSettled` | `#2CE09B→#10C47F` / `#04291A` | `#22D993→#10B981` / `#04291A` | All-settled hero slab (AA+ ≥ 6.2:1) |
-| `success` / `successSoft` | `#007D53` / `#E6FAEE` | `#34E8A0` / `#0A3829` | `Paid`, `Settled`, OCR matched (≥ 4.75:1 AA) |
-| `warning` / `warningSoft` | `#9A4100` / `#FEF08A` | `#FFD23F` / `#382B06` | Unsettled bills, unassigned items, pending push (≥ 5.77:1 AA) |
-| `danger` / `dangerSoft` / `onDanger` | `#C81E1E` / `#FEE2E2` / `#FFFFFF` | `#FF7575` / `#3B1317` / `#240608` | OCR mismatch, destructive delete, sync error (≥ 4.70:1 AA) |
+| `ground` | `#F7F8FC` | `#111521` | Screen scaffold background (airy pastel base) |
+| `surface` | `#FFFFFF` | `#1A2030` | Cards, bottom bars, dialogs, sheets |
+| `surfaceSubtle` | `#F0F3F9` | `#232B3E` | Secondary pills, progress tracks, dark inputs |
+| `border` | `#E6EAF2` | `#2B354B` | 1px hairline elevation (single elevation mechanism) |
+| `ink` | `#1E293B` | `#F4F6FB` | Primary headings, item names, VND amounts |
+| `muted` | `#56637A` | `#9DA8BE` | Metadata, dates, secondary labels |
+| `primary` / `primaryFill` / `onPrimary` | `#2E5CD6` / `#98C2FF` / `#0F234A` | `#93C0FF` / `#93C0FF` / `#0C1C38` | Pastel cornflower CTA (AAA 8.5–9.1:1) & links (≥ 5.2:1 AA) |
+| `primarySoft` | `#EDF3FF` | `#1F2E4D` | Tonal buttons, OCR banner, bank selector, selected chips |
+| `heroBackground` / `onHero` | `#FFF3C4→#FFE594` / `#3B2804` | `#FCE8A6→#F7D77E` / `#332305` | Uncollected Balance hero slab (butter pastel, AAA ≥ 10.8:1) |
+| `heroSettled` / `onHeroSettled` | `#D4F8E8→#AEEED4` / `#0A3A2B` | `#C2F5DF→#96E6C6` / `#093628` | All-settled hero slab (mint pastel, AAA ≥ 9.2:1) |
+| `success` / `successSoft` | `#146E52` / `#DDF7EC` | `#8AEBC6` / `#14362C` | `Paid`, `Settled`, OCR matched (≥ 5.5:1 AA/AAA) |
+| `warning` / `warningSoft` | `#7F4B00` / `#FFF2BE` | `#FDE28A` / `#362D14` | Unsettled bills, unassigned items, pending push (≥ 6.4:1 AA/AAA) |
+| `danger` / `dangerSoft` / `onDanger` | `#B42343` / `#FFE2E8` / `#FFFFFF` | `#FFA8BC` / `#3A1B25` / `#330A15` | OCR mismatch, destructive delete, sync error (≥ 5.3:1 AA/AAA) |
 
 ### Print-Safe Receipt Palette (`MamReceiptColors`)
 - Paper `#FFFFFF`, Subtle `#F4F6FA`, Border `#E2E8F0`, Ink `#0F172A`, Muted `#526075`, Primary `#0066FF`, Success `#059669`.

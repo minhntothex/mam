@@ -11,12 +11,12 @@ const TextStyle kTabularStyle = TextStyle(
 /// Always renders on crisp white paper so bank apps scan reliably from Zalo/Messenger.
 abstract final class MamReceiptColors {
   static const Color paper = Color(0xFFFFFFFF);
-  static const Color subtle = Color(0xFFF4F6FA);
-  static const Color ink = Color(0xFF0F172A);
-  static const Color muted = Color(0xFF475569);
-  static const Color border = Color(0xFFE2E8F0);
-  static const Color primary = Color(0xFF0060F0);
-  static const Color success = Color(0xFF007D53);
+  static const Color subtle = Color(0xFFF7F8FC);
+  static const Color ink = Color(0xFF1E293B);
+  static const Color muted = Color(0xFF56637A);
+  static const Color border = Color(0xFFE6EAF2);
+  static const Color primary = Color(0xFF2E5CD6);
+  static const Color success = Color(0xFF146E52);
 }
 
 @immutable
@@ -30,6 +30,7 @@ class MamPalette extends ThemeExtension<MamPalette> {
     required this.muted,
     required this.border,
     required this.primary,
+    required this.primaryFill,
     required this.primarySoft,
     required this.onPrimary,
     required this.heroBackground,
@@ -54,6 +55,7 @@ class MamPalette extends ThemeExtension<MamPalette> {
   final Color muted;
   final Color border;
   final Color primary;
+  final Color primaryFill;
   final Color primarySoft;
   final Color onPrimary;
   final Color heroBackground;
@@ -73,70 +75,72 @@ class MamPalette extends ThemeExtension<MamPalette> {
       participantPalette[index % participantPalette.length];
 
   static const MamPalette light = MamPalette(
-    ground: Color(0xFFF5F7FB),
-    backdrop: Color(0xFFE5ECF6),
+    ground: Color(0xFFF7F8FC),
+    backdrop: Color(0xFFEAF0FA),
     surface: Color(0xFFFFFFFF),
-    surfaceSubtle: Color(0xFFEEF2F8),
-    ink: Color(0xFF0F172A),
-    muted: Color(0xFF475569),
-    border: Color(0xFFE2E8F0),
-    primary: Color(0xFF0060F0),
-    primarySoft: Color(0xFFEEF4FF),
-    onPrimary: Color(0xFFFFFFFF),
-    heroBackground: Color(0xFFFFBE18),
-    onHero: Color(0xFF0F172A),
-    heroSettled: Color(0xFF10C47F),
-    onHeroSettled: Color(0xFF04291A),
-    success: Color(0xFF007D53),
-    successSoft: Color(0xFFE6FAEE),
-    warning: Color(0xFF9A4100),
-    warningSoft: Color(0xFFFEF08A),
-    danger: Color(0xFFC81E1E),
-    dangerSoft: Color(0xFFFEE2E2),
+    surfaceSubtle: Color(0xFFF0F3F9),
+    ink: Color(0xFF1E293B),
+    muted: Color(0xFF56637A),
+    border: Color(0xFFE6EAF2),
+    primary: Color(0xFF2E5CD6),
+    primaryFill: Color(0xFF98C2FF),
+    primarySoft: Color(0xFFEDF3FF),
+    onPrimary: Color(0xFF0F234A),
+    heroBackground: Color(0xFFFFE9A3),
+    onHero: Color(0xFF3B2804),
+    heroSettled: Color(0xFFBDF2DC),
+    onHeroSettled: Color(0xFF0A3A2B),
+    success: Color(0xFF146E52),
+    successSoft: Color(0xFFDDF7EC),
+    warning: Color(0xFF7F4B00),
+    warningSoft: Color(0xFFFFF2BE),
+    danger: Color(0xFFB42343),
+    dangerSoft: Color(0xFFFFE2E8),
     onDanger: Color(0xFFFFFFFF),
     participantPalette: [
-      Color(0xFF0A74FF), // Fresh Blue
-      Color(0xFF00B87C), // Vivid Jade
-      Color(0xFF8B5CF6), // Bright Violet
-      Color(0xFFF59E0B), // Sunny Amber
-      Color(0xFF06B6D4), // Bright Cyan
-      Color(0xFFEC4899), // Vivid Pink
-      Color(0xFF6366F1), // Fresh Indigo
-      Color(0xFFF43F5E), // Coral Rose
+      Color(0xFF4F86F7), // Periwinkle Pastel
+      Color(0xFF2EB88A), // Mint Pastel
+      Color(0xFF8C6FF7), // Lavender Pastel
+      Color(0xFFE0912B), // Peach-Butter Pastel
+      Color(0xFF24A6BD), // Aqua Pastel
+      Color(0xFFE36496), // Sakura Pink Pastel
+      Color(0xFF6A78F2), // Soft Indigo Pastel
+      Color(0xFFE56B70), // Coral Pastel
     ],
   );
 
   static const MamPalette dark = MamPalette(
-    ground: Color(0xFF0B1019),
-    backdrop: Color(0xFF05080D),
-    surface: Color(0xFF131B29),
-    surfaceSubtle: Color(0xFF1C273A),
-    ink: Color(0xFFF8FAFC),
-    muted: Color(0xFF94A3B8),
-    border: Color(0xFF243248),
-    primary: Color(0xFF5AA3FF),
-    primarySoft: Color(0xFF132544),
-    onPrimary: Color(0xFF061529),
-    heroBackground: Color(0xFFF5B301),
-    onHero: Color(0xFF0F172A),
-    heroSettled: Color(0xFF10B981),
-    onHeroSettled: Color(0xFF04291A),
-    success: Color(0xFF34E8A0),
-    successSoft: Color(0xFF0A3829),
-    warning: Color(0xFFFFD23F),
-    warningSoft: Color(0xFF382B06),
-    danger: Color(0xFFFF7575),
-    dangerSoft: Color(0xFF3B1317),
-    onDanger: Color(0xFF240608),
+    ground: Color(0xFF111521),
+    backdrop: Color(0xFF090C14),
+    surface: Color(0xFF1A2030),
+    surfaceSubtle: Color(0xFF232B3E),
+    ink: Color(0xFFF4F6FB),
+    muted: Color(0xFF9DA8BE),
+    border: Color(0xFF2B354B),
+    primary: Color(0xFF93C0FF),
+    primaryFill: Color(0xFF93C0FF),
+    primarySoft: Color(0xFF1F2E4D),
+    onPrimary: Color(0xFF0C1C38),
+    heroBackground: Color(0xFFF9DC86),
+    onHero: Color(0xFF332305),
+    heroSettled: Color(0xFFA8EDD1),
+    onHeroSettled: Color(0xFF093628),
+    success: Color(0xFF8AEBC6),
+    successSoft: Color(0xFF14362C),
+    warning: Color(0xFFFDE28A),
+    warningSoft: Color(0xFF362D14),
+    danger: Color(0xFFFFA8BC),
+    dangerSoft: Color(0xFF3A1B25),
+    onDanger: Color(0xFF330A15),
     participantPalette: [
-      Color(0xFF38BDF8), // Electric Sky
-      Color(0xFF2EE59D), // Fresh Mint
-      Color(0xFFB794F4), // Bright Violet
-      Color(0xFFFFD02F), // Sunny Gold
-      Color(0xFF22D3EE), // Vivid Cyan
-      Color(0xFFFF6BA9), // Bright Pink
-      Color(0xFF818CF8), // Fresh Indigo
-      Color(0xFFFF6B6B), // Coral Red
+      Color(0xFF93C5FD), // Sky Pastel
+      Color(0xFF8AEBC6), // Mint Pastel
+      Color(0xFFC4B5FD), // Lavender Pastel
+      Color(0xFFFDE28A), // Butter Pastel
+      Color(0xFF7DD3FC), // Aqua Pastel
+      Color(0xFFF9A8D4), // Sakura Pastel
+      Color(0xFFA5B4FC), // Periwinkle Pastel
+      Color(0xFFFDA4AF), // Peach-Rose Pastel
     ],
   );
 
@@ -150,6 +154,7 @@ class MamPalette extends ThemeExtension<MamPalette> {
     Color? muted,
     Color? border,
     Color? primary,
+    Color? primaryFill,
     Color? primarySoft,
     Color? onPrimary,
     Color? heroBackground,
@@ -174,6 +179,7 @@ class MamPalette extends ThemeExtension<MamPalette> {
       muted: muted ?? this.muted,
       border: border ?? this.border,
       primary: primary ?? this.primary,
+      primaryFill: primaryFill ?? this.primaryFill,
       primarySoft: primarySoft ?? this.primarySoft,
       onPrimary: onPrimary ?? this.onPrimary,
       heroBackground: heroBackground ?? this.heroBackground,
@@ -203,6 +209,7 @@ class MamPalette extends ThemeExtension<MamPalette> {
       muted: Color.lerp(muted, other.muted, t)!,
       border: Color.lerp(border, other.border, t)!,
       primary: Color.lerp(primary, other.primary, t)!,
+      primaryFill: Color.lerp(primaryFill, other.primaryFill, t)!,
       primarySoft: Color.lerp(primarySoft, other.primarySoft, t)!,
       onPrimary: Color.lerp(onPrimary, other.onPrimary, t)!,
       heroBackground: Color.lerp(heroBackground, other.heroBackground, t)!,
@@ -317,7 +324,7 @@ ThemeData _buildTheme(Brightness brightness, MamPalette p) {
     ),
     filledButtonTheme: FilledButtonThemeData(
       style: FilledButton.styleFrom(
-        backgroundColor: p.primary,
+        backgroundColor: p.primaryFill,
         foregroundColor: p.onPrimary,
         minimumSize: const Size(0, 48),
         padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 13),

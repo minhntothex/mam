@@ -321,23 +321,30 @@ class _UncollectedBanner extends StatelessWidget {
     final allDone = pendingCount == 0;
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final fg = allDone ? p.onHeroSettled : p.onHero;
-    final pillBg = fg.withValues(alpha: 0.11);
+    final pillBg = fg.withValues(alpha: 0.09);
     final dotColor =
-        allDone ? const Color(0xFF045D3A) : const Color(0xFF92400E);
+        allDone ? const Color(0xFF146E52) : const Color(0xFFA15C00);
+    final heroBorder = isDark
+        ? null
+        : Border.all(
+            color: allDone
+                ? const Color(0xFF8BE0BF)
+                : const Color(0xFFF3D578),
+          );
     final heroGradient = allDone
         ? LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
             colors: isDark
-                ? [const Color(0xFF22D993), const Color(0xFF10B981)]
-                : [const Color(0xFF2CE09B), const Color(0xFF10C47F)],
+                ? [const Color(0xFFC2F5DF), const Color(0xFF96E6C6)]
+                : [const Color(0xFFD4F8E8), const Color(0xFFAEEED4)],
           )
         : LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
             colors: isDark
-                ? [const Color(0xFFFCC62B), const Color(0xFFF59E0B)]
-                : [const Color(0xFFFFD23F), const Color(0xFFFFB400)],
+                ? [const Color(0xFFFCE8A6), const Color(0xFFF7D77E)]
+                : [const Color(0xFFFFF3C4), const Color(0xFFFFE594)],
           );
 
     return Container(
@@ -345,6 +352,7 @@ class _UncollectedBanner extends StatelessWidget {
       decoration: BoxDecoration(
         gradient: heroGradient,
         borderRadius: BorderRadius.circular(16),
+        border: heroBorder,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -573,10 +581,10 @@ class _BillHistoryCard extends StatelessWidget {
                         color: settled
                             ? (Theme.of(context).brightness == Brightness.dark
                                 ? p.success
-                                : const Color(0xFF10C47F))
+                                : const Color(0xFF6FE3B5))
                             : (Theme.of(context).brightness == Brightness.dark
                                 ? p.warning
-                                : const Color(0xFFFFB800)),
+                                : const Color(0xFFF7C95C)),
                       ),
                     ),
                   ),
