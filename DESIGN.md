@@ -26,13 +26,13 @@
 | `border` | `#E2E8F0` | `#243044` | 1px hairline elevation (single elevation mechanism) |
 | `ink` | `#0F172A` | `#F8FAFC` | Primary headings, item names, VND amounts |
 | `muted` | `#526075` | `#94A3B8` | Metadata, dates, secondary labels |
-| `primary` | `#0066FF` | `#3B82F6` | Primary CTA, active links, active states |
-| `primarySoft` | `#EBF3FF` | `#172554` | Tonal buttons, OCR banner, bank selector, selected chips |
-| `heroBackground` / `onHero` | `#F59E0B` / `#0F172A` | `#B45309` / `#FFFFFF` | Uncollected Balance hero slab (amber-gold) |
-| `heroSettled` | `#047857` | `#065F46` | All-settled hero slab |
-| `success` / `successSoft` | `#059669` / `#ECFDF5` | `#34D399` / `#064E3B` | `Đã trả`, `Đã xong`, OCR matched |
-| `warning` / `warningSoft` | `#B45309` / `#FEF3C7` | `#FBBF24` / `#451A03` | Unassigned items, pending cloud push |
-| `danger` / `dangerSoft` | `#DC2626` / `#FEF2F2` | `#F87171` / `#450A0A` | OCR total mismatch, destructive delete, sync error |
+| `primary` | `#0070FF` | `#388BFF` | Primary CTA, active links, active states |
+| `primarySoft` | `#E6F1FF` | `#162C56` | Tonal buttons, OCR banner, bank selector, selected chips |
+| `heroBackground` / `onHero` | `#FFCE3A→#FFAD00` / `#0F172A` | `#FCC62B→#F59E0B` / `#0F172A` | Uncollected Balance hero slab (fresh gold) |
+| `heroSettled` | `#10C982→#059669` | `#10B981→#047857` | All-settled hero slab (fresh emerald) |
+| `success` / `successSoft` | `#00A86B` / `#DCFCE7` | `#2EE59D` / `#0A3D2E` | `Paid`, `Settled`, OCR matched |
+| `warning` / `warningSoft` | `#B45309` / `#FEF08A` | `#FFD02F` / `#3D2F07` | Unsettled bills, unassigned items, pending cloud push |
+| `danger` / `dangerSoft` | `#EF4444` / `#FEE2E2` | `#FF6B6B` / `#3F151A` | OCR total mismatch, destructive delete, sync error |
 
 ### Print-Safe Receipt Palette (`MamReceiptColors`)
 - Paper `#FFFFFF`, Subtle `#F4F6FA`, Border `#E2E8F0`, Ink `#0F172A`, Muted `#526075`, Primary `#0066FF`, Success `#059669`.

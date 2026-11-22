@@ -15,8 +15,8 @@ abstract final class MamReceiptColors {
   static const Color ink = Color(0xFF0F172A);
   static const Color muted = Color(0xFF526075);
   static const Color border = Color(0xFFE2E8F0);
-  static const Color primary = Color(0xFF0066FF);
-  static const Color success = Color(0xFF059669);
+  static const Color primary = Color(0xFF0070FF);
+  static const Color success = Color(0xFF00A86B);
 }
 
 @immutable
@@ -69,66 +69,66 @@ class MamPalette extends ThemeExtension<MamPalette> {
       participantPalette[index % participantPalette.length];
 
   static const MamPalette light = MamPalette(
-    ground: Color(0xFFF4F6FA),
-    backdrop: Color(0xFFE6ECF5),
+    ground: Color(0xFFF5F7FB),
+    backdrop: Color(0xFFE5ECF6),
     surface: Color(0xFFFFFFFF),
-    surfaceSubtle: Color(0xFFEDF1F7),
+    surfaceSubtle: Color(0xFFEEF2F8),
     ink: Color(0xFF0F172A),
     muted: Color(0xFF526075),
     border: Color(0xFFE2E8F0),
-    primary: Color(0xFF0066FF),
-    primarySoft: Color(0xFFEBF3FF),
+    primary: Color(0xFF0070FF),
+    primarySoft: Color(0xFFE6F1FF),
     onPrimary: Color(0xFFFFFFFF),
-    heroBackground: Color(0xFFF59E0B),
+    heroBackground: Color(0xFFFFBE18),
     onHero: Color(0xFF0F172A),
-    heroSettled: Color(0xFF047857),
-    success: Color(0xFF059669),
-    successSoft: Color(0xFFECFDF5),
+    heroSettled: Color(0xFF06A870),
+    success: Color(0xFF00A86B),
+    successSoft: Color(0xFFDCFCE7),
     warning: Color(0xFFB45309),
-    warningSoft: Color(0xFFFEF3C7),
-    danger: Color(0xFFDC2626),
-    dangerSoft: Color(0xFFFEF2F2),
+    warningSoft: Color(0xFFFEF08A),
+    danger: Color(0xFFEF4444),
+    dangerSoft: Color(0xFFFEE2E2),
     participantPalette: [
-      Color(0xFF0066FF), // Banking Blue
-      Color(0xFF059669), // Emerald
-      Color(0xFF7C3AED), // Violet
-      Color(0xFFD97706), // Amber
-      Color(0xFF0891B2), // Cyan
-      Color(0xFFDB2777), // Rose
-      Color(0xFF4F46E5), // Indigo
-      Color(0xFFDC2626), // Crimson
+      Color(0xFF0A74FF), // Fresh Blue
+      Color(0xFF00B87C), // Vivid Jade
+      Color(0xFF8B5CF6), // Bright Violet
+      Color(0xFFF59E0B), // Sunny Amber
+      Color(0xFF06B6D4), // Bright Cyan
+      Color(0xFFEC4899), // Vivid Pink
+      Color(0xFF6366F1), // Fresh Indigo
+      Color(0xFFF43F5E), // Coral Rose
     ],
   );
 
   static const MamPalette dark = MamPalette(
-    ground: Color(0xFF0B0F17),
-    backdrop: Color(0xFF05070B),
-    surface: Color(0xFF131A26),
-    surfaceSubtle: Color(0xFF1C2536),
+    ground: Color(0xFF0B1019),
+    backdrop: Color(0xFF05080D),
+    surface: Color(0xFF131B29),
+    surfaceSubtle: Color(0xFF1C273A),
     ink: Color(0xFFF8FAFC),
     muted: Color(0xFF94A3B8),
-    border: Color(0xFF243044),
-    primary: Color(0xFF3B82F6),
-    primarySoft: Color(0xFF172554),
+    border: Color(0xFF243248),
+    primary: Color(0xFF388BFF),
+    primarySoft: Color(0xFF162C56),
     onPrimary: Color(0xFFFFFFFF),
-    heroBackground: Color(0xFFB45309),
-    onHero: Color(0xFFFFFFFF),
-    heroSettled: Color(0xFF065F46),
-    success: Color(0xFF34D399),
-    successSoft: Color(0xFF064E3B),
-    warning: Color(0xFFFBBF24),
-    warningSoft: Color(0xFF451A03),
-    danger: Color(0xFFF87171),
-    dangerSoft: Color(0xFF450A0A),
+    heroBackground: Color(0xFFF5B301),
+    onHero: Color(0xFF0F172A),
+    heroSettled: Color(0xFF059E68),
+    success: Color(0xFF2EE59D),
+    successSoft: Color(0xFF0A3D2E),
+    warning: Color(0xFFFFD02F),
+    warningSoft: Color(0xFF3D2F07),
+    danger: Color(0xFFFF6B6B),
+    dangerSoft: Color(0xFF3F151A),
     participantPalette: [
-      Color(0xFF60A5FA), // Sky Blue
-      Color(0xFF34D399), // Mint Emerald
-      Color(0xFFA78BFA), // Soft Violet
-      Color(0xFFFBBF24), // Warm Amber
-      Color(0xFF22D3EE), // Cyan
-      Color(0xFFF472B6), // Pink
-      Color(0xFF818CF8), // Indigo
-      Color(0xFFF87171), // Coral Red
+      Color(0xFF38BDF8), // Electric Sky
+      Color(0xFF2EE59D), // Fresh Mint
+      Color(0xFFB794F4), // Bright Violet
+      Color(0xFFFFD02F), // Sunny Gold
+      Color(0xFF22D3EE), // Vivid Cyan
+      Color(0xFFFF6BA9), // Bright Pink
+      Color(0xFF818CF8), // Fresh Indigo
+      Color(0xFFFF6B6B), // Coral Red
     ],
   );
 
