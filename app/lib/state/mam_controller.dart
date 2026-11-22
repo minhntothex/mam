@@ -39,13 +39,11 @@ class MamController extends ChangeNotifier {
   String? _lastSyncError;
   String _currentUserId = LocalStore.localDemoUserId;
   String? _signedInEmail;
-  ThemeMode _themeMode = ThemeMode.system;
   AppLanguage _language = AppLanguage.en;
 
   Future<void> Function()? _onSyncRequested;
 
   bool get initialized => _initialized;
-  ThemeMode get themeMode => _themeMode;
   AppLanguage get language => _language;
   MamStrings get strings => MamStrings(_language);
   String get currentUserId => _currentUserId;
@@ -122,7 +120,6 @@ class MamController extends ChangeNotifier {
     _settings = snapshot.settings;
     _pendingSyncKeys = Set<String>.from(snapshot.pendingSyncKeys);
     _lastSyncedAt = snapshot.lastSyncedAt;
-    _themeMode = snapshot.themeMode;
     _language = snapshot.language;
     _initialized = true;
     notifyListeners();
@@ -133,20 +130,6 @@ class MamController extends ChangeNotifier {
     _language = language;
     await store.saveLanguage(language);
     notifyListeners();
-  }
-
-  Future<void> setThemeMode(ThemeMode mode) async {
-    if (_themeMode == mode) return;
-    _themeMode = mode;
-    await store.saveThemeMode(mode);
-    notifyListeners();
-  }
-
-  Future<void> toggleLightDark(Brightness currentBrightness) async {
-    final next = currentBrightness == Brightness.dark
-        ? ThemeMode.light
-        : ThemeMode.dark;
-    await setThemeMode(next);
   }
 
   void attachSyncHandler({

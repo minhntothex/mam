@@ -13,15 +13,11 @@ class _EditableItemRow {
     String name = '',
     double quantity = 1,
     int lineTotal = 0,
-    int itemDiscount = 0,
     Map<String, double>? shares,
   })  : nameCtrl = TextEditingController(text: name),
         qtyCtrl = TextEditingController(text: formatQty(quantity)),
         totalCtrl = TextEditingController(
           text: lineTotal > 0 ? lineTotal.toString() : '',
-        ),
-        discountCtrl = TextEditingController(
-          text: itemDiscount > 0 ? itemDiscount.toString() : '',
         ),
         existingShares = shares ?? const {};
 
@@ -29,7 +25,6 @@ class _EditableItemRow {
   final TextEditingController nameCtrl;
   final TextEditingController qtyCtrl;
   final TextEditingController totalCtrl;
-  final TextEditingController discountCtrl;
   final Map<String, double> existingShares;
 
   BillItem toBillItem(String fallbackName) {
@@ -39,7 +34,6 @@ class _EditableItemRow {
       name: nameCtrl.text.trim().isEmpty ? fallbackName : nameCtrl.text.trim(),
       quantity: qty > 0 ? qty : 1,
       lineTotal: parseVndInput(totalCtrl.text),
-      itemDiscount: parseVndInput(discountCtrl.text),
       shares: existingShares,
     );
   }
@@ -48,7 +42,6 @@ class _EditableItemRow {
     nameCtrl.dispose();
     qtyCtrl.dispose();
     totalCtrl.dispose();
-    discountCtrl.dispose();
   }
 }
 
@@ -120,8 +113,7 @@ class _BillInputScreenState extends State<BillInputScreen> {
             id: item.id,
             name: item.name,
             quantity: item.quantity,
-            lineTotal: item.lineTotal,
-            itemDiscount: item.itemDiscount,
+            lineTotal: item.netTotal,
             shares: item.shares,
           ),
         );
@@ -212,8 +204,9 @@ class _BillInputScreenState extends State<BillInputScreen> {
             id: 'ocr_${DateTime.now().microsecondsSinceEpoch}_$i',
             name: item.name,
             quantity: item.quantity,
-            lineTotal: item.lineTotal,
-            itemDiscount: item.itemDiscount,
+            lineTotal: item.lineTotal > item.itemDiscount
+                ? item.lineTotal - item.itemDiscount
+                : item.lineTotal,
           ),
         );
       }
@@ -441,7 +434,6 @@ class _BillInputScreenState extends State<BillInputScreen> {
                           ),
                           const SizedBox(width: 8),
                           Expanded(
-                            flex: 2,
                             child: TextField(
                               controller: _rows[i].totalCtrl,
                               keyboardType: TextInputType.number,
@@ -449,18 +441,6 @@ class _BillInputScreenState extends State<BillInputScreen> {
                               decoration: InputDecoration(
                                 labelText: s.lineTotalLabel,
                                 suffixText: 'đ',
-                              ),
-                              onChanged: (_) => setState(() {}),
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: TextField(
-                              controller: _rows[i].discountCtrl,
-                              keyboardType: TextInputType.number,
-                              style: kTabularStyle,
-                              decoration: InputDecoration(
-                                labelText: s.itemDiscountLabel,
                               ),
                               onChanged: (_) => setState(() {}),
                             ),

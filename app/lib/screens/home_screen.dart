@@ -37,7 +37,6 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     final p = context.mam;
     final s = context.s;
-    final brightness = Theme.of(context).brightness;
 
     return ListenableBuilder(
       listenable: widget.controller,
@@ -68,17 +67,6 @@ class _HomeScreenState extends State<HomeScreen> {
                     _openSettings(context);
                   }
                 },
-              ),
-              IconButton(
-                tooltip: brightness == Brightness.dark
-                    ? s.switchToLight
-                    : s.switchToDark,
-                icon: Icon(
-                  brightness == Brightness.dark
-                      ? Icons.light_mode_outlined
-                      : Icons.dark_mode_outlined,
-                ),
-                onPressed: () => ctrl.toggleLightDark(brightness),
               ),
               IconButton(
                 tooltip: s.settings,
@@ -319,32 +307,23 @@ class _UncollectedBanner extends StatelessWidget {
     final p = context.mam;
     final s = context.s;
     final allDone = pendingCount == 0;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     final fg = allDone ? p.onHeroSettled : p.onHero;
     final pillBg = fg.withValues(alpha: 0.09);
     final dotColor =
         allDone ? const Color(0xFF146E52) : const Color(0xFFA15C00);
-    final heroBorder = isDark
-        ? null
-        : Border.all(
-            color: allDone
-                ? const Color(0xFF8BE0BF)
-                : const Color(0xFFF3D578),
-          );
+    final heroBorder = Border.all(
+      color: allDone ? const Color(0xFF8BE0BF) : const Color(0xFFF3D578),
+    );
     final heroGradient = allDone
-        ? LinearGradient(
+        ? const LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
-            colors: isDark
-                ? [const Color(0xFFC2F5DF), const Color(0xFF96E6C6)]
-                : [const Color(0xFFD4F8E8), const Color(0xFFAEEED4)],
+            colors: [Color(0xFFD4F8E8), Color(0xFFAEEED4)],
           )
-        : LinearGradient(
+        : const LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
-            colors: isDark
-                ? [const Color(0xFFFCE8A6), const Color(0xFFF7D77E)]
-                : [const Color(0xFFFFF3C4), const Color(0xFFFFE594)],
+            colors: [Color(0xFFFFF3C4), Color(0xFFFFE594)],
           );
 
     return Container(
@@ -579,12 +558,8 @@ class _BillHistoryCard extends StatelessWidget {
                         minHeight: 6,
                         backgroundColor: p.surfaceSubtle,
                         color: settled
-                            ? (Theme.of(context).brightness == Brightness.dark
-                                ? p.success
-                                : const Color(0xFF6FE3B5))
-                            : (Theme.of(context).brightness == Brightness.dark
-                                ? p.warning
-                                : const Color(0xFFF7C95C)),
+                            ? const Color(0xFF6FE3B5)
+                            : const Color(0xFFF7C95C),
                       ),
                     ),
                   ),

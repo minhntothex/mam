@@ -4,7 +4,6 @@ import 'package:mam/l10n/mam_strings.dart';
 import 'package:mam/main.dart';
 import 'package:mam/state/mam_controller.dart';
 import 'package:mam/widgets/mam_logo.dart';
-import 'package:material_ui/material_ui.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -77,7 +76,7 @@ void main() {
     expect(find.textContaining('unassigned'), findsOneWidget);
   });
 
-  testWidgets('Theme toggle and EN <-> VI language switching work live', (tester) async {
+  testWidgets('EN <-> VI language switching works live on single pastel theme', (tester) async {
     SharedPreferences.setMockInitialValues({});
     final store = await LocalStore.open();
     final controller = MamController(store: store);
@@ -86,25 +85,15 @@ void main() {
     await tester.pumpWidget(MamApp(controller: controller));
     await tester.pumpAndSettle();
 
-    // Toggle Dark -> Light
-    expect(controller.themeMode, ThemeMode.system);
-    await tester.tap(find.byTooltip('Switch to Dark mode'));
-    await tester.pumpAndSettle();
-    expect(controller.themeMode, ThemeMode.dark);
-
-    await tester.tap(find.byTooltip('Switch to Light mode'));
-    await tester.pumpAndSettle();
-    expect(controller.themeMode, ThemeMode.light);
-
     // Open Settings and switch English -> Vietnamese
     await tester.tap(find.byTooltip('Settings'));
     await tester.pumpAndSettle();
-    expect(find.text('Appearance & Language'), findsOneWidget);
+    expect(find.text('Language'), findsOneWidget);
 
     await tester.tap(find.text('Tiếng Việt'));
     await tester.pumpAndSettle();
     expect(controller.language, AppLanguage.vi);
-    expect(find.text('Giao diện & Ngôn ngữ'), findsOneWidget);
+    expect(find.text('Ngôn ngữ'), findsOneWidget);
     expect(find.text('Cài đặt'), findsOneWidget);
   });
 }

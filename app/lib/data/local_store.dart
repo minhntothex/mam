@@ -1,6 +1,5 @@
 import 'dart:convert';
 
-import 'package:material_ui/material_ui.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../l10n/mam_strings.dart';
@@ -16,7 +15,6 @@ final class LocalDataSnapshot {
     required this.settings,
     required this.pendingSyncKeys,
     required this.lastSyncedAt,
-    this.themeMode = ThemeMode.system,
     this.language = AppLanguage.en,
   });
 
@@ -26,7 +24,6 @@ final class LocalDataSnapshot {
   final UserSettings settings;
   final Set<String> pendingSyncKeys;
   final DateTime? lastSyncedAt;
-  final ThemeMode themeMode;
   final AppLanguage language;
 }
 
@@ -42,7 +39,6 @@ class LocalStore {
   static const String _kSettings = 'mam_settings_v1';
   static const String _kPendingSync = 'mam_pending_sync_v1';
   static const String _kLastSyncedAt = 'mam_last_synced_at_v1';
-  static const String _kThemeMode = 'mam_theme_mode_v1';
   static const String _kLanguage = 'mam_language_v1';
   static const String localDemoUserId = '00000000-0000-0000-0000-000000000001';
 
@@ -76,7 +72,6 @@ class LocalStore {
     final pending = (_prefs.getStringList(_kPendingSync) ?? const []).toSet();
     final rawSync = _prefs.getString(_kLastSyncedAt);
     final lastSync = rawSync == null ? null : DateTime.tryParse(rawSync);
-    final themeMode = _decodeThemeMode(_prefs.getString(_kThemeMode));
     final language = AppLanguage.fromCode(_prefs.getString(_kLanguage));
 
     return LocalDataSnapshot(
@@ -86,25 +81,12 @@ class LocalStore {
       settings: settings,
       pendingSyncKeys: pending,
       lastSyncedAt: lastSync,
-      themeMode: themeMode,
       language: language,
     );
   }
 
-  Future<void> saveThemeMode(ThemeMode mode) async {
-    await _prefs.setString(_kThemeMode, mode.name);
-  }
-
   Future<void> saveLanguage(AppLanguage language) async {
     await _prefs.setString(_kLanguage, language.code);
-  }
-
-  ThemeMode _decodeThemeMode(String? raw) {
-    return switch (raw) {
-      'light' => ThemeMode.light,
-      'dark' => ThemeMode.dark,
-      _ => ThemeMode.system,
-    };
   }
 
   Future<LocalDataSnapshot> resetToDemoSeed() async {

@@ -34,76 +34,32 @@ class SettingsScreen extends StatelessWidget {
           body: ListView(
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 40),
             children: [
-              // 0. Appearance & Language
+              // 0. Language
               Text(
-                s.appearanceSection,
+                s.languageLabel,
                 style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
               ),
               const SizedBox(height: 8),
               Card(
                 child: Padding(
                   padding: const EdgeInsets.all(14),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        s.themeModeLabel,
-                        style: const TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600,
+                  child: SizedBox(
+                    width: double.infinity,
+                    child: SegmentedButton<AppLanguage>(
+                      segments: [
+                        ButtonSegment(
+                          value: AppLanguage.en,
+                          label: Text(AppLanguage.en.label),
                         ),
-                      ),
-                      const SizedBox(height: 8),
-                      SizedBox(
-                        width: double.infinity,
-                        child: SegmentedButton<ThemeMode>(
-                          segments: [
-                            ButtonSegment(
-                              value: ThemeMode.system,
-                              label: Text(s.themeSystem),
-                            ),
-                            ButtonSegment(
-                              value: ThemeMode.light,
-                              label: Text(s.themeLight),
-                            ),
-                            ButtonSegment(
-                              value: ThemeMode.dark,
-                              label: Text(s.themeDark),
-                            ),
-                          ],
-                          selected: {controller.themeMode},
-                          onSelectionChanged: (sel) =>
-                              controller.setThemeMode(sel.first),
+                        ButtonSegment(
+                          value: AppLanguage.vi,
+                          label: Text(AppLanguage.vi.label),
                         ),
-                      ),
-                      const SizedBox(height: 14),
-                      Text(
-                        s.languageLabel,
-                        style: const TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      SizedBox(
-                        width: double.infinity,
-                        child: SegmentedButton<AppLanguage>(
-                          segments: [
-                            ButtonSegment(
-                              value: AppLanguage.en,
-                              label: Text(AppLanguage.en.label),
-                            ),
-                            ButtonSegment(
-                              value: AppLanguage.vi,
-                              label: Text(AppLanguage.vi.label),
-                            ),
-                          ],
-                          selected: {controller.language},
-                          onSelectionChanged: (sel) =>
-                              controller.setLanguage(sel.first),
-                        ),
-                      ),
-                    ],
+                      ],
+                      selected: {controller.language},
+                      onSelectionChanged: (sel) =>
+                          controller.setLanguage(sel.first),
+                    ),
                   ),
                 ),
               ),

@@ -39,8 +39,6 @@ class MamStrings {
 
   // Home
   String get settings => t('Settings', 'Cài đặt');
-  String get switchToLight => t('Switch to Light mode', 'Chuyển chế độ Sáng');
-  String get switchToDark => t('Switch to Dark mode', 'Chuyển chế độ Tối');
   String get syncLocal => t('Local', 'Local');
   String get syncSynced => t('Synced', 'Đã sync');
   String get syncPending => t('Pending', 'Chờ sync');
@@ -131,7 +129,6 @@ class MamStrings {
   String get defaultItemName => t('Item', 'Món ăn');
   String get qtyLabel => t('Qty', 'SL');
   String get lineTotalLabel => t('Line total', 'Thành tiền');
-  String get itemDiscountLabel => t('Item disc.', 'Giảm riêng');
   String get addItemBtn => t('Add item', 'Thêm món');
   String get feesAndDiscounts =>
       t('Tax, fees & discounts', 'Thuế, phụ phí & giảm giá');
@@ -264,11 +261,6 @@ class MamStrings {
       isVi ? '+ $count món khác' : '+ $count more items';
 
   // Settings
-  String get appearanceSection => t('Appearance & Language', 'Giao diện & Ngôn ngữ');
-  String get themeModeLabel => t('Theme (Light / Dark)', 'Chế độ hiển thị (Sáng / Tối)');
-  String get themeSystem => t('System', 'Hệ thống');
-  String get themeLight => t('Light', 'Sáng');
-  String get themeDark => t('Dark', 'Tối');
   String get languageLabel => t('Language', 'Ngôn ngữ');
   String get bankSection => t('Bank accounts (VietQR)', 'Tài khoản ngân hàng (VietQR)');
   String get addBankBtn => t('Add bank', 'Thêm STK');

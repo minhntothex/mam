@@ -1,7 +1,7 @@
 import 'package:material_ui/material_ui.dart';
 
-// Mâm — Chuẩn Fintech Việt Nam (Canon) Design Tokens
-// First-class Light & Dark appearance with semantic roles and WCAG AA contrast.
+// Mâm — Fresh Pastel Fintech Design Tokens
+// Single light pastel theme with verified WCAG AA/AAA contrast.
 
 const TextStyle kTabularStyle = TextStyle(
   fontFeatures: [FontFeature.tabularFigures()],
@@ -109,41 +109,6 @@ class MamPalette extends ThemeExtension<MamPalette> {
     ],
   );
 
-  static const MamPalette dark = MamPalette(
-    ground: Color(0xFF111521),
-    backdrop: Color(0xFF090C14),
-    surface: Color(0xFF1A2030),
-    surfaceSubtle: Color(0xFF232B3E),
-    ink: Color(0xFFF4F6FB),
-    muted: Color(0xFF9DA8BE),
-    border: Color(0xFF2B354B),
-    primary: Color(0xFF93C0FF),
-    primaryFill: Color(0xFF93C0FF),
-    primarySoft: Color(0xFF1F2E4D),
-    onPrimary: Color(0xFF0C1C38),
-    heroBackground: Color(0xFFF9DC86),
-    onHero: Color(0xFF332305),
-    heroSettled: Color(0xFFA8EDD1),
-    onHeroSettled: Color(0xFF093628),
-    success: Color(0xFF8AEBC6),
-    successSoft: Color(0xFF14362C),
-    warning: Color(0xFFFDE28A),
-    warningSoft: Color(0xFF362D14),
-    danger: Color(0xFFFFA8BC),
-    dangerSoft: Color(0xFF3A1B25),
-    onDanger: Color(0xFF330A15),
-    participantPalette: [
-      Color(0xFF93C5FD), // Sky Pastel
-      Color(0xFF8AEBC6), // Mint Pastel
-      Color(0xFFC4B5FD), // Lavender Pastel
-      Color(0xFFFDE28A), // Butter Pastel
-      Color(0xFF7DD3FC), // Aqua Pastel
-      Color(0xFFF9A8D4), // Sakura Pastel
-      Color(0xFFA5B4FC), // Periwinkle Pastel
-      Color(0xFFFDA4AF), // Peach-Rose Pastel
-    ],
-  );
-
   @override
   MamPalette copyWith({
     Color? ground,
@@ -234,15 +199,11 @@ extension MamPaletteContext on BuildContext {
       Theme.of(this).extension<MamPalette>() ?? MamPalette.light;
 }
 
-ThemeData buildMamLightTheme() => _buildTheme(Brightness.light, MamPalette.light);
-
-ThemeData buildMamDarkTheme() => _buildTheme(Brightness.dark, MamPalette.dark);
-
-ThemeData _buildTheme(Brightness brightness, MamPalette p) {
-  final isDark = brightness == Brightness.dark;
+ThemeData buildMamTheme() {
+  const p = MamPalette.light;
   final scheme = ColorScheme.fromSeed(
     seedColor: p.primary,
-    brightness: brightness,
+    brightness: Brightness.light,
   ).copyWith(
     primary: p.primary,
     onPrimary: p.onPrimary,
@@ -259,10 +220,10 @@ ThemeData _buildTheme(Brightness brightness, MamPalette p) {
 
   return ThemeData(
     useMaterial3: true,
-    brightness: brightness,
+    brightness: Brightness.light,
     colorScheme: scheme,
     scaffoldBackgroundColor: p.ground,
-    extensions: [p],
+    extensions: const [p],
     appBarTheme: AppBarTheme(
       backgroundColor: p.ground,
       foregroundColor: p.ink,
@@ -304,7 +265,7 @@ ThemeData _buildTheme(Brightness brightness, MamPalette p) {
     ),
     inputDecorationTheme: InputDecorationTheme(
       filled: true,
-      fillColor: isDark ? p.surfaceSubtle : p.surface,
+      fillColor: p.surface,
       isDense: true,
       labelStyle: TextStyle(color: p.muted),
       hintStyle: TextStyle(color: p.muted),
@@ -373,8 +334,8 @@ ThemeData _buildTheme(Brightness brightness, MamPalette p) {
     ),
     snackBarTheme: SnackBarThemeData(
       behavior: SnackBarBehavior.floating,
-      backgroundColor: isDark ? p.surfaceSubtle : p.ink,
-      contentTextStyle: TextStyle(color: isDark ? p.ink : Colors.white),
+      backgroundColor: p.ink,
+      contentTextStyle: const TextStyle(color: Colors.white),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
     ),
   );

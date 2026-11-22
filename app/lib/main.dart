@@ -62,9 +62,7 @@ class MamApp extends StatelessWidget {
           child: MaterialApp(
             title: 'Mâm',
             debugShowCheckedModeBanner: false,
-            theme: buildMamLightTheme(),
-            darkTheme: buildMamDarkTheme(),
-            themeMode: controller.themeMode,
+            theme: buildMamTheme(),
             builder: (context, child) => MamResponsiveShell(
               child: child ?? const SizedBox.shrink(),
             ),
