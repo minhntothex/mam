@@ -7,6 +7,7 @@
 !.env.example
 
 # Flutter / Dart
+app/.idea/
 app/.dart_tool/
 app/.flutter-plugins
 app/.flutter-plugins-dependencies

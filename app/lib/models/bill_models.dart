@@ -1,12 +1,12 @@
-/// Mâm (mam) — Pure Dart 3 Domain Models
-///
-/// Maps 1:1 with:
-/// - `supabase/migrations/001_init.sql` (snake_case DB columns)
-/// - `bills.payload` & `friend_groups.members` JSONB structures (camelCase)
-/// - `POST /functions/v1/scan-bill` OCR response contract (camelCase)
-///
-/// Zero external package dependencies so this drops directly into a fresh
-/// Flutter project without codegen (`build_runner`/`freezed`).
+// Mâm (mam) — Pure Dart 3 Domain Models
+//
+// Maps 1:1 with:
+// - `supabase/migrations/001_init.sql` (snake_case DB columns)
+// - `bills.payload` & `friend_groups.members` JSONB structures (camelCase)
+// - `POST /functions/v1/scan-bill` OCR response contract (camelCase)
+//
+// Zero external package dependencies so this drops directly into a fresh
+// Flutter project without codegen (`build_runner`/`freezed`).
 
 const Object _unset = Object();
 
