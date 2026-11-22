@@ -178,14 +178,14 @@ class _BillInputScreenState extends State<BillInputScreen> {
   }
 
   Future<void> _handleScanOcr() async {
-    if (widget.onOpenScanOcr == null) return;
-    setState(() => _scanning = true);
+    if (widget.onOpenScanOcr == null || _scanning) return;
+    _scanning = true;
     try {
       final result = await widget.onOpenScanOcr!(context);
       if (result == null || !mounted) return;
       _applyOcrResult(result);
     } finally {
-      if (mounted) setState(() => _scanning = false);
+      _scanning = false;
     }
   }
 
@@ -366,11 +366,15 @@ class _BillInputScreenState extends State<BillInputScreen> {
           const SizedBox(height: 12),
           Row(
             children: [
-              const Text(
-                'Danh sách món',
-                style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+              const Expanded(
+                child: Text(
+                  'Danh sách món',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+                ),
               ),
-              const Spacer(),
+              const SizedBox(width: 8),
               Text(
                 'Tạm tính: ${formatVnd(_itemsSubtotal)}',
                 style: kTabularStyle.copyWith(
@@ -635,23 +639,27 @@ class _BillInputScreenState extends State<BillInputScreen> {
               ],
               Row(
                 children: [
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        'Tổng cộng',
-                        style: TextStyle(fontSize: 12, color: MamColors.muted),
-                      ),
-                      Text(
-                        formatVnd(_computedGrandTotal),
-                        style: kTabularStyle.copyWith(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w800,
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Tổng cộng',
+                          style: TextStyle(fontSize: 12, color: MamColors.muted),
                         ),
-                      ),
-                    ],
+                        Text(
+                          formatVnd(_computedGrandTotal),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: kTabularStyle.copyWith(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-                  const Spacer(),
+                  const SizedBox(width: 8),
                   FilledButton.icon(
                     onPressed: _goToAssign,
                     icon: const Icon(Icons.arrow_forward_rounded, size: 18),

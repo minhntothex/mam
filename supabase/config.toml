@@ -1,0 +1,4 @@
+project_id = "mam"
+
+[functions.scan-bill]
+verify_jwt = true

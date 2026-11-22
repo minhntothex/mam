@@ -45,4 +45,30 @@ void main() {
     expect(find.text('PHIẾU CHIA BILL'), findsOneWidget);
     expect(find.byType(QrImageView), findsOneWidget);
   });
+
+  testWidgets('OCR demo preset populates BillInputScreen and reconciles totals', (tester) async {
+    SharedPreferences.setMockInitialValues({});
+    final store = await LocalStore.open();
+    final controller = MamController(store: store);
+    await controller.init();
+
+    await tester.pumpWidget(MamApp(controller: controller));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Tạo bill mới'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Scan ảnh hóa đơn (AI OCR)'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.textContaining('GrabFood Bún Đậu Mắm Tôm'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Khớp tổng in trên bill (223.000đ)'), findsOneWidget);
+
+    await tester.tap(find.text('Tiếp: Gán món'));
+    await tester.pumpAndSettle();
+    expect(find.text('Gán món siêu tốc'), findsOneWidget);
+    expect(find.textContaining('chưa gán'), findsOneWidget);
+  });
 }

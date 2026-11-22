@@ -3,6 +3,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'data/local_store.dart';
 import 'screens/home_screen.dart';
+import 'services/ocr_service.dart';
 import 'services/supabase_config.dart';
 import 'services/sync_service.dart';
 import 'state/mam_controller.dart';
@@ -51,6 +52,7 @@ class MamApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final effectiveSync = syncService ?? SyncService(controller: controller);
+    final ocrService = OcrService();
 
     return MaterialApp(
       title: 'Mâm',
@@ -61,6 +63,7 @@ class MamApp extends StatelessWidget {
       ),
       home: HomeScreen(
         controller: controller,
+        onOpenScanOcr: (ctx) => ocrService.openScanSheet(ctx),
         syncAuthSectionBuilder: (_) => SyncAuthCard(
           controller: controller,
           syncService: effectiveSync,
