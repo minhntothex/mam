@@ -33,6 +33,7 @@ class MamPalette extends ThemeExtension<MamPalette> {
     required this.primarySoft,
     required this.onPrimary,
     required this.heroBackground,
+    required this.onHero,
     required this.heroSettled,
     required this.success,
     required this.successSoft,
@@ -54,6 +55,7 @@ class MamPalette extends ThemeExtension<MamPalette> {
   final Color primarySoft;
   final Color onPrimary;
   final Color heroBackground;
+  final Color onHero;
   final Color heroSettled;
   final Color success;
   final Color successSoft;
@@ -77,7 +79,8 @@ class MamPalette extends ThemeExtension<MamPalette> {
     primary: Color(0xFF0066FF),
     primarySoft: Color(0xFFEBF3FF),
     onPrimary: Color(0xFFFFFFFF),
-    heroBackground: Color(0xFF005CE6),
+    heroBackground: Color(0xFFF59E0B),
+    onHero: Color(0xFF0F172A),
     heroSettled: Color(0xFF047857),
     success: Color(0xFF059669),
     successSoft: Color(0xFFECFDF5),
@@ -108,7 +111,8 @@ class MamPalette extends ThemeExtension<MamPalette> {
     primary: Color(0xFF3B82F6),
     primarySoft: Color(0xFF172554),
     onPrimary: Color(0xFFFFFFFF),
-    heroBackground: Color(0xFF1D4ED8),
+    heroBackground: Color(0xFFB45309),
+    onHero: Color(0xFFFFFFFF),
     heroSettled: Color(0xFF065F46),
     success: Color(0xFF34D399),
     successSoft: Color(0xFF064E3B),
@@ -141,6 +145,7 @@ class MamPalette extends ThemeExtension<MamPalette> {
     Color? primarySoft,
     Color? onPrimary,
     Color? heroBackground,
+    Color? onHero,
     Color? heroSettled,
     Color? success,
     Color? successSoft,
@@ -162,6 +167,7 @@ class MamPalette extends ThemeExtension<MamPalette> {
       primarySoft: primarySoft ?? this.primarySoft,
       onPrimary: onPrimary ?? this.onPrimary,
       heroBackground: heroBackground ?? this.heroBackground,
+      onHero: onHero ?? this.onHero,
       heroSettled: heroSettled ?? this.heroSettled,
       success: success ?? this.success,
       successSoft: successSoft ?? this.successSoft,
@@ -188,6 +194,7 @@ class MamPalette extends ThemeExtension<MamPalette> {
       primarySoft: Color.lerp(primarySoft, other.primarySoft, t)!,
       onPrimary: Color.lerp(onPrimary, other.onPrimary, t)!,
       heroBackground: Color.lerp(heroBackground, other.heroBackground, t)!,
+      onHero: Color.lerp(onHero, other.onHero, t)!,
       heroSettled: Color.lerp(heroSettled, other.heroSettled, t)!,
       success: Color.lerp(success, other.success, t)!,
       successSoft: Color.lerp(successSoft, other.successSoft, t)!,

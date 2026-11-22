@@ -316,6 +316,15 @@ class _UncollectedBanner extends StatelessWidget {
     final p = context.mam;
     final s = context.s;
     final allDone = pendingCount == 0;
+    final fg = allDone ? Colors.white : p.onHero;
+    final isDarkOnLight = !allDone && fg != Colors.white;
+    final pillBg = isDarkOnLight
+        ? fg.withValues(alpha: 0.11)
+        : Colors.white.withValues(alpha: 0.16);
+    final dotColor = allDone
+        ? const Color(0xFF6EE7B7)
+        : (isDarkOnLight ? const Color(0xFF92400E) : const Color(0xFFFDE68A));
+
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
@@ -333,9 +342,9 @@ class _UncollectedBanner extends StatelessWidget {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
-                    color: Colors.white.withValues(alpha: 0.85),
+                    color: fg.withValues(alpha: isDarkOnLight ? 0.74 : 0.86),
                     fontSize: 13,
-                    fontWeight: FontWeight.w500,
+                    fontWeight: FontWeight.w600,
                   ),
                 ),
               ),
@@ -343,7 +352,7 @@ class _UncollectedBanner extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
                 decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.16),
+                  color: pillBg,
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Row(
@@ -353,9 +362,7 @@ class _UncollectedBanner extends StatelessWidget {
                       width: 7,
                       height: 7,
                       decoration: BoxDecoration(
-                        color: allDone
-                            ? const Color(0xFF6EE7B7)
-                            : const Color(0xFFFBBF24),
+                        color: dotColor,
                         shape: BoxShape.circle,
                       ),
                     ),
@@ -364,8 +371,8 @@ class _UncollectedBanner extends StatelessWidget {
                       allDone
                           ? s.allSettledBadge
                           : s.pendingBillsBadge(pendingCount),
-                      style: const TextStyle(
-                        color: Colors.white,
+                      style: TextStyle(
+                        color: fg,
                         fontSize: 12,
                         fontWeight: FontWeight.w600,
                       ),
@@ -379,7 +386,7 @@ class _UncollectedBanner extends StatelessWidget {
           Text(
             formatVnd(amount),
             style: kTabularStyle.copyWith(
-              color: Colors.white,
+              color: fg,
               fontSize: 30,
               fontWeight: FontWeight.w800,
               letterSpacing: -0.6,

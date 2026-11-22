@@ -28,7 +28,7 @@
 | `muted` | `#526075` | `#94A3B8` | Metadata, dates, secondary labels |
 | `primary` | `#0066FF` | `#3B82F6` | Primary CTA, active links, active states |
 | `primarySoft` | `#EBF3FF` | `#172554` | Tonal buttons, OCR banner, bank selector, selected chips |
-| `heroBackground` | `#005CE6` | `#1D4ED8` | Uncollected Balance hero slab |
+| `heroBackground` / `onHero` | `#F59E0B` / `#0F172A` | `#B45309` / `#FFFFFF` | Uncollected Balance hero slab (amber-gold) |
 | `heroSettled` | `#047857` | `#065F46` | All-settled hero slab |
 | `success` / `successSoft` | `#059669` / `#ECFDF5` | `#34D399` / `#064E3B` | `Đã trả`, `Đã xong`, OCR matched |
 | `warning` / `warningSoft` | `#B45309` / `#FEF3C7` | `#FBBF24` / `#451A03` | Unassigned items, pending cloud push |
