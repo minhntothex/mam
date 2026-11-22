@@ -217,7 +217,10 @@ class _HomeScreenState extends State<HomeScreen> {
             child: Text(s.cancel),
           ),
           FilledButton(
-            style: FilledButton.styleFrom(backgroundColor: p.danger),
+            style: FilledButton.styleFrom(
+              backgroundColor: p.danger,
+              foregroundColor: p.onDanger,
+            ),
             onPressed: () => Navigator.pop(ctx, true),
             child: Text(s.delete),
           ),
@@ -317,28 +320,24 @@ class _UncollectedBanner extends StatelessWidget {
     final s = context.s;
     final allDone = pendingCount == 0;
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final fg = allDone ? Colors.white : p.onHero;
-    final isDarkOnLight = !allDone && fg != Colors.white;
-    final pillBg = isDarkOnLight
-        ? fg.withValues(alpha: 0.11)
-        : Colors.white.withValues(alpha: 0.18);
-    final dotColor = allDone
-        ? const Color(0xFFA7F3D0)
-        : (isDarkOnLight ? const Color(0xFF92400E) : const Color(0xFFFDE68A));
+    final fg = allDone ? p.onHeroSettled : p.onHero;
+    final pillBg = fg.withValues(alpha: 0.11);
+    final dotColor =
+        allDone ? const Color(0xFF045D3A) : const Color(0xFF92400E);
     final heroGradient = allDone
         ? LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
             colors: isDark
-                ? [const Color(0xFF10B981), const Color(0xFF047857)]
-                : [const Color(0xFF10C982), const Color(0xFF059669)],
+                ? [const Color(0xFF22D993), const Color(0xFF10B981)]
+                : [const Color(0xFF2CE09B), const Color(0xFF10C47F)],
           )
         : LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
             colors: isDark
                 ? [const Color(0xFFFCC62B), const Color(0xFFF59E0B)]
-                : [const Color(0xFFFFCE3A), const Color(0xFFFFAD00)],
+                : [const Color(0xFFFFD23F), const Color(0xFFFFB400)],
           );
 
     return Container(
@@ -358,7 +357,7 @@ class _UncollectedBanner extends StatelessWidget {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
-                    color: fg.withValues(alpha: isDarkOnLight ? 0.74 : 0.86),
+                    color: fg.withValues(alpha: allDone ? 0.88 : 0.82),
                     fontSize: 13,
                     fontWeight: FontWeight.w600,
                   ),
@@ -572,7 +571,9 @@ class _BillHistoryCard extends StatelessWidget {
                         minHeight: 6,
                         backgroundColor: p.surfaceSubtle,
                         color: settled
-                            ? p.success
+                            ? (Theme.of(context).brightness == Brightness.dark
+                                ? p.success
+                                : const Color(0xFF10C47F))
                             : (Theme.of(context).brightness == Brightness.dark
                                 ? p.warning
                                 : const Color(0xFFFFB800)),

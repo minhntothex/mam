@@ -25,14 +25,14 @@
 | `surfaceSubtle` | `#EDF1F7` | `#1C2536` | Secondary pills, progress tracks, dark inputs |
 | `border` | `#E2E8F0` | `#243044` | 1px hairline elevation (single elevation mechanism) |
 | `ink` | `#0F172A` | `#F8FAFC` | Primary headings, item names, VND amounts |
-| `muted` | `#526075` | `#94A3B8` | Metadata, dates, secondary labels |
-| `primary` | `#0070FF` | `#388BFF` | Primary CTA, active links, active states |
-| `primarySoft` | `#E6F1FF` | `#162C56` | Tonal buttons, OCR banner, bank selector, selected chips |
-| `heroBackground` / `onHero` | `#FFCE3A→#FFAD00` / `#0F172A` | `#FCC62B→#F59E0B` / `#0F172A` | Uncollected Balance hero slab (fresh gold) |
-| `heroSettled` | `#10C982→#059669` | `#10B981→#047857` | All-settled hero slab (fresh emerald) |
-| `success` / `successSoft` | `#00A86B` / `#DCFCE7` | `#2EE59D` / `#0A3D2E` | `Paid`, `Settled`, OCR matched |
-| `warning` / `warningSoft` | `#B45309` / `#FEF08A` | `#FFD02F` / `#3D2F07` | Unsettled bills, unassigned items, pending cloud push |
-| `danger` / `dangerSoft` | `#EF4444` / `#FEE2E2` | `#FF6B6B` / `#3F151A` | OCR total mismatch, destructive delete, sync error |
+| `muted` | `#475569` | `#94A3B8` | Metadata, dates, secondary labels |
+| `primary` / `onPrimary` | `#0060F0` / `#FFFFFF` | `#5AA3FF` / `#061529` | Primary CTA, active links, active states (≥ 5.3:1 AA) |
+| `primarySoft` | `#EEF4FF` | `#132544` | Tonal buttons, OCR banner, bank selector, selected chips |
+| `heroBackground` / `onHero` | `#FFD23F→#FFB400` / `#0F172A` | `#FCC62B→#F59E0B` / `#0F172A` | Uncollected Balance hero slab (AAA ≥ 8.3:1) |
+| `heroSettled` / `onHeroSettled` | `#2CE09B→#10C47F` / `#04291A` | `#22D993→#10B981` / `#04291A` | All-settled hero slab (AA+ ≥ 6.2:1) |
+| `success` / `successSoft` | `#007D53` / `#E6FAEE` | `#34E8A0` / `#0A3829` | `Paid`, `Settled`, OCR matched (≥ 4.75:1 AA) |
+| `warning` / `warningSoft` | `#9A4100` / `#FEF08A` | `#FFD23F` / `#382B06` | Unsettled bills, unassigned items, pending push (≥ 5.77:1 AA) |
+| `danger` / `dangerSoft` / `onDanger` | `#C81E1E` / `#FEE2E2` / `#FFFFFF` | `#FF7575` / `#3B1317` / `#240608` | OCR mismatch, destructive delete, sync error (≥ 4.70:1 AA) |
 
 ### Print-Safe Receipt Palette (`MamReceiptColors`)
 - Paper `#FFFFFF`, Subtle `#F4F6FA`, Border `#E2E8F0`, Ink `#0F172A`, Muted `#526075`, Primary `#0066FF`, Success `#059669`.

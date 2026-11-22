@@ -13,10 +13,10 @@ abstract final class MamReceiptColors {
   static const Color paper = Color(0xFFFFFFFF);
   static const Color subtle = Color(0xFFF4F6FA);
   static const Color ink = Color(0xFF0F172A);
-  static const Color muted = Color(0xFF526075);
+  static const Color muted = Color(0xFF475569);
   static const Color border = Color(0xFFE2E8F0);
-  static const Color primary = Color(0xFF0070FF);
-  static const Color success = Color(0xFF00A86B);
+  static const Color primary = Color(0xFF0060F0);
+  static const Color success = Color(0xFF007D53);
 }
 
 @immutable
@@ -35,12 +35,14 @@ class MamPalette extends ThemeExtension<MamPalette> {
     required this.heroBackground,
     required this.onHero,
     required this.heroSettled,
+    required this.onHeroSettled,
     required this.success,
     required this.successSoft,
     required this.warning,
     required this.warningSoft,
     required this.danger,
     required this.dangerSoft,
+    required this.onDanger,
     required this.participantPalette,
   });
 
@@ -57,12 +59,14 @@ class MamPalette extends ThemeExtension<MamPalette> {
   final Color heroBackground;
   final Color onHero;
   final Color heroSettled;
+  final Color onHeroSettled;
   final Color success;
   final Color successSoft;
   final Color warning;
   final Color warningSoft;
   final Color danger;
   final Color dangerSoft;
+  final Color onDanger;
   final List<Color> participantPalette;
 
   Color participantColor(int index) =>
@@ -74,20 +78,22 @@ class MamPalette extends ThemeExtension<MamPalette> {
     surface: Color(0xFFFFFFFF),
     surfaceSubtle: Color(0xFFEEF2F8),
     ink: Color(0xFF0F172A),
-    muted: Color(0xFF526075),
+    muted: Color(0xFF475569),
     border: Color(0xFFE2E8F0),
-    primary: Color(0xFF0070FF),
-    primarySoft: Color(0xFFE6F1FF),
+    primary: Color(0xFF0060F0),
+    primarySoft: Color(0xFFEEF4FF),
     onPrimary: Color(0xFFFFFFFF),
     heroBackground: Color(0xFFFFBE18),
     onHero: Color(0xFF0F172A),
-    heroSettled: Color(0xFF06A870),
-    success: Color(0xFF00A86B),
-    successSoft: Color(0xFFDCFCE7),
-    warning: Color(0xFFB45309),
+    heroSettled: Color(0xFF10C47F),
+    onHeroSettled: Color(0xFF04291A),
+    success: Color(0xFF007D53),
+    successSoft: Color(0xFFE6FAEE),
+    warning: Color(0xFF9A4100),
     warningSoft: Color(0xFFFEF08A),
-    danger: Color(0xFFEF4444),
+    danger: Color(0xFFC81E1E),
     dangerSoft: Color(0xFFFEE2E2),
+    onDanger: Color(0xFFFFFFFF),
     participantPalette: [
       Color(0xFF0A74FF), // Fresh Blue
       Color(0xFF00B87C), // Vivid Jade
@@ -108,18 +114,20 @@ class MamPalette extends ThemeExtension<MamPalette> {
     ink: Color(0xFFF8FAFC),
     muted: Color(0xFF94A3B8),
     border: Color(0xFF243248),
-    primary: Color(0xFF388BFF),
-    primarySoft: Color(0xFF162C56),
-    onPrimary: Color(0xFFFFFFFF),
+    primary: Color(0xFF5AA3FF),
+    primarySoft: Color(0xFF132544),
+    onPrimary: Color(0xFF061529),
     heroBackground: Color(0xFFF5B301),
     onHero: Color(0xFF0F172A),
-    heroSettled: Color(0xFF059E68),
-    success: Color(0xFF2EE59D),
-    successSoft: Color(0xFF0A3D2E),
-    warning: Color(0xFFFFD02F),
-    warningSoft: Color(0xFF3D2F07),
-    danger: Color(0xFFFF6B6B),
-    dangerSoft: Color(0xFF3F151A),
+    heroSettled: Color(0xFF10B981),
+    onHeroSettled: Color(0xFF04291A),
+    success: Color(0xFF34E8A0),
+    successSoft: Color(0xFF0A3829),
+    warning: Color(0xFFFFD23F),
+    warningSoft: Color(0xFF382B06),
+    danger: Color(0xFFFF7575),
+    dangerSoft: Color(0xFF3B1317),
+    onDanger: Color(0xFF240608),
     participantPalette: [
       Color(0xFF38BDF8), // Electric Sky
       Color(0xFF2EE59D), // Fresh Mint
@@ -147,12 +155,14 @@ class MamPalette extends ThemeExtension<MamPalette> {
     Color? heroBackground,
     Color? onHero,
     Color? heroSettled,
+    Color? onHeroSettled,
     Color? success,
     Color? successSoft,
     Color? warning,
     Color? warningSoft,
     Color? danger,
     Color? dangerSoft,
+    Color? onDanger,
     List<Color>? participantPalette,
   }) {
     return MamPalette(
@@ -169,12 +179,14 @@ class MamPalette extends ThemeExtension<MamPalette> {
       heroBackground: heroBackground ?? this.heroBackground,
       onHero: onHero ?? this.onHero,
       heroSettled: heroSettled ?? this.heroSettled,
+      onHeroSettled: onHeroSettled ?? this.onHeroSettled,
       success: success ?? this.success,
       successSoft: successSoft ?? this.successSoft,
       warning: warning ?? this.warning,
       warningSoft: warningSoft ?? this.warningSoft,
       danger: danger ?? this.danger,
       dangerSoft: dangerSoft ?? this.dangerSoft,
+      onDanger: onDanger ?? this.onDanger,
       participantPalette: participantPalette ?? this.participantPalette,
     );
   }
@@ -196,12 +208,14 @@ class MamPalette extends ThemeExtension<MamPalette> {
       heroBackground: Color.lerp(heroBackground, other.heroBackground, t)!,
       onHero: Color.lerp(onHero, other.onHero, t)!,
       heroSettled: Color.lerp(heroSettled, other.heroSettled, t)!,
+      onHeroSettled: Color.lerp(onHeroSettled, other.onHeroSettled, t)!,
       success: Color.lerp(success, other.success, t)!,
       successSoft: Color.lerp(successSoft, other.successSoft, t)!,
       warning: Color.lerp(warning, other.warning, t)!,
       warningSoft: Color.lerp(warningSoft, other.warningSoft, t)!,
       danger: Color.lerp(danger, other.danger, t)!,
       dangerSoft: Color.lerp(dangerSoft, other.dangerSoft, t)!,
+      onDanger: Color.lerp(onDanger, other.onDanger, t)!,
       participantPalette:
           t < 0.5 ? participantPalette : other.participantPalette,
     );
@@ -233,6 +247,7 @@ ThemeData _buildTheme(Brightness brightness, MamPalette p) {
     outline: p.border,
     outlineVariant: p.border,
     error: p.danger,
+    onError: p.onDanger,
   );
 
   return ThemeData(
