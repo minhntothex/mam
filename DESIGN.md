@@ -59,3 +59,14 @@
 - **Sticky Bottom Action Bars:** `surface` background + `1px` top `border`, `SafeArea(top: false)`, keeping thumb-reachable primary actions pinned at bottom on `Home`, `QuickEqual`, `BillInput`, `SplitAssign`, and `Result`.
 - **Theme Mode Control:** Persisted locally (`ThemeMode.system` default) with 3-way selector (`Hệ thống / Sáng / Tối`) in `SettingsScreen` plus a 1-tap Light/Dark toggle icon in `HomeScreen` AppBar.
 - **Responsive Shell:** Full edge-to-edge layout on mobile widths (`≤ 520px`); centered `430px` framed mobile viewport on desktop/web demo screens.
+
+---
+
+## 5. Brand Mark & App Icons
+
+- **Concept:** A shared round Vietnamese dining tray (*mâm*) rendered as a crisp geometric annular ring (`252°`, `#FFFFFF`) with one cleanly detached fair-share wedge (`76°`, mint-emerald `#5EEAD4 → #10B981`, offset `+44 / -44`) inside a Canon fintech blue squircle (`#0A74FF → #004CE6`, `rx = 224/1024`).
+- **Vector sources:**
+  - [assets/brand/mam-logo.svg](assets/brand/mam-logo.svg) (master squircle)
+  - [assets/brand/mam-icon-fullbleed.svg](assets/brand/mam-icon-fullbleed.svg) (iOS AppIcon)
+  - [assets/brand/mam-icon-maskable.svg](assets/brand/mam-icon-maskable.svg) (Android / Web PWA maskable)
+- **Runtime widget:** [app/lib/widgets/mam_logo.dart](app/lib/widgets/mam_logo.dart) (`MamLogoMark`, `CustomPainter`) used in `HomeScreen` AppBar (`30px`) and print-safe `SummaryReceiptCard` (`20px`) / `PersonQrCard` (`18px`).

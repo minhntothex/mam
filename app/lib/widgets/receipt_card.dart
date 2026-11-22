@@ -7,6 +7,7 @@ import '../core/vietqr.dart';
 import '../l10n/mam_strings.dart';
 import '../models/bill_models.dart';
 import '../theme/mam_theme.dart';
+import 'mam_logo.dart';
 
 /// Exported PNG Receipt Cards always use print-safe crisp white stock
 /// (`MamReceiptColors`) so VietQR codes scan reliably from Zalo/Messenger even
@@ -56,20 +57,15 @@ class SummaryReceiptCard extends StatelessWidget {
         children: [
           Row(
             children: [
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: MamReceiptColors.primary,
-                  borderRadius: BorderRadius.circular(6),
-                ),
-                child: const Text(
-                  'MÂM',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w800,
-                    fontSize: 11,
-                    letterSpacing: 0.8,
-                  ),
+              const MamLogoMark(size: 20),
+              const SizedBox(width: 6),
+              const Text(
+                'MÂM',
+                style: TextStyle(
+                  color: MamReceiptColors.ink,
+                  fontWeight: FontWeight.w800,
+                  fontSize: 12,
+                  letterSpacing: 0.6,
                 ),
               ),
               const SizedBox(width: 8),
@@ -289,20 +285,15 @@ class PersonQrCard extends StatelessWidget {
         children: [
           Row(
             children: [
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                decoration: BoxDecoration(
-                  color: MamReceiptColors.primary,
-                  borderRadius: BorderRadius.circular(6),
-                ),
-                child: const Text(
-                  'MÂM',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w800,
-                    fontSize: 10.5,
-                    letterSpacing: 0.8,
-                  ),
+              const MamLogoMark(size: 18),
+              const SizedBox(width: 6),
+              const Text(
+                'MÂM',
+                style: TextStyle(
+                  color: MamReceiptColors.ink,
+                  fontWeight: FontWeight.w800,
+                  fontSize: 11.5,
+                  letterSpacing: 0.6,
                 ),
               ),
               const SizedBox(width: 8),

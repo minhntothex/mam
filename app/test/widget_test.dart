@@ -3,6 +3,7 @@ import 'package:mam/data/local_store.dart';
 import 'package:mam/l10n/mam_strings.dart';
 import 'package:mam/main.dart';
 import 'package:mam/state/mam_controller.dart';
+import 'package:mam/widgets/mam_logo.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -18,6 +19,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(controller.language, AppLanguage.en);
+    expect(find.byType(MamLogoMark), findsOneWidget);
     expect(find.text('Mâm'), findsOneWidget);
     expect(find.text('Uncollected'), findsOneWidget);
     expect(find.text('Lẩu Haidilao Bitexco'), findsOneWidget);
@@ -44,6 +46,7 @@ void main() {
 
     await tester.tap(find.text('Export Summary Receipt (PNG)'));
     await tester.pumpAndSettle();
+    expect(find.byType(MamLogoMark), findsOneWidget);
     expect(find.text('BILL SUMMARY'), findsOneWidget);
     expect(find.byType(QrImageView), findsOneWidget);
   });

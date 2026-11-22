@@ -6,6 +6,7 @@ import '../l10n/mam_strings.dart';
 import '../models/bill_models.dart';
 import '../state/mam_controller.dart';
 import '../theme/mam_theme.dart';
+import '../widgets/mam_logo.dart';
 import 'bill_input_screen.dart';
 import 'quick_equal_screen.dart';
 import 'result_screen.dart';
@@ -52,23 +53,7 @@ class _HomeScreenState extends State<HomeScreen> {
           appBar: AppBar(
             title: Row(
               children: [
-                Container(
-                  width: 28,
-                  height: 28,
-                  decoration: BoxDecoration(
-                    color: p.primary,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  alignment: Alignment.center,
-                  child: const Text(
-                    'M',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w800,
-                      fontSize: 15,
-                    ),
-                  ),
-                ),
+                const MamLogoMark(size: 30),
                 const SizedBox(width: 10),
                 Text(s.appName),
               ],

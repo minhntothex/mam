@@ -1,11 +1,11 @@
 {
-    "name": "mam",
-    "short_name": "mam",
+    "name": "Mâm — Split Bills & VietQR",
+    "short_name": "Mâm",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#0175C2",
-    "theme_color": "#0175C2",
-    "description": "Mam - Personal bill-sharing app with offline VietQR",
+    "background_color": "#F4F6FA",
+    "theme_color": "#0066FF",
+    "description": "Mâm — Personal bill-sharing app with offline VietQR",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [
