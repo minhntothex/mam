@@ -24,12 +24,15 @@ class _QuickEqualScreenState extends State<QuickEqualScreen> {
   final TextEditingController _nameCtrl = TextEditingController();
 
   late RoundingMode _roundingMode;
+  late DateTime _billDate;
   late List<Participant> _participants;
 
   @override
   void initState() {
     super.initState();
     final s = widget.controller.strings;
+    final now = DateTime.now();
+    _billDate = DateTime(now.year, now.month, now.day);
     _titleCtrl = TextEditingController(text: defaultMealTitle(isVi: s.isVi));
     _roundingMode = widget.controller.settings.defaultRounding;
     _participants = [
@@ -118,6 +121,21 @@ class _QuickEqualScreenState extends State<QuickEqualScreen> {
     });
   }
 
+  Future<void> _pickBillDate() async {
+    final now = DateTime.now();
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _billDate,
+      firstDate: DateTime(2020, 1, 1),
+      lastDate: DateTime(now.year + 1, 12, 31),
+    );
+    if (picked != null && mounted) {
+      setState(() {
+        _billDate = DateTime(picked.year, picked.month, picked.day);
+      });
+    }
+  }
+
   Future<void> _submit() async {
     final s = context.s;
     if (_totalAmount <= 0) {
@@ -129,7 +147,6 @@ class _QuickEqualScreenState extends State<QuickEqualScreen> {
     if (_participants.isEmpty) return;
 
     final now = DateTime.now().toUtc();
-    final today = DateTime(now.year, now.month, now.day);
     final title = _titleCtrl.text.trim().isEmpty
         ? defaultMealTitle(isVi: s.isVi)
         : _titleCtrl.text.trim();
@@ -138,7 +155,7 @@ class _QuickEqualScreenState extends State<QuickEqualScreen> {
       id: widget.controller.newId(),
       userId: widget.controller.currentUserId,
       title: title,
-      billDate: today,
+      billDate: _billDate,
       mode: BillMode.quickEqual,
       totalAmount: _totalAmount,
       payload: _buildPayload(s),
@@ -199,6 +216,43 @@ class _QuickEqualScreenState extends State<QuickEqualScreen> {
                   TextField(
                     controller: _titleCtrl,
                     decoration: InputDecoration(hintText: s.mealHint),
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    s.billDateLabel,
+                    style: TextStyle(
+                      fontSize: 12.5,
+                      fontWeight: FontWeight.w600,
+                      color: p.muted,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  InkWell(
+                    key: const ValueKey('quick_equal_date_picker'),
+                    borderRadius: BorderRadius.circular(12),
+                    onTap: _pickBillDate,
+                    child: InputDecorator(
+                      decoration: InputDecoration(
+                        prefixIcon: Icon(
+                          Icons.calendar_today_rounded,
+                          size: 18,
+                          color: p.muted,
+                        ),
+                        suffixIcon: Icon(
+                          Icons.keyboard_arrow_down_rounded,
+                          size: 20,
+                          color: p.muted,
+                        ),
+                      ),
+                      child: Text(
+                        formatDateVn(_billDate, includeYear: true),
+                        style: kTabularStyle.copyWith(
+                          fontSize: 14.5,
+                          fontWeight: FontWeight.w600,
+                          color: p.ink,
+                        ),
+                      ),
+                    ),
                   ),
                   const SizedBox(height: 14),
                   Text(

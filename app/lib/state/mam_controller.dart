@@ -128,8 +128,8 @@ class MamController extends ChangeNotifier {
 
   String newId() => _uuid.v4();
 
-  Future<void> init() async {
-    final snapshot = await store.loadOrSeed();
+  Future<void> init({bool seedDemo = false}) async {
+    final snapshot = await store.loadOrSeed(seedDemo: seedDemo);
     _bills = List<BillRecord>.from(snapshot.bills);
     _bankAccounts = List<BankAccount>.from(snapshot.bankAccounts);
     _friendGroups = List<FriendGroup>.from(snapshot.friendGroups);
@@ -410,17 +410,6 @@ class MamController extends ChangeNotifier {
     ]);
     notifyListeners();
     _triggerSyncBestEffort();
-  }
-
-  Future<void> resetDemoData() async {
-    final snapshot = await store.resetToDemoSeed();
-    _bills = List<BillRecord>.from(snapshot.bills);
-    _bankAccounts = List<BankAccount>.from(snapshot.bankAccounts);
-    _friendGroups = List<FriendGroup>.from(snapshot.friendGroups);
-    _settings = snapshot.settings;
-    _pendingSyncKeys = Set<String>.from(snapshot.pendingSyncKeys);
-    _lastSyncedAt = snapshot.lastSyncedAt;
-    notifyListeners();
   }
 
   void _markPending(String key) {

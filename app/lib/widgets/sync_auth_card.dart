@@ -25,6 +25,7 @@ class _SyncAuthCardState extends State<SyncAuthCard> {
   final _passCtrl = TextEditingController();
   bool _busy = false;
   String? _error;
+  String? _info;
 
   @override
   void dispose() {
@@ -38,21 +39,28 @@ class _SyncAuthCardState extends State<SyncAuthCard> {
     final email = _emailCtrl.text.trim();
     final pass = _passCtrl.text;
     if (email.isEmpty || pass.length < 6) {
-      setState(() => _error = s.invalidAuthInput);
+      setState(() {
+        _error = s.invalidAuthInput;
+        _info = null;
+      });
       return;
     }
     setState(() {
       _busy = true;
       _error = null;
+      _info = null;
     });
     try {
       if (isSignUp) {
         await widget.syncService.signUpWithEmail(email: email, password: pass);
+        if (mounted && widget.syncService.currentUser == null) {
+          setState(() => _info = s.signUpCheckEmail);
+        }
       } else {
         await widget.syncService.signInWithEmail(email: email, password: pass);
       }
     } catch (e) {
-      setState(() => _error = e.toString());
+      if (mounted) setState(() => _error = e.toString());
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -188,6 +196,17 @@ class _SyncAuthCardState extends State<SyncAuthCard> {
               Text(
                 _error!,
                 style: TextStyle(fontSize: 12, color: p.danger),
+              ),
+            ],
+            if (_info != null) ...[
+              const SizedBox(height: 8),
+              Text(
+                _info!,
+                style: TextStyle(
+                  fontSize: 12.5,
+                  fontWeight: FontWeight.w600,
+                  color: p.success,
+                ),
               ),
             ],
             const SizedBox(height: 10),

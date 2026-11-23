@@ -154,13 +154,17 @@ class MamStrings {
         'Chụp bill thật hoặc thử hóa đơn mẫu VN',
       );
   String get restaurantName => t('Restaurant / Meal', 'Tên quán / Bữa ăn');
+  String get billDateLabel => t('Bill date', 'Ngày hóa đơn');
   String get itemsList => t('Items', 'Danh sách món');
   String subtotalText(String formatted) =>
       isVi ? 'Tạm tính: $formatted' : 'Subtotal: $formatted';
   String itemHint(int index) => isVi ? 'Tên món #$index' : 'Item #$index';
   String get defaultItemName => t('Item', 'Món ăn');
   String get qtyLabel => t('Qty', 'SL');
+  String get unitPriceLabel => t('Unit price', 'Đơn giá');
   String get lineTotalLabel => t('Line total', 'Thành tiền');
+  String lineTotalInline(String formatted) =>
+      isVi ? 'Thành tiền: $formatted' : 'Line total: $formatted';
   String get addItemBtn => t('Add item', 'Thêm món');
   String get feesAndDiscounts =>
       t('Tax, fees & discounts', 'Thuế, phụ phí & giảm giá');
@@ -359,10 +363,6 @@ class MamStrings {
         'Use {name} (person) and {title} (bill title)',
         'Dùng {name} (tên người) và {title} (tên bill)',
       );
-  String get resetDemoBtn =>
-      t('Reset demo sample data', 'Khôi phục dữ liệu mẫu Demo');
-  String get resetDemoDone =>
-      t('Demo sample data restored', 'Đã khôi phục dữ liệu mẫu Demo');
   String get addBankTitle => t('Add bank account', 'Thêm tài khoản ngân hàng');
   String get editBankTitle => t('Edit bank account', 'Sửa tài khoản');
   String get searchBankHint =>
@@ -405,6 +405,10 @@ class MamStrings {
       );
   String get signInBtn => t('Sign in', 'Đăng nhập');
   String get signUpBtn => t('Sign up', 'Tạo TK');
+  String get signUpCheckEmail => t(
+        'Account created! Check your email to confirm, then sign in.',
+        'Đã tạo tài khoản! Kiểm tra email để xác nhận rồi đăng nhập.',
+      );
   String get working => t('Working...', 'Đang xử lý...');
 
   // OCR Sheet

@@ -1,7 +1,6 @@
 import 'package:material_ui/material_ui.dart';
 
 import '../core/bill_query.dart';
-import '../core/calculator.dart';
 import '../core/currency.dart';
 import '../core/formatters.dart';
 import '../l10n/mam_strings.dart';
@@ -78,8 +77,22 @@ class _HomeScreenState extends State<HomeScreen> {
         final showAllWithDivider = _filter == _HomeFilter.all &&
             matchedArchived.isNotEmpty &&
             (matchedPending.isNotEmpty || matchedSettled.isNotEmpty);
-        final nonArchivedInAll =
-            showAllWithDivider ? [...matchedPending, ...matchedSettled] : const <BillRecord>[];
+        final nonArchivedInAll = showAllWithDivider
+            ? [...matchedPending, ...matchedSettled]
+            : const <BillRecord>[];
+
+        final listEntries = <Object>[
+          'banner',
+          'filters',
+          if (bills.isEmpty)
+            'empty'
+          else if (showAllWithDivider) ...[
+            ...nonArchivedInAll,
+            'archived_divider',
+            ...matchedArchived,
+          ] else
+            ...bills,
+        ];
 
         return Scaffold(
           drawer: _HomeMenuDrawer(
@@ -168,29 +181,39 @@ class _HomeScreenState extends State<HomeScreen> {
                 }
                 return false;
               },
-              child: ListView(
+              child: ListView.builder(
                 padding: const EdgeInsets.fromLTRB(16, 8, 16, 108),
-                children: [
-                  _UncollectedBanner(
-                    totalsByCurrency: ctrl.uncollectedByCurrency,
-                    defaultCurrency: ctrl.currentCurrency,
-                    pendingCount: ctrl.pendingBills.length,
-                  ),
-                  const SizedBox(height: 14),
-                  _FilterBar(
-                    selected: _filter,
-                    allCount: matchedAll.length,
-                    pendingCount: matchedPending.length,
-                    settledCount: matchedSettled.length,
-                    archivedCount: matchedArchived.length,
-                    onChanged: (next) => setState(() {
-                      _filter = next;
-                      _openSwipeBillId = null;
-                    }),
-                  ),
-                  const SizedBox(height: 12),
-                  if (bills.isEmpty)
-                    _EmptyBillsCard(
+                itemCount: listEntries.length,
+                itemBuilder: (context, index) {
+                  final entry = listEntries[index];
+                  if (entry == 'banner') {
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 14),
+                      child: _UncollectedBanner(
+                        totalsByCurrency: ctrl.uncollectedByCurrency,
+                        defaultCurrency: ctrl.currentCurrency,
+                        pendingCount: ctrl.pendingBills.length,
+                      ),
+                    );
+                  }
+                  if (entry == 'filters') {
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: _FilterBar(
+                        selected: _filter,
+                        allCount: matchedAll.length,
+                        pendingCount: matchedPending.length,
+                        settledCount: matchedSettled.length,
+                        archivedCount: matchedArchived.length,
+                        onChanged: (next) => setState(() {
+                          _filter = next;
+                          _openSwipeBillId = null;
+                        }),
+                      ),
+                    );
+                  }
+                  if (entry == 'empty') {
+                    return _EmptyBillsCard(
                       filter: _filter,
                       searchQuery: query,
                       onClearSearch: query.isEmpty
@@ -199,19 +222,17 @@ class _HomeScreenState extends State<HomeScreen> {
                               _searchCtrl.clear();
                               setState(() => _openSwipeBillId = null);
                             },
-                    )
-                  else if (showAllWithDivider) ...[
-                    for (final bill in nonArchivedInAll)
-                      _buildSwipeBillItem(context, bill),
-                    _ArchivedSectionDivider(
+                    );
+                  }
+                  if (entry == 'archived_divider') {
+                    return _ArchivedSectionDivider(
                       label: s.archivedDivider(matchedArchived.length),
-                    ),
-                    for (final bill in matchedArchived)
-                      _buildSwipeBillItem(context, bill),
-                  ] else
-                    for (final bill in bills)
-                      _buildSwipeBillItem(context, bill),
-                ],
+                    );
+                  }
+                  return RepaintBoundary(
+                    child: _buildSwipeBillItem(context, entry as BillRecord),
+                  );
+                },
               ),
             ),
           ),
@@ -227,18 +248,39 @@ class _HomeScreenState extends State<HomeScreen> {
                 children: [
                   Expanded(
                     child: OutlinedButton.icon(
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 13,
+                        ),
+                      ),
                       onPressed: () => _openQuickEqual(context),
                       icon: const Icon(Icons.bolt_rounded, size: 18),
-                      label: Text(s.quickEqualBtn),
+                      label: Text(
+                        s.quickEqualBtn,
+                        maxLines: 1,
+                        softWrap: false,
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ),
                   ),
                   const SizedBox(width: 10),
                   Expanded(
-                    flex: 2,
                     child: FilledButton.icon(
+                      style: FilledButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 13,
+                        ),
+                      ),
                       onPressed: () => _openNewBill(context),
                       icon: const Icon(Icons.receipt_long_rounded, size: 18),
-                      label: Text(s.newBillBtn),
+                      label: Text(
+                        s.newBillBtn,
+                        maxLines: 1,
+                        softWrap: false,
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ),
                   ),
                 ],
@@ -903,7 +945,6 @@ class _BillHistoryCard extends StatelessWidget {
     final progress = totalPeople == 0 ? 0.0 : paidCount / totalPeople;
     final settled = bill.paymentStatus == PaymentStatus.settled;
     final archived = bill.isArchived;
-    final calc = BillCalculator.calculate(bill.payload);
     final currency = CurrencyRegistry.byCode(bill.payload.currencyCode);
 
     final barColor = archived
@@ -958,7 +999,7 @@ class _BillHistoryCard extends StatelessWidget {
                   ),
                   const SizedBox(width: 8),
                   Text(
-                    formatMoney(calc.computedGrandTotal, currency: currency),
+                    formatMoney(bill.totalAmount, currency: currency),
                     style: kTabularStyle.copyWith(
                       fontSize: 15.5,
                       fontWeight: FontWeight.w800,

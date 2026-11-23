@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart' show visibleForTesting;
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../l10n/mam_strings.dart';
@@ -33,6 +34,7 @@ class LocalStore {
   final SharedPreferences _prefs;
 
   static const String _kSeeded = 'mam_seeded_v1';
+  static const String _kCleanedLegacyDemo = 'mam_cleaned_legacy_demo_v1';
   static const String _kBills = 'mam_bills_v1';
   static const String _kBankAccounts = 'mam_bank_accounts_v1';
   static const String _kFriendGroups = 'mam_friend_groups_v1';
@@ -42,24 +44,40 @@ class LocalStore {
   static const String _kLanguage = 'mam_language_v1';
   static const String localDemoUserId = '00000000-0000-0000-0000-000000000001';
 
+  static const Set<String> _legacyDemoBillIds = {
+    '33333333-3333-4333-8333-333333333301',
+    '33333333-3333-4333-8333-333333333302',
+  };
+  static const Set<String> _legacyDemoBankIds = {
+    '11111111-1111-4111-8111-111111111101',
+    '11111111-1111-4111-8111-111111111102',
+  };
+  static const Set<String> _legacyDemoGroupIds = {
+    '22222222-2222-4222-8222-222222222201',
+    '22222222-2222-4222-8222-222222222202',
+  };
+
   static Future<LocalStore> open() async {
     final prefs = await SharedPreferences.getInstance();
     return LocalStore(prefs);
   }
 
-  Future<LocalDataSnapshot> loadOrSeed() async {
+  Future<LocalDataSnapshot> loadOrSeed({bool seedDemo = false}) async {
     final seeded = _prefs.getBool(_kSeeded) ?? false;
     if (!seeded) {
-      final initial = _buildDemoSeed();
+      final initial = seedDemo ? buildDemoSeedForTest() : _buildEmptyState();
       await saveAll(initial);
       await _prefs.setBool(_kSeeded, true);
+      if (!seedDemo) {
+        await _prefs.setBool(_kCleanedLegacyDemo, true);
+      }
       return initial;
     }
 
-    final bills = _decodeList(_prefs.getString(_kBills), BillRecord.fromJson);
-    final banks =
+    var bills = _decodeList(_prefs.getString(_kBills), BillRecord.fromJson);
+    var banks =
         _decodeList(_prefs.getString(_kBankAccounts), BankAccount.fromJson);
-    final groups =
+    var groups =
         _decodeList(_prefs.getString(_kFriendGroups), FriendGroup.fromJson);
 
     final rawSettings = _prefs.getString(_kSettings);
@@ -69,10 +87,45 @@ class LocalStore {
           )
         : UserSettings(userId: localDemoUserId, updatedAt: DateTime.now().toUtc());
 
-    final pending = (_prefs.getStringList(_kPendingSync) ?? const []).toSet();
+    var pending = (_prefs.getStringList(_kPendingSync) ?? const []).toSet();
     final rawSync = _prefs.getString(_kLastSyncedAt);
     final lastSync = rawSync == null ? null : DateTime.tryParse(rawSync);
     final language = AppLanguage.fromCode(_prefs.getString(_kLanguage));
+
+    // One-time cleanup: purge legacy hardcoded demo records from devices that
+    // opened an earlier demo build, while preserving any real user records.
+    if (!seedDemo && !(_prefs.getBool(_kCleanedLegacyDemo) ?? false)) {
+      final nextBills =
+          bills.where((b) => !_legacyDemoBillIds.contains(b.id)).toList();
+      final nextBanks =
+          banks.where((a) => !_legacyDemoBankIds.contains(a.id)).toList();
+      final nextGroups =
+          groups.where((g) => !_legacyDemoGroupIds.contains(g.id)).toList();
+      final nextPending = pending
+          .where(
+            (k) =>
+                !_legacyDemoBillIds.any((id) => k == 'bill:$id') &&
+                !_legacyDemoBankIds.any((id) => k == 'bank:$id') &&
+                !_legacyDemoGroupIds.any((id) => k == 'group:$id'),
+          )
+          .toSet();
+      if (nextBills.length != bills.length ||
+          nextBanks.length != banks.length ||
+          nextGroups.length != groups.length ||
+          nextPending.length != pending.length) {
+        bills = nextBills;
+        banks = nextBanks;
+        groups = nextGroups;
+        pending = nextPending;
+        await Future.wait([
+          saveBills(bills),
+          saveBankAccounts(banks),
+          saveFriendGroups(groups),
+          savePendingSyncKeys(pending),
+        ]);
+      }
+      await _prefs.setBool(_kCleanedLegacyDemo, true);
+    }
 
     return LocalDataSnapshot(
       bills: bills,
@@ -89,11 +142,22 @@ class LocalStore {
     await _prefs.setString(_kLanguage, language.code);
   }
 
-  Future<LocalDataSnapshot> resetToDemoSeed() async {
-    final initial = _buildDemoSeed();
-    await saveAll(initial);
-    await _prefs.setBool(_kSeeded, true);
-    return initial;
+  LocalDataSnapshot _buildEmptyState() {
+    final now = DateTime.now().toUtc();
+    return LocalDataSnapshot(
+      bills: const [],
+      bankAccounts: const [],
+      friendGroups: const [],
+      settings: UserSettings(
+        userId: localDemoUserId,
+        defaultRounding: RoundingMode.ceil1000,
+        defaultTransferTemplate: '{name} tra tien {title}',
+        defaultShippingMode: ShippingSplitMode.flat,
+        updatedAt: now,
+      ),
+      pendingSyncKeys: <String>{},
+      lastSyncedAt: null,
+    );
   }
 
   Future<void> saveAll(LocalDataSnapshot snapshot) async {
@@ -155,7 +219,8 @@ class LocalStore {
         .toList();
   }
 
-  LocalDataSnapshot _buildDemoSeed() {
+  @visibleForTesting
+  LocalDataSnapshot buildDemoSeedForTest() {
     final now = DateTime.now().toUtc();
     final today = DateTime(now.year, now.month, now.day);
     final yesterday = today.subtract(const Duration(days: 1));

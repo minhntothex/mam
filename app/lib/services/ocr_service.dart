@@ -82,43 +82,45 @@ class OcrService {
                 ),
                 onTap: () => _pickAndRun(ctx, ImageSource.gallery, s),
               ),
-              const Padding(
-                padding: EdgeInsets.symmetric(vertical: 8),
-                child: Divider(),
-              ),
-              Text(
-                s.demoPresetsHeading,
-                style: TextStyle(
-                  fontSize: 12.5,
-                  fontWeight: FontWeight.w700,
-                  color: p.muted,
+              if (!SupabaseConfig.isConfigured) ...[
+                const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 8),
+                  child: Divider(),
                 ),
-              ),
-              const SizedBox(height: 6),
-              ...demoPresets(isVi: s.isVi).map(
-                (preset) => ListTile(
-                  dense: true,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10),
+                Text(
+                  s.demoPresetsHeading,
+                  style: TextStyle(
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w700,
+                    color: p.muted,
                   ),
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 8),
-                  leading: Icon(
-                    Icons.receipt_long_rounded,
-                    color: p.ink,
-                    size: 20,
-                  ),
-                  title: Text(
-                    preset.label,
-                    style: const TextStyle(fontWeight: FontWeight.w600),
-                  ),
-                  subtitle: Text(
-                    preset.subtitle,
-                    style: const TextStyle(fontSize: 12),
-                  ),
-                  trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 14),
-                  onTap: () => Navigator.pop(ctx, preset.result),
                 ),
-              ),
+                const SizedBox(height: 6),
+                ...demoPresets(isVi: s.isVi).map(
+                  (preset) => ListTile(
+                    dense: true,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 8),
+                    leading: Icon(
+                      Icons.receipt_long_rounded,
+                      color: p.ink,
+                      size: 20,
+                    ),
+                    title: Text(
+                      preset.label,
+                      style: const TextStyle(fontWeight: FontWeight.w600),
+                    ),
+                    subtitle: Text(
+                      preset.subtitle,
+                      style: const TextStyle(fontSize: 12),
+                    ),
+                    trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 14),
+                    onTap: () => Navigator.pop(ctx, preset.result),
+                  ),
+                ),
+              ],
             ],
           ),
         ),

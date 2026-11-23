@@ -542,20 +542,6 @@ class SettingsScreen extends StatelessWidget {
                     ),
                   ),
                 ),
-
-              const SizedBox(height: 12),
-              OutlinedButton.icon(
-                onPressed: () async {
-                  await controller.resetDemoData();
-                  if (context.mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text(s.resetDemoDone)),
-                    );
-                  }
-                },
-                icon: const Icon(Icons.restore_rounded, size: 18),
-                label: Text(s.resetDemoBtn),
-              ),
             ],
           ),
         );

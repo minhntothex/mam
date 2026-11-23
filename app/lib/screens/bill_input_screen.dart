@@ -15,34 +15,64 @@ class _EditableItemRow {
     required this.id,
     String name = '',
     double quantity = 1,
-    int lineTotal = 0,
+    int unitPrice = 0,
     CurrencySpec currency = CurrencyRegistry.vnd,
     AmountInputFormat format = AmountInputFormat.auto,
     Map<String, double>? shares,
   })  : nameCtrl = TextEditingController(text: name),
         qtyCtrl = TextEditingController(text: formatQty(quantity)),
-        totalCtrl = TextEditingController(
+        unitPriceCtrl = TextEditingController(
           text: formatAmountForInput(
-            lineTotal,
+            unitPrice,
             currency: currency,
             format: format,
           ),
         ),
         existingShares = shares ?? const {};
 
+  factory _EditableItemRow.fromLineTotal({
+    required String id,
+    String name = '',
+    double quantity = 1,
+    int lineTotal = 0,
+    CurrencySpec currency = CurrencyRegistry.vnd,
+    AmountInputFormat format = AmountInputFormat.auto,
+    Map<String, double>? shares,
+  }) {
+    final safeQty = quantity > 0 ? quantity : 1.0;
+    final unitPrice = (lineTotal / safeQty).round();
+    return _EditableItemRow(
+      id: id,
+      name: name,
+      quantity: safeQty,
+      unitPrice: unitPrice,
+      currency: currency,
+      format: format,
+      shares: shares,
+    );
+  }
+
   final String id;
   final TextEditingController nameCtrl;
   final TextEditingController qtyCtrl;
-  final TextEditingController totalCtrl;
+  final TextEditingController unitPriceCtrl;
   final Map<String, double> existingShares;
 
-  BillItem toBillItem(String fallbackName) {
+  double get parsedQty {
     final qty = double.tryParse(qtyCtrl.text.replaceAll(',', '.')) ?? 1;
+    return qty > 0 ? qty : 1;
+  }
+
+  int get parsedUnitPrice => parseAmountInput(unitPriceCtrl.text);
+
+  int get computedLineTotal => (parsedUnitPrice * parsedQty).round();
+
+  BillItem toBillItem(String fallbackName) {
     return BillItem(
       id: id,
       name: nameCtrl.text.trim().isEmpty ? fallbackName : nameCtrl.text.trim(),
-      quantity: qty > 0 ? qty : 1,
-      lineTotal: parseAmountInput(totalCtrl.text),
+      quantity: parsedQty,
+      lineTotal: computedLineTotal,
       shares: existingShares,
     );
   }
@@ -50,7 +80,7 @@ class _EditableItemRow {
   void dispose() {
     nameCtrl.dispose();
     qtyCtrl.dispose();
-    totalCtrl.dispose();
+    unitPriceCtrl.dispose();
   }
 }
 
@@ -121,7 +151,7 @@ class _BillInputScreenState extends State<BillInputScreen> {
     if (bill != null && bill.payload.items.isNotEmpty) {
       for (final item in bill.payload.items) {
         _rows.add(
-          _EditableItemRow(
+          _EditableItemRow.fromLineTotal(
             id: item.id,
             name: item.name,
             quantity: item.quantity,
@@ -214,7 +244,7 @@ class _BillInputScreenState extends State<BillInputScreen> {
       for (var i = 0; i < result.items.length; i++) {
         final item = result.items[i];
         _rows.add(
-          _EditableItemRow(
+          _EditableItemRow.fromLineTotal(
             id: 'ocr_${DateTime.now().microsecondsSinceEpoch}_$i',
             name: item.name,
             quantity: item.quantity,
@@ -235,6 +265,21 @@ class _BillInputScreenState extends State<BillInputScreen> {
       _discountCtrl.text = _fmtInput(result.billDiscountAmount);
       _ocrTotalCtrl.text = _fmtInput(result.ocrGrandTotal ?? 0);
     });
+  }
+
+  Future<void> _pickBillDate() async {
+    final now = DateTime.now();
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _billDate,
+      firstDate: DateTime(2020, 1, 1),
+      lastDate: DateTime(now.year + 1, 12, 31),
+    );
+    if (picked != null && mounted) {
+      setState(() {
+        _billDate = DateTime(picked.year, picked.month, picked.day);
+      });
+    }
   }
 
   void _goToAssign() {
@@ -380,6 +425,43 @@ class _BillInputScreenState extends State<BillInputScreen> {
                     controller: _titleCtrl,
                     decoration: const InputDecoration(hintText: 'Haidilao Hotpot'),
                   ),
+                  const SizedBox(height: 12),
+                  Text(
+                    s.billDateLabel,
+                    style: TextStyle(
+                      fontSize: 12.5,
+                      fontWeight: FontWeight.w600,
+                      color: p.muted,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  InkWell(
+                    key: const ValueKey('bill_date_picker'),
+                    borderRadius: BorderRadius.circular(12),
+                    onTap: _pickBillDate,
+                    child: InputDecorator(
+                      decoration: InputDecoration(
+                        prefixIcon: Icon(
+                          Icons.calendar_today_rounded,
+                          size: 18,
+                          color: p.muted,
+                        ),
+                        suffixIcon: Icon(
+                          Icons.keyboard_arrow_down_rounded,
+                          size: 20,
+                          color: p.muted,
+                        ),
+                      ),
+                      child: Text(
+                        formatDateVn(_billDate, includeYear: true),
+                        style: kTabularStyle.copyWith(
+                          fontSize: 14.5,
+                          fontWeight: FontWeight.w600,
+                          color: p.ink,
+                        ),
+                      ),
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -455,12 +537,12 @@ class _BillInputScreenState extends State<BillInputScreen> {
                           const SizedBox(width: 8),
                           Expanded(
                             child: TextField(
-                              controller: _rows[i].totalCtrl,
+                              controller: _rows[i].unitPriceCtrl,
                               keyboardType: TextInputType.number,
                               inputFormatters: [amountFormatter],
                               style: kTabularStyle,
                               decoration: InputDecoration(
-                                labelText: s.lineTotalLabel,
+                                labelText: s.unitPriceLabel,
                                 prefixText: prefixSymbol,
                                 suffixText: suffixSymbol,
                               ),
@@ -469,6 +551,26 @@ class _BillInputScreenState extends State<BillInputScreen> {
                           ),
                         ],
                       ),
+                      if (_rows[i].parsedQty != 1 &&
+                          _rows[i].parsedUnitPrice > 0) ...[
+                        const SizedBox(height: 6),
+                        Align(
+                          alignment: Alignment.centerRight,
+                          child: Text(
+                            s.lineTotalInline(
+                              formatMoney(
+                                _rows[i].computedLineTotal,
+                                currency: currency,
+                              ),
+                            ),
+                            style: kTabularStyle.copyWith(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: p.muted,
+                            ),
+                          ),
+                        ),
+                      ],
                     ],
                   ),
                 ),

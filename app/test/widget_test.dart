@@ -3,6 +3,7 @@ import 'package:mam/core/currency.dart';
 import 'package:mam/data/local_store.dart';
 import 'package:mam/l10n/mam_strings.dart';
 import 'package:mam/main.dart';
+import 'package:mam/models/bill_models.dart';
 import 'package:mam/state/mam_controller.dart';
 import 'package:mam/widgets/mam_logo.dart';
 import 'package:material_ui/material_ui.dart';
@@ -10,20 +11,78 @@ import 'package:qr_flutter/qr_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
-  testWidgets('MamApp shows Logo + Search in AppBar, opens Drawer panel, and opens Quick Equal Split', (tester) async {
+  testWidgets('Clean production start has zero mock data and purges legacy demo records while keeping user bills', (tester) async {
     SharedPreferences.setMockInitialValues({});
     final store = await LocalStore.open();
     final controller = MamController(store: store);
     await controller.init();
+
+    expect(controller.activeBills, isEmpty);
+    expect(controller.activeBankAccounts, isEmpty);
+    expect(controller.activeFriendGroups, isEmpty);
+
+    // Simulate a device that previously seeded legacy demo records + 1 real user bill
+    final legacyStore = await LocalStore.open();
+    final demoSnapshot = legacyStore.buildDemoSeedForTest();
+    final realNow = DateTime.now().toUtc();
+    final userBill = BillRecord(
+      id: '99999999-9999-4999-8999-999999999901',
+      userId: LocalStore.localDemoUserId,
+      title: 'Bún bò Huế thật',
+      billDate: DateTime(2026, 11, 15),
+      totalAmount: 150000,
+      payload: const BillPayload(
+        participants: [Participant(id: 'p1', name: 'Me', isHost: true, paid: true)],
+        items: [BillItem(id: 'i1', name: 'Bún bò', quantity: 2, lineTotal: 150000, shares: {'p1': 1})],
+      ),
+      createdAt: realNow,
+      updatedAt: realNow,
+    );
+    await legacyStore.saveAll(
+      LocalDataSnapshot(
+        bills: [...demoSnapshot.bills, userBill],
+        bankAccounts: demoSnapshot.bankAccounts,
+        friendGroups: demoSnapshot.friendGroups,
+        settings: demoSnapshot.settings,
+        pendingSyncKeys: <String>{},
+        lastSyncedAt: null,
+      ),
+    );
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('mam_seeded_v1', true);
+    await prefs.remove('mam_cleaned_legacy_demo_v1');
+
+    final migratedController = MamController(store: legacyStore);
+    await migratedController.init();
+    expect(migratedController.activeBills.map((b) => b.title), ['Bún bò Huế thật']);
+    expect(migratedController.activeBankAccounts, isEmpty);
+    expect(migratedController.activeFriendGroups, isEmpty);
+  });
+
+  testWidgets('MamApp shows flat Logo + Search in AppBar, equal-width bottom buttons, Drawer panel, and Quick Equal Split', (tester) async {
+    SharedPreferences.setMockInitialValues({});
+    final store = await LocalStore.open();
+    final controller = MamController(store: store);
+    await controller.init(seedDemo: true);
 
     await tester.pumpWidget(MamApp(controller: controller));
     await tester.pumpAndSettle();
 
     expect(controller.language, AppLanguage.en);
     expect(find.byType(MamLogoMark), findsOneWidget);
+    // Flat logo: no BoxShadow inside MamLogoMark
+    expect(
+      find.descendant(of: find.byType(MamLogoMark), matching: find.byType(DecoratedBox)),
+      findsNothing,
+    );
     expect(find.text('Mâm'), findsNothing);
     expect(find.text('Uncollected'), findsOneWidget);
     expect(find.text('Lẩu Haidilao Bitexco'), findsOneWidget);
+
+    // Equal split and New bill buttons share identical 50/50 widths
+    final equalBtnSize = tester.getSize(find.widgetWithText(OutlinedButton, 'Equal split'));
+    final newBillBtnSize = tester.getSize(find.widgetWithText(FilledButton, 'New bill'));
+    expect((equalBtnSize.width - newBillBtnSize.width).abs(), lessThan(1.0));
 
     // Searchbar sits in AppBar next to logo; Local & Settings live inside Logo panel
     expect(find.descendant(of: find.byType(AppBar), matching: find.byType(TextField)), findsOneWidget);
@@ -34,13 +93,14 @@ void main() {
     expect(find.text('Local'), findsOneWidget);
     expect(find.text('Settings'), findsOneWidget);
 
-    // Close drawer and enter Quick Equal Split to verify numeric-only live formatting
+    // Close drawer and enter Quick Equal Split to verify date picker + numeric formatting
     Navigator.of(tester.element(find.text('Settings'))).pop();
     await tester.pumpAndSettle();
 
     await tester.tap(find.text('Equal split'));
     await tester.pumpAndSettle();
     expect(find.text('Quick Equal Split'), findsOneWidget);
+    expect(find.byKey(const ValueKey('quick_equal_date_picker')), findsOneWidget);
 
     // Typing letters + digits into total field rejects letters and formats 5923892 -> 5.923.892
     final totalField = find.byType(TextField).at(1);
@@ -53,7 +113,7 @@ void main() {
     SharedPreferences.setMockInitialValues({});
     final store = await LocalStore.open();
     final controller = MamController(store: store);
-    await controller.init();
+    await controller.init(seedDemo: true);
 
     await tester.pumpWidget(MamApp(controller: controller));
     await tester.pumpAndSettle();
@@ -105,7 +165,7 @@ void main() {
     SharedPreferences.setMockInitialValues({});
     final store = await LocalStore.open();
     final controller = MamController(store: store);
-    await controller.init();
+    await controller.init(seedDemo: true);
 
     await tester.pumpWidget(MamApp(controller: controller));
     await tester.pumpAndSettle();
@@ -124,7 +184,6 @@ void main() {
     expect(find.text('BILL SUMMARY'), findsOneWidget);
     expect(find.byType(QrImageView), findsOneWidget);
 
-    // Dismiss receipt sheet then tap Home button to return to HomeScreen
     Navigator.of(tester.element(find.text('BILL SUMMARY'))).pop();
     await tester.pumpAndSettle();
     await tester.tap(find.text('Home'));
@@ -132,11 +191,11 @@ void main() {
     expect(find.text('Uncollected'), findsOneWidget);
   });
 
-  testWidgets('Save & view result -> Back returns to Assign without duplicating bill on re-save', (tester) async {
+  testWidgets('BillInputScreen supports Bill date picker, Unit price x Qty auto line total, and non-duplicating Back -> Re-save', (tester) async {
     SharedPreferences.setMockInitialValues({});
     final store = await LocalStore.open();
     final controller = MamController(store: store);
-    await controller.init();
+    await controller.init(seedDemo: true);
     final initialCount = controller.activeBills.length;
 
     await tester.pumpWidget(MamApp(controller: controller));
@@ -145,7 +204,24 @@ void main() {
     await tester.tap(find.text('New bill'));
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('Scan receipt (AI OCR)'));
+    // Bill date picker sits below Restaurant / Meal
+    expect(find.text('Bill date'), findsOneWidget);
+    expect(find.byKey(const ValueKey('bill_date_picker')), findsOneWidget);
+
+    // Enter Qty = 4 and Unit price = 30.000 -> auto computes Line total: 120.000đ
+    final qtyField = find.widgetWithText(TextField, 'Qty').first;
+    final unitPriceField = find.widgetWithText(TextField, 'Unit price').first;
+    await tester.enterText(qtyField, '4');
+    await tester.enterText(unitPriceField, '30000');
+    await tester.pumpAndSettle();
+    expect(find.text('Line total: 120.000đ'), findsOneWidget);
+    expect(find.text('Subtotal: 120.000đ'), findsOneWidget);
+
+    // Scroll back up to Scan receipt card and test OCR conversion from lineTotal -> unitPrice
+    final scanCard = find.text('Scan receipt (AI OCR)');
+    await tester.ensureVisible(scanCard);
+    await tester.pumpAndSettle();
+    await tester.tap(scanCard);
     await tester.pumpAndSettle();
 
     await tester.tap(find.textContaining('GrabFood Bun Dau'));
@@ -182,16 +258,15 @@ void main() {
     expect(find.text('Uncollected'), findsOneWidget);
   });
 
-  testWidgets('Logo panel -> Settings switches Currency (VND <-> USD), Amount Format, and EN <-> VI', (tester) async {
+  testWidgets('Logo panel -> Settings switches Currency, Amount Format, EN <-> VI, and has no Reset demo button', (tester) async {
     SharedPreferences.setMockInitialValues({});
     final store = await LocalStore.open();
     final controller = MamController(store: store);
-    await controller.init();
+    await controller.init(seedDemo: true);
 
     await tester.pumpWidget(MamApp(controller: controller));
     await tester.pumpAndSettle();
 
-    // Open Logo drawer -> Settings
     await tester.tap(find.byType(MamLogoMark));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Settings'));
@@ -200,15 +275,14 @@ void main() {
     expect(find.text('Currency & Number Format'), findsOneWidget);
     expect(find.textContaining('Nearest'), findsNothing);
     expect(find.byIcon(Icons.check), findsNothing);
+    expect(find.text('Reset demo sample data'), findsNothing);
     expect(controller.currentCurrency.code, 'VND');
 
-    // Switch currency to USD
     await tester.tap(find.text(r'$ / USD'));
     await tester.pumpAndSettle();
     expect(controller.currentCurrency.code, 'USD');
     expect(controller.amountInputFormat, AmountInputFormat.auto);
 
-    // Open Transfer note template dialog and verify helper text allows multi-line (not truncated)
     final templateItem = find.text('Transfer note template');
     await tester.scrollUntilVisible(
       templateItem,
@@ -224,7 +298,6 @@ void main() {
     await tester.tap(find.text('Cancel'));
     await tester.pumpAndSettle();
 
-    // Scroll back up and switch language English -> Vietnamese
     final viOption = find.text('Tiếng Việt');
     await tester.scrollUntilVisible(
       viOption,

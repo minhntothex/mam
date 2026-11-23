@@ -4,8 +4,8 @@ import 'package:material_ui/material_ui.dart';
 
 /// Vector brand mark for Mâm (Tri-Pastel Share): three rich pastel slices —
 /// sky periwinkle, fresh mint, and a detached honey-butter fair-share wedge —
-/// arranged as a shared round dining tray ("mâm") inside a cloud-white tile
-/// with crisp border and subtle elevation shadow.
+/// arranged as a shared round dining tray ("mâm") inside a clean flat
+/// cloud-white tile with crisp border.
 ///
 /// Mirrors `assets/brand/mam-logo.svg` in a normalized 1024×1024 coordinate
 /// space so the AppBar mark, exported PNG Receipt Cards, and platform icons
@@ -22,33 +22,12 @@ class MamLogoMark extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final radius = size * (220.0 / 1024.0);
-    final painter = SizedBox(
+    return SizedBox(
       width: size,
       height: size,
       child: CustomPaint(
         painter: _MamLogoPainter(showTile: showTile),
       ),
-    );
-    if (!showTile) return painter;
-
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(radius),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x1F1E293B),
-            blurRadius: 6,
-            offset: Offset(0, 2),
-          ),
-          BoxShadow(
-            color: Color(0x0D1E293B),
-            blurRadius: 2,
-            offset: Offset(0, 1),
-          ),
-        ],
-      ),
-      child: painter,
     );
   }
 }
