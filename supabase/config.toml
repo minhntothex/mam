@@ -1,4 +1,5 @@
 project_id = "mam"
 
 [functions.scan-bill]
-verify_jwt = true
+# Verified inside scan-bill/index.ts via supabase.auth.getUser() (supports both HS256 & ES256 JWTs)
+verify_jwt = false
