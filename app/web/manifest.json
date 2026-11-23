@@ -1,7 +1,8 @@
 {
     "name": "Mâm — Split Bills & VietQR",
     "short_name": "Mâm",
-    "start_url": ".",
+    "start_url": "./",
+    "scope": "./",
     "display": "standalone",
     "background_color": "#F7F8FC",
     "theme_color": "#564CE6",
