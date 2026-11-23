@@ -27,7 +27,7 @@ echo "1/3 Linking project ${SUPABASE_PROJECT_REF}..."
 "${SUPA[@]}" link --project-ref "$SUPABASE_PROJECT_REF"
 
 echo "2/3 Pushing SQL migrations (001..003)..."
-SUPABASE_DB_PASSWORD="$SUPABASE_DB_PASSWORD" "${SUPA[@]}" db push --remote
+SUPABASE_DB_PASSWORD="$SUPABASE_DB_PASSWORD" "${SUPA[@]}" db push --remote --yes
 
 echo "3/3 Setting GEMINI_API_KEY & deploying Edge Function scan-bill..."
 "${SUPA[@]}" secrets set "GEMINI_API_KEY=${GEMINI_API_KEY}" --project-ref "$SUPABASE_PROJECT_REF"
