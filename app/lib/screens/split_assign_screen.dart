@@ -1,6 +1,7 @@
 import 'package:material_ui/material_ui.dart';
 
 import '../core/calculator.dart';
+import '../core/currency.dart';
 import '../core/formatters.dart';
 import '../l10n/mam_strings.dart';
 import '../models/bill_models.dart';
@@ -17,6 +18,7 @@ class SplitAssignScreen extends StatefulWidget {
     required this.billDate,
     required this.items,
     required this.adjustments,
+    this.currencyCode,
   });
 
   final MamController controller;
@@ -25,6 +27,7 @@ class SplitAssignScreen extends StatefulWidget {
   final DateTime billDate;
   final List<BillItem> items;
   final BillAdjustments adjustments;
+  final String? currencyCode;
 
   @override
   State<SplitAssignScreen> createState() => _SplitAssignScreenState();
@@ -34,11 +37,21 @@ class _SplitAssignScreenState extends State<SplitAssignScreen> {
   late List<Participant> _participants;
   late List<BillItem> _items;
   late String _selectedPersonId;
+  String? _savedBillId;
+  DateTime? _savedCreatedAt;
+
+  CurrencySpec get _currency => CurrencyRegistry.byCode(
+        widget.currencyCode ??
+            widget.existingBill?.payload.currencyCode ??
+            widget.controller.currentCurrency.code,
+      );
 
   @override
   void initState() {
     super.initState();
     final existing = widget.existingBill;
+    _savedBillId = existing?.id;
+    _savedCreatedAt = existing?.createdAt;
     final s = widget.controller.strings;
     if (existing != null && existing.payload.participants.isNotEmpty) {
       _participants = List<Participant>.from(existing.payload.participants);
@@ -73,6 +86,7 @@ class _SplitAssignScreenState extends State<SplitAssignScreen> {
       adjustments: widget.adjustments,
       roundingMode: widget.existingBill?.payload.roundingMode ??
           widget.controller.settings.defaultRounding,
+      currencyCode: _currency.code,
       bankAccountSnapshot: widget.existingBill?.payload.bankAccountSnapshot ??
           widget.controller.defaultBankAccount?.toSnapshot(),
       transferNoteTemplate: widget.existingBill?.payload.transferNoteTemplate ??
@@ -301,7 +315,7 @@ class _SplitAssignScreenState extends State<SplitAssignScreen> {
           content: Text(
             s.unassignedDialogBody(
               calc.unassignedItems.length,
-              formatVnd(calc.unassignedTotal),
+              formatMoney(calc.unassignedTotal, currency: _currency),
             ),
           ),
           actions: [
@@ -327,30 +341,33 @@ class _SplitAssignScreenState extends State<SplitAssignScreen> {
     }
 
     final now = DateTime.now().toUtc();
-    final existing = widget.existingBill;
+    final billId = _savedBillId ?? widget.controller.newId();
+    final createdAt = _savedCreatedAt ?? now;
+    _savedBillId = billId;
+    _savedCreatedAt = createdAt;
     final payload = _currentPayload();
     final record = BillRecord(
-      id: existing?.id ?? widget.controller.newId(),
+      id: billId,
       userId: widget.controller.currentUserId,
       title: widget.title,
       billDate: widget.billDate,
       mode: BillMode.itemized,
       totalAmount: BillCalculator.calculate(payload).computedGrandTotal,
       payload: payload,
-      createdAt: existing?.createdAt ?? now,
+      createdAt: createdAt,
       updatedAt: now,
+      archivedAt: widget.existingBill?.archivedAt,
     );
 
     final saved = await widget.controller.saveBill(record);
     if (!mounted) return;
-    Navigator.of(context).pushAndRemoveUntil(
+    await Navigator.of(context).push(
       MaterialPageRoute(
         builder: (_) => ResultScreen(
           controller: widget.controller,
           billId: saved.id,
         ),
       ),
-      (route) => route.isFirst,
     );
   }
 
@@ -404,6 +421,7 @@ class _SplitAssignScreenState extends State<SplitAssignScreen> {
                           selected: _participants[i].id == _selectedPersonId,
                           subtotal:
                               calc.breakdownFor(_participants[i].id)?.finalAmount ?? 0,
+                          currency: _currency,
                           onTap: () => setState(
                             () => _selectedPersonId = _participants[i].id,
                           ),
@@ -488,7 +506,10 @@ class _SplitAssignScreenState extends State<SplitAssignScreen> {
                                       if (item.itemDiscount > 0)
                                         Text(
                                           s.itemDiscountApplied(
-                                            formatVnd(item.itemDiscount),
+                                            formatMoney(
+                                              item.itemDiscount,
+                                              currency: _currency,
+                                            ),
                                           ),
                                           style: TextStyle(
                                             fontSize: 11.5,
@@ -500,7 +521,7 @@ class _SplitAssignScreenState extends State<SplitAssignScreen> {
                                 ),
                                 const SizedBox(width: 8),
                                 Text(
-                                  formatVnd(item.netTotal),
+                                  formatMoney(item.netTotal, currency: _currency),
                                   style: kTabularStyle.copyWith(
                                     fontSize: 14.5,
                                     fontWeight: FontWeight.w800,
@@ -642,7 +663,10 @@ class _SplitAssignScreenState extends State<SplitAssignScreen> {
                         calc.hasUnassignedItems
                             ? s.unassignedSummary(
                                 calc.unassignedItems.length,
-                                formatVnd(calc.unassignedTotal),
+                                formatMoney(
+                                  calc.unassignedTotal,
+                                  currency: _currency,
+                                ),
                               )
                             : s.allAssignedSummary(_items.length),
                         style: TextStyle(
@@ -694,6 +718,7 @@ class _ParticipantTabChip extends StatelessWidget {
     required this.color,
     required this.selected,
     required this.subtotal,
+    required this.currency,
     required this.onTap,
   });
 
@@ -701,6 +726,7 @@ class _ParticipantTabChip extends StatelessWidget {
   final Color color;
   final bool selected;
   final int subtotal;
+  final CurrencySpec currency;
   final VoidCallback onTap;
 
   @override
@@ -743,7 +769,7 @@ class _ParticipantTabChip extends StatelessWidget {
             ),
             const SizedBox(height: 2),
             Text(
-              formatVnd(subtotal),
+              formatMoney(subtotal, currency: currency),
               style: kTabularStyle.copyWith(
                 color: selected ? Colors.white.withValues(alpha: 0.9) : p.muted,
                 fontSize: 11.5,

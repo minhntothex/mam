@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:mam/core/currency.dart';
 import 'package:mam/data/local_store.dart';
 import 'package:mam/l10n/mam_strings.dart';
 import 'package:mam/main.dart';
@@ -9,7 +10,7 @@ import 'package:qr_flutter/qr_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
-  testWidgets('MamApp defaults to English, shows logo only, and opens Quick Equal Split', (tester) async {
+  testWidgets('MamApp shows Logo + Search in AppBar, opens Drawer panel, and opens Quick Equal Split', (tester) async {
     SharedPreferences.setMockInitialValues({});
     final store = await LocalStore.open();
     final controller = MamController(store: store);
@@ -24,12 +25,31 @@ void main() {
     expect(find.text('Uncollected'), findsOneWidget);
     expect(find.text('Lẩu Haidilao Bitexco'), findsOneWidget);
 
+    // Searchbar sits in AppBar next to logo; Local & Settings live inside Logo panel
+    expect(find.descendant(of: find.byType(AppBar), matching: find.byType(TextField)), findsOneWidget);
+    expect(find.descendant(of: find.byType(AppBar), matching: find.text('Local')), findsNothing);
+
+    await tester.tap(find.byType(MamLogoMark));
+    await tester.pumpAndSettle();
+    expect(find.text('Local'), findsOneWidget);
+    expect(find.text('Settings'), findsOneWidget);
+
+    // Close drawer and enter Quick Equal Split to verify numeric-only live formatting
+    Navigator.of(tester.element(find.text('Settings'))).pop();
+    await tester.pumpAndSettle();
+
     await tester.tap(find.text('Equal split'));
     await tester.pumpAndSettle();
     expect(find.text('Quick Equal Split'), findsOneWidget);
+
+    // Typing letters + digits into total field rejects letters and formats 5923892 -> 5.923.892
+    final totalField = find.byType(TextField).at(1);
+    await tester.enterText(totalField, 'abc5923892xyz');
+    await tester.pumpAndSettle();
+    expect(find.text('5.923.892'), findsOneWidget);
   });
 
-  testWidgets('Home supports search, swipe-left Archive, Archived divider & Restore', (tester) async {
+  testWidgets('Home supports AppBar search, swipe-left Archive, Archived divider & Restore', (tester) async {
     SharedPreferences.setMockInitialValues({});
     final store = await LocalStore.open();
     final controller = MamController(store: store);
@@ -38,7 +58,6 @@ void main() {
     await tester.pumpWidget(MamApp(controller: controller));
     await tester.pumpAndSettle();
 
-    // Search by member name (case-insensitive)
     await tester.enterText(find.byType(TextField), 'minh');
     await tester.pumpAndSettle();
     expect(find.text('Lẩu Haidilao Bitexco'), findsOneWidget);
@@ -50,11 +69,9 @@ void main() {
     await tester.tap(find.text('Clear search'));
     await tester.pumpAndSettle();
 
-    // Swipe left on settled bill -> reveal Archive + Delete -> tap Archive
     final settledTitle = find.text('Phê La chiều (GrabFood)');
     await tester.ensureVisible(settledTitle);
     await tester.pumpAndSettle();
-    expect(settledTitle, findsOneWidget);
     await tester.drag(settledTitle, const Offset(-180, 0));
     await tester.pumpAndSettle();
 
@@ -64,17 +81,17 @@ void main() {
     await tester.tap(find.text('Archive'));
     await tester.pumpAndSettle();
 
-    // Divider appears in All tab & Archived pill shows count 1
     expect(find.text('Archived (1)'), findsNWidgets(2));
 
-    // Switch to Archived tab -> swipe left -> Restore
-    await tester.tap(find.text('Archived (1)').first);
+    final archivedTab = find.text('Archived (1)').first;
+    await tester.ensureVisible(archivedTab);
     await tester.pumpAndSettle();
+    await tester.tap(archivedTab);
+    await tester.pumpAndSettle();
+
     final archivedTitle = find.text('Phê La chiều (GrabFood)');
     await tester.ensureVisible(archivedTitle);
     await tester.pumpAndSettle();
-    expect(archivedTitle, findsOneWidget);
-
     await tester.drag(archivedTitle, const Offset(-180, 0));
     await tester.pumpAndSettle();
     expect(find.text('Restore'), findsOneWidget);
@@ -84,7 +101,7 @@ void main() {
     expect(controller.archivedBills, isEmpty);
   });
 
-  testWidgets('ResultScreen toggles paid and renders VietQR cards cleanly', (tester) async {
+  testWidgets('ResultScreen renders Home button before Export Summary Receipt and VietQR cards cleanly', (tester) async {
     SharedPreferences.setMockInitialValues({});
     final store = await LocalStore.open();
     final controller = MamController(store: store);
@@ -97,20 +114,30 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Per-person breakdown'), findsOneWidget);
+    expect(find.text('Home'), findsOneWidget);
     expect(find.text('Export Summary Receipt (PNG)'), findsOneWidget);
 
     await tester.tap(find.text('Export Summary Receipt (PNG)'));
     await tester.pumpAndSettle();
     expect(find.byType(MamLogoMark), findsOneWidget);
+    expect(find.text('MÂM'), findsNothing);
     expect(find.text('BILL SUMMARY'), findsOneWidget);
     expect(find.byType(QrImageView), findsOneWidget);
+
+    // Dismiss receipt sheet then tap Home button to return to HomeScreen
+    Navigator.of(tester.element(find.text('BILL SUMMARY'))).pop();
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Home'));
+    await tester.pumpAndSettle();
+    expect(find.text('Uncollected'), findsOneWidget);
   });
 
-  testWidgets('OCR demo preset populates BillInputScreen and reconciles totals', (tester) async {
+  testWidgets('Save & view result -> Back returns to Assign without duplicating bill on re-save', (tester) async {
     SharedPreferences.setMockInitialValues({});
     final store = await LocalStore.open();
     final controller = MamController(store: store);
     await controller.init();
+    final initialCount = controller.activeBills.length;
 
     await tester.pumpWidget(MamApp(controller: controller));
     await tester.pumpAndSettle();
@@ -129,10 +156,33 @@ void main() {
     await tester.tap(find.text('Next: Assign'));
     await tester.pumpAndSettle();
     expect(find.text('Fast Item Assign'), findsOneWidget);
-    expect(find.textContaining('unassigned'), findsOneWidget);
+
+    await tester.tap(find.text('Split all'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Save & View result'));
+    await tester.pumpAndSettle();
+    expect(find.text('Per-person breakdown'), findsOneWidget);
+    expect(controller.activeBills.length, initialCount + 1);
+
+    // Press Back -> returns to Assign screen (NOT Home!)
+    await tester.pageBack();
+    await tester.pumpAndSettle();
+    expect(find.text('Fast Item Assign'), findsOneWidget);
+
+    // Re-save -> updates same bill without creating a duplicate
+    await tester.tap(find.text('Save & View result'));
+    await tester.pumpAndSettle();
+    expect(find.text('Per-person breakdown'), findsOneWidget);
+    expect(controller.activeBills.length, initialCount + 1);
+
+    // Tap Home button -> pops straight back to HomeScreen
+    await tester.tap(find.text('Home'));
+    await tester.pumpAndSettle();
+    expect(find.text('Uncollected'), findsOneWidget);
   });
 
-  testWidgets('EN <-> VI language switching works live on single pastel theme', (tester) async {
+  testWidgets('Logo panel -> Settings switches Currency (VND <-> USD), Amount Format, and EN <-> VI', (tester) async {
     SharedPreferences.setMockInitialValues({});
     final store = await LocalStore.open();
     final controller = MamController(store: store);
@@ -141,15 +191,26 @@ void main() {
     await tester.pumpWidget(MamApp(controller: controller));
     await tester.pumpAndSettle();
 
-    // Open Settings and switch English -> Vietnamese
-    await tester.tap(find.byTooltip('Settings'));
+    // Open Logo drawer -> Settings
+    await tester.tap(find.byType(MamLogoMark));
     await tester.pumpAndSettle();
-    expect(find.text('Language'), findsOneWidget);
+    await tester.tap(find.text('Settings'));
+    await tester.pumpAndSettle();
 
+    expect(find.text('Currency & Number Format'), findsOneWidget);
+    expect(controller.currentCurrency.code, 'VND');
+
+    // Switch currency to USD
+    await tester.tap(find.text(r'$ / USD'));
+    await tester.pumpAndSettle();
+    expect(controller.currentCurrency.code, 'USD');
+    expect(controller.amountInputFormat, AmountInputFormat.auto);
+
+    // Switch language English -> Vietnamese
     await tester.tap(find.text('Tiếng Việt'));
     await tester.pumpAndSettle();
     expect(controller.language, AppLanguage.vi);
-    expect(find.text('Ngôn ngữ'), findsOneWidget);
+    expect(find.text('Tiền tệ & Định dạng số'), findsOneWidget);
     expect(find.text('Cài đặt'), findsOneWidget);
   });
 }

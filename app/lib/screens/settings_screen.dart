@@ -1,5 +1,8 @@
+import 'package:flutter/services.dart';
 import 'package:material_ui/material_ui.dart';
 
+import '../core/amount_input_formatter.dart';
+import '../core/currency.dart';
 import '../core/formatters.dart';
 import '../data/bank_bins.dart';
 import '../l10n/mam_strings.dart';
@@ -28,6 +31,26 @@ class SettingsScreen extends StatelessWidget {
         final banks = controller.activeBankAccounts;
         final groups = controller.activeFriendGroups;
         final settings = controller.settings;
+        final currency = controller.currentCurrency;
+        final inputFormat = controller.amountInputFormat;
+        final resolvedFormat = currency.resolveInputFormat(inputFormat);
+        final stepLabel = s.isVi
+            ? currency.roundingStepLabelVi
+            : currency.roundingStepLabelEn;
+        final previewSamples = [1000, 312592, 5923892]
+            .map(
+              (n) => formatAmountForInput(
+                n,
+                currency: currency,
+                format: inputFormat,
+              ),
+            )
+            .join(' · ');
+        final formatHint = switch (resolvedFormat) {
+          AmountInputFormat.usdDecimal => s.formatAtmHint,
+          AmountInputFormat.plain => s.formatPlainHint,
+          _ => s.formatDotHint,
+        };
 
         return Scaffold(
           appBar: AppBar(title: Text(s.settings)),
@@ -60,6 +83,125 @@ class SettingsScreen extends StatelessWidget {
                       onSelectionChanged: (sel) =>
                           controller.setLanguage(sel.first),
                     ),
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: 16),
+
+              // 0b. Currency & Amount Input Format (scalable)
+              Text(
+                s.currencyAndFormatSection,
+                style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+              ),
+              const SizedBox(height: 8),
+              Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(14),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        s.currencyLabel,
+                        style: const TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: [
+                          for (final spec in CurrencyRegistry.all)
+                            ChoiceChip(
+                              label: Text(spec.label),
+                              selected: spec.code == currency.code,
+                              selectedColor: p.primary,
+                              labelStyle: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w700,
+                                color: spec.code == currency.code
+                                    ? p.onPrimary
+                                    : p.ink,
+                              ),
+                              onSelected: (_) => controller.updateSettings(
+                                settings.copyWith(defaultCurrency: spec.code),
+                              ),
+                            ),
+                        ],
+                      ),
+                      const SizedBox(height: 14),
+                      Text(
+                        s.amountFormatLabel,
+                        style: const TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      SizedBox(
+                        width: double.infinity,
+                        child: SegmentedButton<AmountInputFormat>(
+                          showSelectedIcon: false,
+                          segments: [
+                            ButtonSegment(
+                              value: AmountInputFormat.auto,
+                              label: Text(s.formatAuto),
+                            ),
+                            ButtonSegment(
+                              value: AmountInputFormat.dotThousands,
+                              label: Text(s.formatDotThousands),
+                            ),
+                            ButtonSegment(
+                              value: AmountInputFormat.usdDecimal,
+                              label: Text(s.formatUsdDecimal),
+                            ),
+                            ButtonSegment(
+                              value: AmountInputFormat.plain,
+                              label: Text(s.formatPlain),
+                            ),
+                          ],
+                          selected: {inputFormat},
+                          onSelectionChanged: (sel) => controller.updateSettings(
+                            settings.copyWith(amountInputFormat: sel.first),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 9,
+                        ),
+                        decoration: BoxDecoration(
+                          color: p.surfaceSubtle,
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              '${s.formatPreviewLabel}: $previewSamples',
+                              style: kTabularStyle.copyWith(
+                                fontSize: 12.5,
+                                fontWeight: FontWeight.w700,
+                                color: p.ink,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              formatHint,
+                              style: TextStyle(
+                                fontSize: 11.5,
+                                color: p.muted,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ),
@@ -282,11 +424,11 @@ class SettingsScreen extends StatelessWidget {
                             ),
                             ButtonSegment(
                               value: RoundingMode.nearest1000,
-                              label: Text(s.roundNearest1k),
+                              label: Text(s.roundNearestStep(stepLabel)),
                             ),
                             ButtonSegment(
                               value: RoundingMode.ceil1000,
-                              label: Text(s.roundCeil1k),
+                              label: Text(s.roundCeilStep(stepLabel)),
                             ),
                           ],
                           selected: {settings.defaultRounding},
@@ -496,6 +638,7 @@ class SettingsScreen extends StatelessWidget {
                     TextField(
                       controller: accNoCtrl,
                       keyboardType: TextInputType.number,
+                      inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                       decoration: InputDecoration(labelText: s.accountNoLabel),
                     ),
                     const SizedBox(height: 10),
@@ -508,11 +651,8 @@ class SettingsScreen extends StatelessWidget {
                     ),
                     const SizedBox(height: 10),
                     Material(
-                      color: p.surface,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        side: BorderSide(color: p.border),
-                      ),
+                      color: p.surfaceSubtle,
+                      borderRadius: BorderRadius.circular(12),
                       clipBehavior: Clip.antiAlias,
                       child: CheckboxListTile(
                         contentPadding: const EdgeInsets.symmetric(

@@ -2,6 +2,7 @@ import 'package:flutter/services.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../core/calculator.dart';
+import '../core/currency.dart';
 import '../core/export_png.dart';
 import '../core/formatters.dart';
 import '../core/vietqr.dart';
@@ -50,9 +51,15 @@ class _ResultScreenState extends State<ResultScreen> {
         }
 
         final calc = BillCalculator.calculate(bill.payload);
+        final currency = CurrencyRegistry.byCode(bill.payload.currencyCode);
+        final stepLabel = s.isVi
+            ? currency.roundingStepLabelVi
+            : currency.roundingStepLabelEn;
         final activeBanks = ctrl.activeBankAccounts;
-        final bankSnapshot =
-            bill.payload.bankAccountSnapshot ?? ctrl.defaultBankAccount?.toSnapshot();
+        final bankSnapshot = currency.supportsVietQr
+            ? (bill.payload.bankAccountSnapshot ??
+                ctrl.defaultBankAccount?.toSnapshot())
+            : null;
 
         final paidCount =
             bill.payload.participants.where((e) => e.isHost || e.paid).length;
@@ -104,7 +111,10 @@ class _ResultScreenState extends State<ResultScreen> {
                           ),
                           const SizedBox(width: 8),
                           Text(
-                            formatVnd(calc.computedGrandTotal),
+                            formatMoney(
+                              calc.computedGrandTotal,
+                              currency: currency,
+                            ),
                             style: kTabularStyle.copyWith(
                               fontSize: 20,
                               fontWeight: FontWeight.w800,
@@ -124,11 +134,11 @@ class _ResultScreenState extends State<ResultScreen> {
                             ),
                             ButtonSegment(
                               value: RoundingMode.nearest1000,
-                              label: Text(s.roundNearest1k),
+                              label: Text(s.roundNearestStep(stepLabel)),
                             ),
                             ButtonSegment(
                               value: RoundingMode.ceil1000,
-                              label: Text(s.roundCeil1k),
+                              label: Text(s.roundCeilStep(stepLabel)),
                             ),
                           ],
                           selected: {bill.payload.roundingMode},
@@ -152,7 +162,10 @@ class _ResultScreenState extends State<ResultScreen> {
                           child: Text(
                             s.roundingDeltaHost(
                               calc.roundingDelta > 0,
-                              formatSignedVnd(calc.roundingDelta),
+                              formatSignedMoney(
+                                calc.roundingDelta,
+                                currency: currency,
+                              ),
                             ),
                             style: TextStyle(
                               fontSize: 12,
@@ -162,54 +175,57 @@ class _ResultScreenState extends State<ResultScreen> {
                           ),
                         ),
                       ],
-                      const SizedBox(height: 10),
-                      Material(
-                        color: p.primarySoft,
-                        borderRadius: BorderRadius.circular(10),
-                        clipBehavior: Clip.antiAlias,
-                        child: InkWell(
+                      if (currency.supportsVietQr) ...[
+                        const SizedBox(height: 10),
+                        Material(
+                          color: p.primarySoft,
                           borderRadius: BorderRadius.circular(10),
-                          onTap: () => _pickBankSheet(context, bill, activeBanks),
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 12,
-                              vertical: 10,
-                            ),
-                            child: Row(
-                              children: [
-                                Icon(
-                                  Icons.account_balance_rounded,
-                                  size: 16,
-                                  color: p.primary,
-                                ),
-                                const SizedBox(width: 8),
-                                Expanded(
-                                  child: Text(
-                                    bankSnapshot == null
-                                        ? s.noBankAccountTap
-                                        : s.receivingBank(
-                                            bankSnapshot.bankShortName,
-                                            bankSnapshot.accountNo,
-                                          ),
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: TextStyle(
-                                      fontSize: 12.5,
-                                      fontWeight: FontWeight.w600,
-                                      color: p.ink,
+                          clipBehavior: Clip.antiAlias,
+                          child: InkWell(
+                            borderRadius: BorderRadius.circular(10),
+                            onTap: () =>
+                                _pickBankSheet(context, bill, activeBanks),
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 10,
+                              ),
+                              child: Row(
+                                children: [
+                                  Icon(
+                                    Icons.account_balance_rounded,
+                                    size: 16,
+                                    color: p.primary,
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Expanded(
+                                    child: Text(
+                                      bankSnapshot == null
+                                          ? s.noBankAccountTap
+                                          : s.receivingBank(
+                                              bankSnapshot.bankShortName,
+                                              bankSnapshot.accountNo,
+                                            ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: TextStyle(
+                                        fontSize: 12.5,
+                                        fontWeight: FontWeight.w600,
+                                        color: p.ink,
+                                      ),
                                     ),
                                   ),
-                                ),
-                                Icon(
-                                  Icons.swap_horiz_rounded,
-                                  size: 16,
-                                  color: p.primary,
-                                ),
-                              ],
+                                  Icon(
+                                    Icons.swap_horiz_rounded,
+                                    size: 16,
+                                    color: p.primary,
+                                  ),
+                                ],
+                              ),
                             ),
                           ),
                         ),
-                      ),
+                      ],
                     ],
                   ),
                 ),
@@ -225,6 +241,7 @@ class _ResultScreenState extends State<ResultScreen> {
                   padding: const EdgeInsets.only(bottom: 10),
                   child: _ParticipantResultCard(
                     breakdown: calc.breakdowns[i],
+                    currency: currency,
                     accentColor: p.participantColor(i),
                     expanded: _expandedPersonIds
                         .contains(calc.breakdowns[i].participant.id),
@@ -242,7 +259,8 @@ class _ResultScreenState extends State<ResultScreen> {
                               bill.id,
                               calc.breakdowns[i].participant.id,
                             ),
-                    onShowQr: (calc.breakdowns[i].participant.isHost ||
+                    onShowQr: (!currency.supportsVietQr ||
+                            calc.breakdowns[i].participant.isHost ||
                             calc.breakdowns[i].finalAmount <= 0)
                         ? null
                         : () => _openPersonQrModal(
@@ -263,15 +281,32 @@ class _ResultScreenState extends State<ResultScreen> {
                 color: p.surface,
                 border: Border(top: BorderSide(color: p.border)),
               ),
-              child: FilledButton.icon(
-                onPressed: () => _openSummaryReceiptModal(
-                  context,
-                  bill: bill,
-                  calc: calc,
-                  bank: bankSnapshot,
-                ),
-                icon: const Icon(Icons.share_rounded, size: 18),
-                label: Text(s.exportSummaryBtn),
+              child: Row(
+                children: [
+                  OutlinedButton.icon(
+                    onPressed: () =>
+                        Navigator.of(context).popUntil((route) => route.isFirst),
+                    icon: const Icon(Icons.home_outlined, size: 18),
+                    label: Text(s.homeBtn),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: FilledButton.icon(
+                      onPressed: () => _openSummaryReceiptModal(
+                        context,
+                        bill: bill,
+                        calc: calc,
+                        bank: bankSnapshot,
+                      ),
+                      icon: const Icon(Icons.share_rounded, size: 18),
+                      label: Text(
+                        s.exportSummaryBtn,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
           ),
@@ -407,7 +442,7 @@ class _ResultScreenState extends State<ResultScreen> {
                                   boundaryKey: boundaryKey,
                                   fileName: 'mam_${slug.isEmpty ? 'bill' : slug}.png',
                                   shareText:
-                                      'Mâm — ${bill.title} (${formatVnd(calc.computedGrandTotal)})',
+                                      '${bill.title} (${formatMoney(calc.computedGrandTotal, currency: CurrencyRegistry.byCode(bill.payload.currencyCode))})',
                                 );
                               } catch (e) {
                                 if (ctx.mounted) {
@@ -595,6 +630,7 @@ class _ResultScreenState extends State<ResultScreen> {
 class _ParticipantResultCard extends StatelessWidget {
   const _ParticipantResultCard({
     required this.breakdown,
+    required this.currency,
     required this.accentColor,
     required this.expanded,
     required this.onToggleExpand,
@@ -603,6 +639,7 @@ class _ParticipantResultCard extends StatelessWidget {
   });
 
   final ParticipantBreakdown breakdown;
+  final CurrencySpec currency;
   final Color accentColor;
   final bool expanded;
   final VoidCallback onToggleExpand;
@@ -698,7 +735,7 @@ class _ParticipantResultCard extends StatelessWidget {
                       ),
                       const SizedBox(width: 8),
                       Text(
-                        formatVnd(breakdown.finalAmount),
+                        formatMoney(breakdown.finalAmount, currency: currency),
                         style: kTabularStyle.copyWith(
                           fontSize: 16,
                           fontWeight: FontWeight.w800,
@@ -723,7 +760,10 @@ class _ParticipantResultCard extends StatelessWidget {
                               ),
                             ),
                             Text(
-                              formatVnd(item.amount.round()),
+                              formatMoney(
+                                item.amount.round(),
+                                currency: currency,
+                              ),
                               style: kTabularStyle.copyWith(
                                 fontSize: 12.5,
                                 color: palette.muted,
@@ -748,8 +788,9 @@ class _ParticipantResultCard extends StatelessWidget {
                               ),
                             ),
                             Text(
-                              formatSignedVnd(
+                              formatSignedMoney(
                                 breakdown.proRataAdjustment.round(),
+                                currency: currency,
                               ),
                               style: kTabularStyle.copyWith(
                                 fontSize: 12.5,
@@ -774,7 +815,10 @@ class _ParticipantResultCard extends StatelessWidget {
                               ),
                             ),
                             Text(
-                              formatSignedVnd(breakdown.flatAdjustment.round()),
+                              formatSignedMoney(
+                                breakdown.flatAdjustment.round(),
+                                currency: currency,
+                              ),
                               style: kTabularStyle.copyWith(
                                 fontSize: 12.5,
                                 color: palette.muted,

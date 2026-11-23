@@ -40,10 +40,18 @@ class MamStrings {
   String get undo => t('Undo', 'Hoàn tác');
 
   // Home
+  String get menuTooltip => t('Menu', 'Menu');
+  String get homeBtn => t('Home', 'Trang chủ');
   String get settings => t('Settings', 'Cài đặt');
+  String get panelSubtitle =>
+      t('Split bills & VietQR', 'Chia bill & VietQR');
+  String get syncStatusLabel => t('Sync status', 'Trạng thái đồng bộ');
+  String get tapToSync => t('Tap to sync now', 'Chạm để đồng bộ ngay');
+  String get tapToConfigureSync =>
+      t('Tap to sign in & sync', 'Chạm để đăng nhập & đồng bộ');
   String get searchBillsHint => t(
         'Search bills, members, DD/MM/YY...',
-        'Tìm tên bill, thành viên, DD/MM/YY...',
+        'Tìm bill, thành viên, DD/MM/YY...',
       );
   String get clearSearch => t('Clear search', 'Xóa tìm kiếm');
   String get archiveAction => t('Archive', 'Lưu trữ');
@@ -283,6 +291,48 @@ class MamStrings {
   String notePrefix(String note) => isVi ? 'ND: $note' : 'Note: $note';
   String moreItemsCount(int count) =>
       isVi ? '+ $count món khác' : '+ $count more items';
+
+  String totalBillCurrency(String code) =>
+      isVi ? 'Tổng tiền hóa đơn ($code)' : 'Total bill ($code)';
+  String vatLabelCurrency(String code) => 'VAT ($code)';
+  String serviceChargeLabelCurrency(String code) =>
+      isVi ? 'Phí phục vụ ($code)' : 'Service charge ($code)';
+  String shippingLabelCurrency(String code) =>
+      isVi ? 'Tiền ship ($code)' : 'Shipping ($code)';
+  String billDiscountLabelCurrency(String code) => isVi
+      ? 'Giảm giá / Voucher toàn bill ($code)'
+      : 'Bill voucher / discount ($code)';
+  String roundNearestStep(String stepLabel) =>
+      isVi ? 'Gần $stepLabel' : 'Nearest $stepLabel';
+  String roundCeilStep(String stepLabel) =>
+      isVi ? 'Lên $stepLabel' : 'Round up $stepLabel';
+  String receiptRoundingNoteStep(String stepLabel, String signed) => isVi
+      ? 'Làm tròn $stepLabel · Chênh lệch: $signed'
+      : 'Rounded to $stepLabel · Diff: $signed';
+
+  // Currency & Input format settings
+  String get currencyAndFormatSection =>
+      t('Currency & Number Format', 'Tiền tệ & Định dạng số');
+  String get currencyLabel => t('Currency', 'Đơn vị tiền tệ');
+  String get amountFormatLabel =>
+      t('Amount input format', 'Định dạng nhập số tiền');
+  String get formatAuto => t('Auto', 'Tự động');
+  String get formatDotThousands => '1.000';
+  String get formatUsdDecimal => '1.00';
+  String get formatPlain => t('Plain', 'Thô');
+  String get formatPreviewLabel => t('Input preview', 'Xem trước');
+  String get formatAtmHint => t(
+        'ATM/POS mode: type 100 → 1.00, 312592 → 3,125.92',
+        'Kiểu ATM/POS: gõ 100 → 1.00, 312592 → 3,125.92',
+      );
+  String get formatDotHint => t(
+        'Grouped: 1000 → 1.000, 5923892 → 5.923.892',
+        'Tự phân tách: 1000 → 1.000, 5923892 → 5.923.892',
+      );
+  String get formatPlainHint => t(
+        'Digits only without separators',
+        'Chỉ nhập số không phân tách',
+      );
 
   // Settings
   String get languageLabel => t('Language', 'Ngôn ngữ');

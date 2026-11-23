@@ -1,5 +1,8 @@
+import 'package:flutter/services.dart';
 import 'package:material_ui/material_ui.dart';
 
+import '../core/amount_input_formatter.dart';
+import '../core/currency.dart';
 import '../core/formatters.dart';
 import '../l10n/mam_strings.dart';
 import '../models/bill_models.dart';
@@ -13,11 +16,17 @@ class _EditableItemRow {
     String name = '',
     double quantity = 1,
     int lineTotal = 0,
+    CurrencySpec currency = CurrencyRegistry.vnd,
+    AmountInputFormat format = AmountInputFormat.auto,
     Map<String, double>? shares,
   })  : nameCtrl = TextEditingController(text: name),
         qtyCtrl = TextEditingController(text: formatQty(quantity)),
         totalCtrl = TextEditingController(
-          text: lineTotal > 0 ? lineTotal.toString() : '',
+          text: formatAmountForInput(
+            lineTotal,
+            currency: currency,
+            format: format,
+          ),
         ),
         existingShares = shares ?? const {};
 
@@ -33,7 +42,7 @@ class _EditableItemRow {
       id: id,
       name: nameCtrl.text.trim().isEmpty ? fallbackName : nameCtrl.text.trim(),
       quantity: qty > 0 ? qty : 1,
-      lineTotal: parseVndInput(totalCtrl.text),
+      lineTotal: parseAmountInput(totalCtrl.text),
       shares: existingShares,
     );
   }
@@ -73,6 +82,19 @@ class _BillInputScreenState extends State<BillInputScreen> {
   final List<_EditableItemRow> _rows = [];
   bool _scanning = false;
 
+  CurrencySpec get _currency => CurrencyRegistry.byCode(
+        widget.existingBill?.payload.currencyCode ??
+            widget.controller.currentCurrency.code,
+      );
+
+  AmountInputFormat get _inputFormat => widget.controller.amountInputFormat;
+
+  String _fmtInput(int minor) => formatAmountForInput(
+        minor,
+        currency: _currency,
+        format: _inputFormat,
+      );
+
   @override
   void initState() {
     super.initState();
@@ -84,25 +106,15 @@ class _BillInputScreenState extends State<BillInputScreen> {
       text: bill?.title ?? defaultMealTitle(isVi: isVi),
     );
     _billDate = bill?.billDate ?? DateTime.now();
-    _taxCtrl = TextEditingController(
-      text: (adj?.taxAmount ?? 0) > 0 ? adj!.taxAmount.toString() : '',
-    );
-    _serviceCtrl = TextEditingController(
-      text: (adj?.serviceChargeAmount ?? 0) > 0
-          ? adj!.serviceChargeAmount.toString()
-          : '',
-    );
-    _shipCtrl = TextEditingController(
-      text: (adj?.shippingAmount ?? 0) > 0 ? adj!.shippingAmount.toString() : '',
-    );
-    _discountCtrl = TextEditingController(
-      text: (adj?.billDiscountAmount ?? 0) > 0
-          ? adj!.billDiscountAmount.toString()
-          : '',
-    );
-    _ocrTotalCtrl = TextEditingController(
-      text: (adj?.ocrGrandTotal ?? 0) > 0 ? adj!.ocrGrandTotal.toString() : '',
-    );
+    _taxCtrl = TextEditingController(text: _fmtInput(adj?.taxAmount ?? 0));
+    _serviceCtrl =
+        TextEditingController(text: _fmtInput(adj?.serviceChargeAmount ?? 0));
+    _shipCtrl =
+        TextEditingController(text: _fmtInput(adj?.shippingAmount ?? 0));
+    _discountCtrl =
+        TextEditingController(text: _fmtInput(adj?.billDiscountAmount ?? 0));
+    _ocrTotalCtrl =
+        TextEditingController(text: _fmtInput(adj?.ocrGrandTotal ?? 0));
     _shippingMode =
         adj?.shippingMode ?? widget.controller.settings.defaultShippingMode;
 
@@ -114,6 +126,8 @@ class _BillInputScreenState extends State<BillInputScreen> {
             name: item.name,
             quantity: item.quantity,
             lineTotal: item.netTotal,
+            currency: _currency,
+            format: _inputFormat,
             shares: item.shares,
           ),
         );
@@ -207,23 +221,19 @@ class _BillInputScreenState extends State<BillInputScreen> {
             lineTotal: item.lineTotal > item.itemDiscount
                 ? item.lineTotal - item.itemDiscount
                 : item.lineTotal,
+            currency: _currency,
+            format: _inputFormat,
           ),
         );
       }
       if (_rows.isEmpty) {
         _rows.add(_EditableItemRow(id: 'item_1'));
       }
-      _taxCtrl.text = result.taxAmount > 0 ? result.taxAmount.toString() : '';
-      _serviceCtrl.text = result.serviceChargeAmount > 0
-          ? result.serviceChargeAmount.toString()
-          : '';
-      _shipCtrl.text =
-          result.shippingAmount > 0 ? result.shippingAmount.toString() : '';
-      _discountCtrl.text = result.billDiscountAmount > 0
-          ? result.billDiscountAmount.toString()
-          : '';
-      _ocrTotalCtrl.text =
-          (result.ocrGrandTotal ?? 0) > 0 ? result.ocrGrandTotal.toString() : '';
+      _taxCtrl.text = _fmtInput(result.taxAmount);
+      _serviceCtrl.text = _fmtInput(result.serviceChargeAmount);
+      _shipCtrl.text = _fmtInput(result.shippingAmount);
+      _discountCtrl.text = _fmtInput(result.billDiscountAmount);
+      _ocrTotalCtrl.text = _fmtInput(result.ocrGrandTotal ?? 0);
     });
   }
 
@@ -263,6 +273,7 @@ class _BillInputScreenState extends State<BillInputScreen> {
           billDate: _billDate,
           items: items,
           adjustments: adjustments,
+          currencyCode: _currency.code,
         ),
       ),
     );
@@ -272,6 +283,14 @@ class _BillInputScreenState extends State<BillInputScreen> {
   Widget build(BuildContext context) {
     final p = context.mam;
     final s = context.s;
+    final currency = _currency;
+    final amountFormatter = AmountTextInputFormatter(
+      currency: currency,
+      format: _inputFormat,
+    );
+    final qtyFormatter = FilteringTextInputFormatter.allow(RegExp(r'[0-9.,]'));
+    final prefixSymbol = currency.symbolBefore ? '${currency.symbol} ' : null;
+    final suffixSymbol = currency.symbolBefore ? null : currency.symbol;
     final ocrTotal = _ocrGrandTotal;
     final diff = ocrTotal == null ? null : _computedGrandTotal - ocrTotal;
 
@@ -378,7 +397,7 @@ class _BillInputScreenState extends State<BillInputScreen> {
               ),
               const SizedBox(width: 8),
               Text(
-                s.subtotalText(formatVnd(_itemsSubtotal)),
+                s.subtotalText(formatMoney(_itemsSubtotal, currency: currency)),
                 style: kTabularStyle.copyWith(
                   fontSize: 13,
                   fontWeight: FontWeight.w600,
@@ -428,6 +447,7 @@ class _BillInputScreenState extends State<BillInputScreen> {
                               controller: _rows[i].qtyCtrl,
                               keyboardType:
                                   const TextInputType.numberWithOptions(decimal: true),
+                              inputFormatters: [qtyFormatter],
                               decoration: InputDecoration(labelText: s.qtyLabel),
                               onChanged: (_) => setState(() {}),
                             ),
@@ -437,10 +457,12 @@ class _BillInputScreenState extends State<BillInputScreen> {
                             child: TextField(
                               controller: _rows[i].totalCtrl,
                               keyboardType: TextInputType.number,
+                              inputFormatters: [amountFormatter],
                               style: kTabularStyle,
                               decoration: InputDecoration(
                                 labelText: s.lineTotalLabel,
-                                suffixText: 'đ',
+                                prefixText: prefixSymbol,
+                                suffixText: suffixSymbol,
                               ),
                               onChanged: (_) => setState(() {}),
                             ),
@@ -475,10 +497,12 @@ class _BillInputScreenState extends State<BillInputScreen> {
                         child: TextField(
                           controller: _taxCtrl,
                           keyboardType: TextInputType.number,
+                          inputFormatters: [amountFormatter],
                           style: kTabularStyle,
                           decoration: InputDecoration(
-                            labelText: s.vatLabel,
-                            suffixText: 'đ',
+                            labelText: s.vatLabelCurrency(currency.code),
+                            prefixText: prefixSymbol,
+                            suffixText: suffixSymbol,
                           ),
                           onChanged: (_) => setState(() {}),
                         ),
@@ -487,7 +511,8 @@ class _BillInputScreenState extends State<BillInputScreen> {
                       ActionChip(
                         label: const Text('+8%'),
                         onPressed: () {
-                          _taxCtrl.text = (_itemsSubtotal * 0.08).round().toString();
+                          _taxCtrl.text =
+                              _fmtInput((_itemsSubtotal * 0.08).round());
                           setState(() {});
                         },
                       ),
@@ -495,7 +520,8 @@ class _BillInputScreenState extends State<BillInputScreen> {
                       ActionChip(
                         label: const Text('+10%'),
                         onPressed: () {
-                          _taxCtrl.text = (_itemsSubtotal * 0.10).round().toString();
+                          _taxCtrl.text =
+                              _fmtInput((_itemsSubtotal * 0.10).round());
                           setState(() {});
                         },
                       ),
@@ -508,10 +534,13 @@ class _BillInputScreenState extends State<BillInputScreen> {
                         child: TextField(
                           controller: _serviceCtrl,
                           keyboardType: TextInputType.number,
+                          inputFormatters: [amountFormatter],
                           style: kTabularStyle,
                           decoration: InputDecoration(
-                            labelText: s.serviceChargeLabel,
-                            suffixText: 'đ',
+                            labelText:
+                                s.serviceChargeLabelCurrency(currency.code),
+                            prefixText: prefixSymbol,
+                            suffixText: suffixSymbol,
                           ),
                           onChanged: (_) => setState(() {}),
                         ),
@@ -521,7 +550,7 @@ class _BillInputScreenState extends State<BillInputScreen> {
                         label: const Text('+5%'),
                         onPressed: () {
                           _serviceCtrl.text =
-                              (_itemsSubtotal * 0.05).round().toString();
+                              _fmtInput((_itemsSubtotal * 0.05).round());
                           setState(() {});
                         },
                       ),
@@ -534,10 +563,12 @@ class _BillInputScreenState extends State<BillInputScreen> {
                         child: TextField(
                           controller: _shipCtrl,
                           keyboardType: TextInputType.number,
+                          inputFormatters: [amountFormatter],
                           style: kTabularStyle,
                           decoration: InputDecoration(
-                            labelText: s.shippingLabel,
-                            suffixText: 'đ',
+                            labelText: s.shippingLabelCurrency(currency.code),
+                            prefixText: prefixSymbol,
+                            suffixText: suffixSymbol,
                           ),
                           onChanged: (_) => setState(() {}),
                         ),
@@ -565,10 +596,12 @@ class _BillInputScreenState extends State<BillInputScreen> {
                   TextField(
                     controller: _discountCtrl,
                     keyboardType: TextInputType.number,
+                    inputFormatters: [amountFormatter],
                     style: kTabularStyle,
                     decoration: InputDecoration(
-                      labelText: s.billDiscountLabel,
-                      suffixText: 'đ',
+                      labelText: s.billDiscountLabelCurrency(currency.code),
+                      prefixText: prefixSymbol,
+                      suffixText: suffixSymbol,
                     ),
                     onChanged: (_) => setState(() {}),
                   ),
@@ -576,10 +609,12 @@ class _BillInputScreenState extends State<BillInputScreen> {
                   TextField(
                     controller: _ocrTotalCtrl,
                     keyboardType: TextInputType.number,
+                    inputFormatters: [amountFormatter],
                     style: kTabularStyle,
                     decoration: InputDecoration(
                       labelText: s.ocrTotalLabel,
-                      suffixText: 'đ',
+                      prefixText: prefixSymbol,
+                      suffixText: suffixSymbol,
                     ),
                     onChanged: (_) => setState(() {}),
                   ),
@@ -622,10 +657,12 @@ class _BillInputScreenState extends State<BillInputScreen> {
                       Expanded(
                         child: Text(
                           diff == 0
-                              ? s.ocrMatched(formatVnd(ocrTotal!))
+                              ? s.ocrMatched(
+                                  formatMoney(ocrTotal!, currency: currency),
+                                )
                               : s.ocrMismatch(
-                                  formatSignedVnd(diff),
-                                  formatVnd(ocrTotal!),
+                                  formatSignedMoney(diff, currency: currency),
+                                  formatMoney(ocrTotal!, currency: currency),
                                 ),
                           style: TextStyle(
                             fontSize: 12,
@@ -649,7 +686,7 @@ class _BillInputScreenState extends State<BillInputScreen> {
                           style: TextStyle(fontSize: 12, color: p.muted),
                         ),
                         Text(
-                          formatVnd(_computedGrandTotal),
+                          formatMoney(_computedGrandTotal, currency: currency),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: kTabularStyle.copyWith(

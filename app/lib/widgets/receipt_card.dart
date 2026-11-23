@@ -2,6 +2,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 
 import '../core/calculator.dart';
+import '../core/currency.dart';
 import '../core/formatters.dart';
 import '../core/vietqr.dart';
 import '../l10n/mam_strings.dart';
@@ -28,8 +29,12 @@ class SummaryReceiptCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final s = context.s;
+    final currency = CurrencyRegistry.byCode(bill.payload.currencyCode);
+    final stepLabel = s.isVi
+        ? currency.roundingStepLabelVi
+        : currency.roundingStepLabelEn;
     String? staticQr;
-    if (bank != null) {
+    if (currency.supportsVietQr && bank != null) {
       try {
         staticQr = VietQrGenerator.generate(
           bankBin: bank!.bankBin,
@@ -97,6 +102,7 @@ class SummaryReceiptCard extends StatelessWidget {
           for (var i = 0; i < calc.breakdowns.length; i++) ...[
             _ReceiptPersonRow(
               breakdown: calc.breakdowns[i],
+              currency: currency,
               accentColor: MamPalette.light.participantColor(i),
             ),
             if (i < calc.breakdowns.length - 1) const SizedBox(height: 10),
@@ -106,24 +112,29 @@ class SummaryReceiptCard extends StatelessWidget {
           const SizedBox(height: 10),
           _SummaryLine(
             label: s.receiptItemsSubtotal,
-            value: formatVnd(calc.allItemsSubtotal),
+            value: formatMoney(calc.allItemsSubtotal, currency: currency),
           ),
           if (adj.taxAmount > 0)
-            _SummaryLine(label: s.receiptVat, value: '+${formatVnd(adj.taxAmount)}'),
+            _SummaryLine(
+              label: s.receiptVat,
+              value: '+${formatMoney(adj.taxAmount, currency: currency)}',
+            ),
           if (adj.serviceChargeAmount > 0)
             _SummaryLine(
               label: s.receiptService,
-              value: '+${formatVnd(adj.serviceChargeAmount)}',
+              value:
+                  '+${formatMoney(adj.serviceChargeAmount, currency: currency)}',
             ),
           if (adj.shippingAmount > 0)
             _SummaryLine(
               label: s.receiptShipping(adj.shippingMode == ShippingSplitMode.flat),
-              value: '+${formatVnd(adj.shippingAmount)}',
+              value: '+${formatMoney(adj.shippingAmount, currency: currency)}',
             ),
           if (adj.billDiscountAmount > 0)
             _SummaryLine(
               label: s.receiptDiscount,
-              value: '-${formatVnd(adj.billDiscountAmount)}',
+              value:
+                  '-${formatMoney(adj.billDiscountAmount, currency: currency)}',
               valueColor: MamReceiptColors.success,
             ),
           const SizedBox(height: 6),
@@ -143,7 +154,7 @@ class SummaryReceiptCard extends StatelessWidget {
               ),
               const SizedBox(width: 8),
               Text(
-                formatVnd(calc.computedGrandTotal),
+                formatMoney(calc.computedGrandTotal, currency: currency),
                 style: kTabularStyle.copyWith(
                   fontSize: 17,
                   fontWeight: FontWeight.w800,
@@ -155,7 +166,10 @@ class SummaryReceiptCard extends StatelessWidget {
           if (calc.roundingDelta != 0) ...[
             const SizedBox(height: 4),
             Text(
-              s.receiptRoundingNote(formatSignedVnd(calc.roundingDelta)),
+              s.receiptRoundingNoteStep(
+                stepLabel,
+                formatSignedMoney(calc.roundingDelta, currency: currency),
+              ),
               style: const TextStyle(
                 fontSize: 11,
                 color: MamReceiptColors.muted,
@@ -408,10 +422,12 @@ class PersonQrCard extends StatelessWidget {
 class _ReceiptPersonRow extends StatelessWidget {
   const _ReceiptPersonRow({
     required this.breakdown,
+    required this.currency,
     required this.accentColor,
   });
 
   final ParticipantBreakdown breakdown;
+  final CurrencySpec currency;
   final Color accentColor;
 
   @override
@@ -471,7 +487,7 @@ class _ReceiptPersonRow extends StatelessWidget {
         ),
         const SizedBox(width: 8),
         Text(
-          formatVnd(breakdown.finalAmount),
+          formatMoney(breakdown.finalAmount, currency: currency),
           style: kTabularStyle.copyWith(
             fontSize: 14,
             fontWeight: FontWeight.w800,

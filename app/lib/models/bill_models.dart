@@ -8,6 +8,8 @@
 // Zero external package dependencies so this drops directly into a fresh
 // Flutter project without codegen (`build_runner`/`freezed`).
 
+import '../core/currency.dart';
+
 const Object _unset = Object();
 
 // ============================================================================
@@ -298,6 +300,8 @@ final class UserSettings {
     this.defaultRounding = RoundingMode.nearest1000,
     this.defaultTransferTemplate = '{name} tra tien {title}',
     this.defaultShippingMode = ShippingSplitMode.flat,
+    this.defaultCurrency = 'VND',
+    this.amountInputFormat = AmountInputFormat.auto,
     required this.updatedAt,
   });
 
@@ -305,6 +309,8 @@ final class UserSettings {
   final RoundingMode defaultRounding;
   final String defaultTransferTemplate;
   final ShippingSplitMode defaultShippingMode;
+  final String defaultCurrency;
+  final AmountInputFormat amountInputFormat;
   final DateTime updatedAt;
 
   factory UserSettings.fromJson(Map<String, dynamic> json) {
@@ -316,6 +322,10 @@ final class UserSettings {
               '{name} tra tien {title}',
       defaultShippingMode:
           ShippingSplitMode.fromValue(json['default_shipping_mode'] as String?),
+      defaultCurrency:
+          CurrencyRegistry.byCode(json['default_currency'] as String?).code,
+      amountInputFormat:
+          AmountInputFormat.fromValue(json['amount_input_format'] as String?),
       updatedAt: _parseDateTime(json['updated_at']),
     );
   }
@@ -325,6 +335,8 @@ final class UserSettings {
         'default_rounding': defaultRounding.value,
         'default_transfer_template': defaultTransferTemplate,
         'default_shipping_mode': defaultShippingMode.value,
+        'default_currency': defaultCurrency,
+        'amount_input_format': amountInputFormat.value,
         'updated_at': updatedAt.toUtc().toIso8601String(),
       };
 
@@ -333,6 +345,8 @@ final class UserSettings {
     RoundingMode? defaultRounding,
     String? defaultTransferTemplate,
     ShippingSplitMode? defaultShippingMode,
+    String? defaultCurrency,
+    AmountInputFormat? amountInputFormat,
     DateTime? updatedAt,
   }) {
     return UserSettings(
@@ -341,6 +355,8 @@ final class UserSettings {
       defaultTransferTemplate:
           defaultTransferTemplate ?? this.defaultTransferTemplate,
       defaultShippingMode: defaultShippingMode ?? this.defaultShippingMode,
+      defaultCurrency: defaultCurrency ?? this.defaultCurrency,
+      amountInputFormat: amountInputFormat ?? this.amountInputFormat,
       updatedAt: updatedAt ?? this.updatedAt,
     );
   }
@@ -679,6 +695,7 @@ final class BillPayload {
     required this.items,
     this.adjustments = const BillAdjustments(),
     this.roundingMode = RoundingMode.nearest1000,
+    this.currencyCode = 'VND',
     this.bankAccountSnapshot,
     this.transferNoteTemplate = '{name} tra tien {title}',
     this.note,
@@ -688,6 +705,7 @@ final class BillPayload {
   final List<BillItem> items;
   final BillAdjustments adjustments;
   final RoundingMode roundingMode;
+  final String currencyCode;
   final BankAccountSnapshot? bankAccountSnapshot;
   final String transferNoteTemplate;
   final String? note;
@@ -709,6 +727,8 @@ final class BillPayload {
           ? BillAdjustments.fromJson(Map<String, dynamic>.from(rawAdjustments))
           : const BillAdjustments(),
       roundingMode: RoundingMode.fromValue(json['roundingMode'] as String?),
+      currencyCode:
+          CurrencyRegistry.byCode(json['currencyCode'] as String?).code,
       bankAccountSnapshot: rawBank is Map
           ? BankAccountSnapshot.fromJson(Map<String, dynamic>.from(rawBank))
           : null,
@@ -724,6 +744,7 @@ final class BillPayload {
         'items': items.map((i) => i.toJson()).toList(growable: false),
         'adjustments': adjustments.toJson(),
         'roundingMode': roundingMode.value,
+        'currencyCode': currencyCode,
         if (bankAccountSnapshot != null)
           'bankAccountSnapshot': bankAccountSnapshot!.toJson(),
         'transferNoteTemplate': transferNoteTemplate,
@@ -735,6 +756,7 @@ final class BillPayload {
     List<BillItem>? items,
     BillAdjustments? adjustments,
     RoundingMode? roundingMode,
+    String? currencyCode,
     Object? bankAccountSnapshot = _unset,
     String? transferNoteTemplate,
     Object? note = _unset,
@@ -744,6 +766,7 @@ final class BillPayload {
       items: items ?? this.items,
       adjustments: adjustments ?? this.adjustments,
       roundingMode: roundingMode ?? this.roundingMode,
+      currencyCode: currencyCode ?? this.currencyCode,
       bankAccountSnapshot: identical(bankAccountSnapshot, _unset)
           ? this.bankAccountSnapshot
           : bankAccountSnapshot as BankAccountSnapshot?,

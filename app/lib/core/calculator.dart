@@ -1,4 +1,5 @@
 import '../models/bill_models.dart';
+import 'currency.dart';
 
 /// Pure bill-splitting calculator for Mâm.
 ///
@@ -185,6 +186,9 @@ abstract final class BillCalculator {
     final breakdowns = <ParticipantBreakdown>[];
     var sumFinalAmounts = 0;
 
+    final currency = CurrencyRegistry.byCode(payload.currencyCode);
+    final roundingStep = currency.roundingStep;
+
     for (final participant in participants) {
       final itemsSub = subtotalByPerson[participant.id] ?? 0.0;
       final proRata = assignedItemsSubtotal > 0
@@ -193,7 +197,11 @@ abstract final class BillCalculator {
       final flat = flatTargets.contains(participant.id) ? flatPerHead : 0.0;
       final raw = itemsSub + proRata + flat;
       final clampedRaw = raw > 0 ? raw : 0.0;
-      final finalAmt = roundAmount(clampedRaw, payload.roundingMode);
+      final finalAmt = roundAmount(
+        clampedRaw,
+        payload.roundingMode,
+        step: roundingStep,
+      );
       sumFinalAmounts += finalAmt;
 
       breakdowns.add(
@@ -227,12 +235,14 @@ abstract final class BillCalculator {
     );
   }
 
-  static int roundAmount(double amount, RoundingMode mode) {
+  static int roundAmount(double amount, RoundingMode mode, {int step = 1000}) {
     if (amount <= 0) return 0;
+    final effectiveStep = step > 0 ? step : 1;
     return switch (mode) {
       RoundingMode.none => amount.round(),
-      RoundingMode.nearest1000 => (amount / 1000.0).round() * 1000,
-      RoundingMode.ceil1000 => (amount / 1000.0).ceil() * 1000,
+      RoundingMode.nearest1000 =>
+        (amount / effectiveStep).round() * effectiveStep,
+      RoundingMode.ceil1000 => (amount / effectiveStep).ceil() * effectiveStep,
     };
   }
 

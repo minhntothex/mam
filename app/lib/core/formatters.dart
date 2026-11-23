@@ -1,31 +1,78 @@
+import 'amount_input_formatter.dart';
+import 'currency.dart';
+
 // Currency, date, and quantity formatters for Mâm.
 
-String formatVnd(int amount, {bool withSuffix = true}) {
+String formatMoney(
+  int amount, {
+  CurrencySpec currency = CurrencyRegistry.vnd,
+  AmountInputFormat format = AmountInputFormat.auto,
+  bool withSymbol = true,
+}) {
   final negative = amount < 0;
-  final digits = amount.abs().toString();
-  final buffer = StringBuffer();
-  for (var i = 0; i < digits.length; i++) {
-    final posFromRight = digits.length - i;
-    if (i > 0 && posFromRight % 3 == 0) {
-      buffer.write('.');
+  final absVal = amount.abs();
+  final effective = currency.resolveInputFormat(format);
+
+  String body;
+  if (currency.decimalDigits > 0 || effective == AmountInputFormat.usdDecimal) {
+    final decimals = currency.decimalDigits > 0 ? currency.decimalDigits : 2;
+    if (absVal == 0) {
+      body = '0.${'0' * decimals}';
+    } else {
+      body = formatAtmDecimal(
+        absVal.toString(),
+        decimalDigits: decimals,
+        thousandsSep: currency.thousandsSep,
+        decimalSep: currency.decimalSep,
+      );
     }
-    buffer.write(digits[i]);
+  } else if (effective == AmountInputFormat.plain) {
+    body = absVal.toString();
+  } else {
+    body = formatGroupedInteger(
+      absVal.toString(),
+      separator: currency.thousandsSep,
+    );
   }
-  final prefix = negative ? '-' : '';
-  final suffix = withSuffix ? 'đ' : '';
-  return '$prefix${buffer.toString()}$suffix';
+
+  final sign = negative ? '-' : '';
+  if (!withSymbol) return '$sign$body';
+  return currency.symbolBefore
+      ? '$sign${currency.symbol}$body'
+      : '$sign$body${currency.symbol}';
 }
 
-String formatSignedVnd(int amount, {bool withSuffix = true}) {
-  if (amount > 0) return '+${formatVnd(amount, withSuffix: withSuffix)}';
-  return formatVnd(amount, withSuffix: withSuffix);
+String formatSignedMoney(
+  int amount, {
+  CurrencySpec currency = CurrencyRegistry.vnd,
+  AmountInputFormat format = AmountInputFormat.auto,
+  bool withSymbol = true,
+}) {
+  if (amount > 0) {
+    return '+${formatMoney(amount, currency: currency, format: format, withSymbol: withSymbol)}';
+  }
+  return formatMoney(
+    amount,
+    currency: currency,
+    format: format,
+    withSymbol: withSymbol,
+  );
 }
 
-int parseVndInput(String raw) {
-  final digitsOnly = raw.replaceAll(RegExp(r'[^0-9]'), '');
-  if (digitsOnly.isEmpty) return 0;
-  return int.tryParse(digitsOnly) ?? 0;
-}
+String formatVnd(int amount, {bool withSuffix = true}) => formatMoney(
+      amount,
+      currency: CurrencyRegistry.vnd,
+      withSymbol: withSuffix,
+    );
+
+String formatSignedVnd(int amount, {bool withSuffix = true}) =>
+    formatSignedMoney(
+      amount,
+      currency: CurrencyRegistry.vnd,
+      withSymbol: withSuffix,
+    );
+
+int parseVndInput(String raw) => parseAmountInput(raw);
 
 String formatDateVn(DateTime date, {bool includeYear = false}) {
   final d = date.day.toString().padLeft(2, '0');

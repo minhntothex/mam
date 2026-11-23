@@ -2,6 +2,7 @@ import 'package:material_ui/material_ui.dart';
 
 import '../core/bill_query.dart';
 import '../core/calculator.dart';
+import '../core/currency.dart';
 import '../core/formatters.dart';
 import '../l10n/mam_strings.dart';
 import '../models/bill_models.dart';
@@ -81,26 +82,78 @@ class _HomeScreenState extends State<HomeScreen> {
             showAllWithDivider ? [...matchedPending, ...matchedSettled] : const <BillRecord>[];
 
         return Scaffold(
+          drawer: _HomeMenuDrawer(
+            controller: ctrl,
+            onOpenSettings: () => _openSettings(context),
+          ),
           appBar: AppBar(
-            title: const MamLogoMark(size: 32),
-            actions: [
-              _SyncBadge(
-                status: ctrl.syncStatus,
-                onTap: () {
-                  if (ctrl.signedInEmail != null) {
-                    ctrl.triggerSync();
-                  } else {
-                    _openSettings(context);
-                  }
-                },
-              ),
-              IconButton(
-                tooltip: s.settings,
-                icon: const Icon(Icons.tune_rounded),
-                onPressed: () => _openSettings(context),
-              ),
-              const SizedBox(width: 4),
-            ],
+            automaticallyImplyLeading: false,
+            titleSpacing: 16,
+            title: Row(
+              children: [
+                Builder(
+                  builder: (ctx) => Tooltip(
+                    message: s.menuTooltip,
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(10),
+                      onTap: () => Scaffold.of(ctx).openDrawer(),
+                      child: const Padding(
+                        padding: EdgeInsets.all(2),
+                        child: MamLogoMark(size: 34),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: SizedBox(
+                    height: 40,
+                    child: TextField(
+                      controller: _searchCtrl,
+                      onChanged: (_) => setState(() => _openSwipeBillId = null),
+                      textInputAction: TextInputAction.search,
+                      style: const TextStyle(fontSize: 13.5),
+                      decoration: InputDecoration(
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 8,
+                        ),
+                        prefixIcon: Icon(
+                          Icons.search_rounded,
+                          size: 18,
+                          color: p.muted,
+                        ),
+                        prefixIconConstraints: const BoxConstraints(
+                          minWidth: 36,
+                          minHeight: 36,
+                        ),
+                        hintText: s.searchBillsHint,
+                        hintStyle: TextStyle(fontSize: 13, color: p.muted),
+                        suffixIcon: query.isEmpty
+                            ? null
+                            : IconButton(
+                                tooltip: s.clearSearch,
+                                padding: EdgeInsets.zero,
+                                constraints: const BoxConstraints(
+                                  minWidth: 32,
+                                  minHeight: 32,
+                                ),
+                                icon: Icon(
+                                  Icons.close_rounded,
+                                  size: 16,
+                                  color: p.muted,
+                                ),
+                                onPressed: () {
+                                  _searchCtrl.clear();
+                                  setState(() => _openSwipeBillId = null);
+                                },
+                              ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
           body: RefreshIndicator(
             onRefresh: () async {
@@ -119,38 +172,11 @@ class _HomeScreenState extends State<HomeScreen> {
                 padding: const EdgeInsets.fromLTRB(16, 8, 16, 108),
                 children: [
                   _UncollectedBanner(
-                    amount: ctrl.totalUncollectedAmount,
+                    totalsByCurrency: ctrl.uncollectedByCurrency,
+                    defaultCurrency: ctrl.currentCurrency,
                     pendingCount: ctrl.pendingBills.length,
                   ),
                   const SizedBox(height: 14),
-                  TextField(
-                    controller: _searchCtrl,
-                    onChanged: (_) => setState(() => _openSwipeBillId = null),
-                    textInputAction: TextInputAction.search,
-                    decoration: InputDecoration(
-                      prefixIcon: Icon(
-                        Icons.search_rounded,
-                        size: 20,
-                        color: p.muted,
-                      ),
-                      hintText: s.searchBillsHint,
-                      suffixIcon: query.isEmpty
-                          ? null
-                          : IconButton(
-                              tooltip: s.clearSearch,
-                              icon: Icon(
-                                Icons.close_rounded,
-                                size: 18,
-                                color: p.muted,
-                              ),
-                              onPressed: () {
-                                _searchCtrl.clear();
-                                setState(() => _openSwipeBillId = null);
-                              },
-                            ),
-                    ),
-                  ),
-                  const SizedBox(height: 12),
                   _FilterBar(
                     selected: _filter,
                     allCount: matchedAll.length,
@@ -381,6 +407,179 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 }
 
+class _HomeMenuDrawer extends StatelessWidget {
+  const _HomeMenuDrawer({
+    required this.controller,
+    required this.onOpenSettings,
+  });
+
+  final MamController controller;
+  final VoidCallback onOpenSettings;
+
+  @override
+  Widget build(BuildContext context) {
+    final p = context.mam;
+    final s = context.s;
+    final signedIn = controller.signedInEmail != null;
+    final currency = controller.currentCurrency;
+    final formatLabel = switch (controller.amountInputFormat) {
+      AmountInputFormat.auto => s.formatAuto,
+      AmountInputFormat.dotThousands => s.formatDotThousands,
+      AmountInputFormat.usdDecimal => s.formatUsdDecimal,
+      AmountInputFormat.plain => s.formatPlain,
+    };
+
+    return Drawer(
+      width: 292,
+      backgroundColor: p.surface,
+      surfaceTintColor: Colors.transparent,
+      child: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 18, 16, 16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Row(
+                children: [
+                  const MamLogoMark(size: 38),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          s.panelSubtitle,
+                          style: TextStyle(
+                            fontSize: 13.5,
+                            fontWeight: FontWeight.w700,
+                            color: p.ink,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          '${controller.language.label} · ${currency.label}',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: p.muted,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 18),
+              const Divider(),
+              const SizedBox(height: 14),
+              Text(
+                s.syncStatusLabel,
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                  color: p.muted,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Material(
+                color: p.surfaceSubtle,
+                borderRadius: BorderRadius.circular(12),
+                clipBehavior: Clip.antiAlias,
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(12),
+                  onTap: () {
+                    Navigator.of(context).pop();
+                    if (signedIn) {
+                      controller.triggerSync();
+                    } else {
+                      onOpenSettings();
+                    }
+                  },
+                  child: Padding(
+                    padding: const EdgeInsets.all(12),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            _SyncBadge(
+                              status: controller.syncStatus,
+                              onTap: () {
+                                Navigator.of(context).pop();
+                                if (signedIn) {
+                                  controller.triggerSync();
+                                } else {
+                                  onOpenSettings();
+                                }
+                              },
+                            ),
+                            const Spacer(),
+                            Icon(
+                              Icons.chevron_right_rounded,
+                              size: 18,
+                              color: p.muted,
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          signedIn
+                              ? controller.signedInEmail!
+                              : s.tapToConfigureSync,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: 12.5,
+                            color: p.muted,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 14),
+              Material(
+                color: p.surface,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  side: BorderSide(color: p.border),
+                ),
+                clipBehavior: Clip.antiAlias,
+                child: ListTile(
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  leading: Icon(Icons.tune_rounded, color: p.ink),
+                  title: Text(
+                    s.settings,
+                    style: TextStyle(
+                      fontWeight: FontWeight.w700,
+                      color: p.ink,
+                    ),
+                  ),
+                  subtitle: Text(
+                    '${currency.label} · $formatLabel',
+                    style: TextStyle(fontSize: 12, color: p.muted),
+                  ),
+                  trailing: Icon(
+                    Icons.chevron_right_rounded,
+                    size: 18,
+                    color: p.muted,
+                  ),
+                  onTap: () {
+                    Navigator.of(context).pop();
+                    onOpenSettings();
+                  },
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _SyncBadge extends StatelessWidget {
   const _SyncBadge({required this.status, required this.onTap});
 
@@ -455,11 +654,13 @@ class _SyncBadge extends StatelessWidget {
 
 class _UncollectedBanner extends StatelessWidget {
   const _UncollectedBanner({
-    required this.amount,
+    required this.totalsByCurrency,
+    required this.defaultCurrency,
     required this.pendingCount,
   });
 
-  final int amount;
+  final Map<String, int> totalsByCurrency;
+  final CurrencySpec defaultCurrency;
   final int pendingCount;
 
   @override
@@ -485,6 +686,17 @@ class _UncollectedBanner extends StatelessWidget {
             end: Alignment.bottomRight,
             colors: [Color(0xFFFFF3C4), Color(0xFFFFE594)],
           );
+
+    final primaryCode = totalsByCurrency.containsKey(defaultCurrency.code)
+        ? defaultCurrency.code
+        : (totalsByCurrency.isNotEmpty
+            ? totalsByCurrency.keys.first
+            : defaultCurrency.code);
+    final primarySpec = CurrencyRegistry.byCode(primaryCode);
+    final primaryAmount = totalsByCurrency[primaryCode] ?? 0;
+    final secondaryEntries = totalsByCurrency.entries
+        .where((e) => e.key != primaryCode && e.value > 0)
+        .toList(growable: false);
 
     return Container(
       padding: const EdgeInsets.all(18),
@@ -546,7 +758,7 @@ class _UncollectedBanner extends StatelessWidget {
           ),
           const SizedBox(height: 6),
           Text(
-            formatVnd(amount),
+            formatMoney(primaryAmount, currency: primarySpec),
             style: kTabularStyle.copyWith(
               color: fg,
               fontSize: 30,
@@ -554,6 +766,22 @@ class _UncollectedBanner extends StatelessWidget {
               letterSpacing: -0.6,
             ),
           ),
+          if (secondaryEntries.isNotEmpty) ...[
+            const SizedBox(height: 2),
+            Text(
+              secondaryEntries
+                  .map(
+                    (e) =>
+                        '+ ${formatMoney(e.value, currency: CurrencyRegistry.byCode(e.key))}',
+                  )
+                  .join(' · '),
+              style: kTabularStyle.copyWith(
+                color: fg.withValues(alpha: 0.82),
+                fontSize: 13.5,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ],
         ],
       ),
     );
@@ -676,6 +904,7 @@ class _BillHistoryCard extends StatelessWidget {
     final settled = bill.paymentStatus == PaymentStatus.settled;
     final archived = bill.isArchived;
     final calc = BillCalculator.calculate(bill.payload);
+    final currency = CurrencyRegistry.byCode(bill.payload.currencyCode);
 
     final barColor = archived
         ? p.muted.withValues(alpha: 0.45)
@@ -729,7 +958,7 @@ class _BillHistoryCard extends StatelessWidget {
                   ),
                   const SizedBox(width: 8),
                   Text(
-                    formatVnd(calc.computedGrandTotal),
+                    formatMoney(calc.computedGrandTotal, currency: currency),
                     style: kTabularStyle.copyWith(
                       fontSize: 15.5,
                       fontWeight: FontWeight.w800,

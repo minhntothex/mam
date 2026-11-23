@@ -3,6 +3,7 @@ import 'package:uuid/uuid.dart';
 
 import '../core/bill_query.dart';
 import '../core/calculator.dart';
+import '../core/currency.dart';
 import '../data/local_store.dart';
 import '../l10n/mam_strings.dart';
 import '../models/bill_models.dart';
@@ -54,6 +55,9 @@ class MamController extends ChangeNotifier {
   DateTime? get lastSyncedAt => _lastSyncedAt;
   Set<String> get pendingSyncKeys => Set.unmodifiable(_pendingSyncKeys);
   UserSettings get settings => _settings;
+  CurrencySpec get currentCurrency =>
+      CurrencyRegistry.byCode(_settings.defaultCurrency);
+  AmountInputFormat get amountInputFormat => _settings.amountInputFormat;
 
   List<BillRecord> get allBills => List.unmodifiable(_bills);
   List<BankAccount> get allBankAccounts => List.unmodifiable(_bankAccounts);
@@ -91,18 +95,28 @@ class MamController extends ChangeNotifier {
   List<FriendGroup> get activeFriendGroups =>
       _friendGroups.where((g) => !g.isDeleted).toList(growable: false);
 
-  /// Sum of unpaid amounts owed by non-host participants across all pending bills.
-  int get totalUncollectedAmount {
-    var total = 0;
+  /// Sum of unpaid amounts owed by non-host participants across pending bills,
+  /// grouped by currency code so multi-currency bills never mix units.
+  Map<String, int> get uncollectedByCurrency {
+    final totals = <String, int>{};
     for (final bill in pendingBills) {
+      final code = CurrencyRegistry.byCode(bill.payload.currencyCode).code;
       final calc = BillCalculator.calculate(bill.payload);
       for (final b in calc.breakdowns) {
         if (!b.participant.isHost && !b.participant.paid) {
-          total += b.finalAmount;
+          totals[code] = (totals[code] ?? 0) + b.finalAmount;
         }
       }
     }
-    return total;
+    return totals;
+  }
+
+  /// Primary uncollected total in the user's current default currency (or the
+  /// first currency with a pending balance).
+  int get totalUncollectedAmount {
+    final map = uncollectedByCurrency;
+    if (map.isEmpty) return 0;
+    return map[currentCurrency.code] ?? map.values.first;
   }
 
   BillRecord? findBillById(String id) {

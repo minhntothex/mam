@@ -1,5 +1,6 @@
 import 'package:material_ui/material_ui.dart';
 
+import '../core/amount_input_formatter.dart';
 import '../core/calculator.dart';
 import '../core/formatters.dart';
 import '../l10n/mam_strings.dart';
@@ -62,6 +63,7 @@ class _QuickEqualScreenState extends State<QuickEqualScreen> {
         ),
       ],
       roundingMode: _roundingMode,
+      currencyCode: widget.controller.currentCurrency.code,
       bankAccountSnapshot: widget.controller.defaultBankAccount?.toSnapshot(),
       transferNoteTemplate: widget.controller.settings.defaultTransferTemplate,
     );
@@ -160,6 +162,15 @@ class _QuickEqualScreenState extends State<QuickEqualScreen> {
   Widget build(BuildContext context) {
     final p = context.mam;
     final s = context.s;
+    final currency = widget.controller.currentCurrency;
+    final inputFormat = widget.controller.amountInputFormat;
+    final amountFormatter = AmountTextInputFormatter(
+      currency: currency,
+      format: inputFormat,
+    );
+    final stepLabel = s.isVi
+        ? currency.roundingStepLabelVi
+        : currency.roundingStepLabelEn;
     final preview = BillCalculator.calculate(_buildPayload(s));
     final perPerson =
         preview.breakdowns.isNotEmpty ? preview.breakdowns.first.finalAmount : 0;
@@ -191,7 +202,7 @@ class _QuickEqualScreenState extends State<QuickEqualScreen> {
                   ),
                   const SizedBox(height: 14),
                   Text(
-                    s.totalBillVnd,
+                    s.totalBillCurrency(currency.code),
                     style: TextStyle(
                       fontSize: 12.5,
                       fontWeight: FontWeight.w600,
@@ -202,13 +213,16 @@ class _QuickEqualScreenState extends State<QuickEqualScreen> {
                   TextField(
                     controller: _totalCtrl,
                     keyboardType: TextInputType.number,
+                    inputFormatters: [amountFormatter],
                     style: kTabularStyle.copyWith(
                       fontSize: 22,
                       fontWeight: FontWeight.w800,
                     ),
-                    decoration: const InputDecoration(
-                      hintText: '300000',
-                      suffixText: 'đ',
+                    decoration: InputDecoration(
+                      hintText: currency.sampleHint,
+                      prefixText:
+                          currency.symbolBefore ? '${currency.symbol} ' : null,
+                      suffixText: currency.symbolBefore ? null : currency.symbol,
                     ),
                     onChanged: (_) => setState(() {}),
                   ),
@@ -216,11 +230,15 @@ class _QuickEqualScreenState extends State<QuickEqualScreen> {
                   Wrap(
                     spacing: 6,
                     runSpacing: 6,
-                    children: [100000, 200000, 300000, 500000, 1000000].map((v) {
+                    children: currency.quickPresets.map((v) {
                       return ActionChip(
-                        label: Text(formatVnd(v)),
+                        label: Text(formatMoney(v, currency: currency)),
                         onPressed: () {
-                          _totalCtrl.text = v.toString();
+                          _totalCtrl.text = formatAmountForInput(
+                            v,
+                            currency: currency,
+                            format: inputFormat,
+                          );
                           setState(() {});
                         },
                       );
@@ -360,11 +378,11 @@ class _QuickEqualScreenState extends State<QuickEqualScreen> {
                         ),
                         ButtonSegment(
                           value: RoundingMode.nearest1000,
-                          label: Text(s.roundNearest1k),
+                          label: Text(s.roundNearestStep(stepLabel)),
                         ),
                         ButtonSegment(
                           value: RoundingMode.ceil1000,
-                          label: Text(s.roundCeil1k),
+                          label: Text(s.roundCeilStep(stepLabel)),
                         ),
                       ],
                       selected: {_roundingMode},
@@ -392,7 +410,7 @@ class _QuickEqualScreenState extends State<QuickEqualScreen> {
                             crossAxisAlignment: CrossAxisAlignment.end,
                             children: [
                               Text(
-                                formatVnd(perPerson),
+                                formatMoney(perPerson, currency: currency),
                                 style: kTabularStyle.copyWith(
                                   fontSize: 18,
                                   fontWeight: FontWeight.w800,
@@ -402,7 +420,10 @@ class _QuickEqualScreenState extends State<QuickEqualScreen> {
                               if (preview.roundingDelta != 0)
                                 Text(
                                   s.roundingDeltaShort(
-                                    formatSignedVnd(preview.roundingDelta),
+                                    formatSignedMoney(
+                                      preview.roundingDelta,
+                                      currency: currency,
+                                    ),
                                   ),
                                   style: TextStyle(
                                     fontSize: 11.5,
