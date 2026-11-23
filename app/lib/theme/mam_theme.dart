@@ -15,7 +15,7 @@ abstract final class MamReceiptColors {
   static const Color ink = Color(0xFF1E293B);
   static const Color muted = Color(0xFF56637A);
   static const Color border = Color(0xFFE6EAF2);
-  static const Color primary = Color(0xFF2F5EE5);
+  static const Color primary = Color(0xFF564CE6);
   static const Color success = Color(0xFF146E52);
 }
 
@@ -82,10 +82,10 @@ class MamPalette extends ThemeExtension<MamPalette> {
     ink: Color(0xFF1E293B),
     muted: Color(0xFF56637A),
     border: Color(0xFFE6EAF2),
-    primary: Color(0xFF2F5EE5),
-    primaryFill: Color(0xFF96BFFF),
-    primarySoft: Color(0xFFEDF3FF),
-    onPrimary: Color(0xFF0D2247),
+    primary: Color(0xFF564CE6),
+    primaryFill: Color(0xFF564CE6),
+    primarySoft: Color(0xFFF0EFFF),
+    onPrimary: Color(0xFFFFFFFF),
     heroBackground: Color(0xFFFFE9A3),
     onHero: Color(0xFF3B2804),
     heroSettled: Color(0xFFBDF2DC),

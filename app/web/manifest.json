@@ -4,7 +4,7 @@
     "start_url": ".",
     "display": "standalone",
     "background_color": "#F7F8FC",
-    "theme_color": "#98C2FF",
+    "theme_color": "#564CE6",
     "description": "Mâm — Personal bill-sharing app with offline VietQR",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
