@@ -191,11 +191,11 @@ class MamController extends ChangeNotifier {
     required Set<String> remainingPendingKeys,
     required DateTime syncedAt,
   }) async {
-    _bills = bills;
-    _bankAccounts = bankAccounts;
-    _friendGroups = friendGroups;
+    _bills = List<BillRecord>.from(bills);
+    _bankAccounts = List<BankAccount>.from(bankAccounts);
+    _friendGroups = List<FriendGroup>.from(friendGroups);
     _settings = settings;
-    _pendingSyncKeys = remainingPendingKeys;
+    _pendingSyncKeys = Set<String>.from(remainingPendingKeys);
     _lastSyncedAt = syncedAt;
     _syncStatus = remainingPendingKeys.isEmpty
         ? SyncStatus.synced

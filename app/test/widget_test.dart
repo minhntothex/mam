@@ -118,7 +118,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('5.923.892'), findsOneWidget);
 
-    // Scroll to Participants section -> starts with only Me (Host), no Guest 2 / Guest 3
+    // Scroll to Participants section -> starts with only Me (Host), no Guest 2 / Guest 3, no +/- buttons
     await tester.scrollUntilVisible(
       find.text('Me (Host)'),
       200,
@@ -127,6 +127,8 @@ void main() {
     expect(find.text('Me (Host)'), findsOneWidget);
     expect(find.text('Guest 2'), findsNothing);
     expect(find.text('Guest 3'), findsNothing);
+    expect(find.byIcon(Icons.add_circle_outline_rounded), findsNothing);
+    expect(find.byIcon(Icons.remove_circle_outline_rounded), findsNothing);
   });
 
   testWidgets('Home supports AppBar search, swipe-left Archive, Archived divider & Restore', (tester) async {
@@ -378,5 +380,80 @@ void main() {
     expect(controller.activeBills.single.paymentStatus, PaymentStatus.settled);
     expect(find.text('Paid'), findsNWidgets(2)); // Me (Host) + Alex (0đ)
     expect(find.text('Mark paid'), findsNothing);
+  });
+
+  testWidgets('After Cloud Sync (applySyncedSnapshot), Create result & Save & View result still save and navigate cleanly', (tester) async {
+    SharedPreferences.setMockInitialValues({});
+    final store = await LocalStore.open();
+    final controller = MamController(store: store);
+    await controller.init();
+
+    // Simulate post-sync snapshot passing fixed-length/unmodifiable lists
+    final now = DateTime.now().toUtc();
+    await controller.applySyncedSnapshot(
+      bills: List<BillRecord>.unmodifiable(const []),
+      bankAccounts: List<BankAccount>.unmodifiable(const []),
+      friendGroups: List<FriendGroup>.unmodifiable(const []),
+      settings: controller.settings,
+      remainingPendingKeys: Set<String>.unmodifiable(const <String>{}),
+      syncedAt: now,
+    );
+
+    // Also verify saving bank & group succeeds after sync
+    await controller.saveBankAccount(
+      BankAccount(
+        id: controller.newId(),
+        userId: controller.currentUserId,
+        bankBin: '970436',
+        bankShortName: 'Vietcombank',
+        accountNo: '999888777',
+        isDefault: true,
+        createdAt: now,
+        updatedAt: now,
+      ),
+    );
+    await controller.saveFriendGroup(
+      FriendGroup(
+        id: controller.newId(),
+        userId: controller.currentUserId,
+        name: 'Friends',
+        members: const [GroupMember(id: 'm1', name: 'Me', isHost: true)],
+        createdAt: now,
+        updatedAt: now,
+      ),
+    );
+    expect(controller.activeBankAccounts.length, 1);
+    expect(controller.activeFriendGroups.length, 1);
+
+    await tester.pumpWidget(MamApp(controller: controller));
+    await tester.pumpAndSettle();
+
+    // 1. Quick Equal Split -> Create result & VietQR navigates to ResultScreen
+    await tester.tap(find.text('Equal split'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField).at(1), '200000');
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Create result & VietQR'));
+    await tester.pumpAndSettle();
+    expect(find.text('Per-person breakdown'), findsOneWidget);
+    expect(controller.activeBills.length, 1);
+
+    // Return Home
+    await tester.tap(find.text('Home'));
+    await tester.pumpAndSettle();
+
+    // 2. New bill -> Assign -> Save & View result navigates to ResultScreen
+    await tester.tap(find.text('New bill'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.widgetWithText(TextField, 'Unit price').first, '150000');
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Next: Assign'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Split all'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Save & View result'));
+    await tester.pumpAndSettle();
+    expect(find.text('Per-person breakdown'), findsOneWidget);
+    expect(controller.activeBills.length, 2);
   });
 }

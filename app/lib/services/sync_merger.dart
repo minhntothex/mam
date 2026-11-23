@@ -20,6 +20,6 @@ abstract final class SyncMerger {
       }
     }
 
-    return merged.values.toList(growable: false);
+    return merged.values.toList();
   }
 }

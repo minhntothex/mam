@@ -99,26 +99,6 @@ class _QuickEqualScreenState extends State<QuickEqualScreen> {
     });
   }
 
-  void _setCount(int target) {
-    if (target < 1 || target > 20) return;
-    final s = context.s;
-    setState(() {
-      if (target > _participants.length) {
-        while (_participants.length < target) {
-          final n = _participants.length + 1;
-          _participants.add(
-            Participant(
-              id: 'p_${DateTime.now().microsecondsSinceEpoch}_$n',
-              name: s.guestLabel(n),
-            ),
-          );
-        }
-      } else {
-        _participants = _participants.sublist(0, target);
-      }
-    });
-  }
-
   Future<void> _pickBillDate() async {
     final now = DateTime.now();
     final picked = await showDatePicker(
@@ -161,16 +141,23 @@ class _QuickEqualScreenState extends State<QuickEqualScreen> {
       updatedAt: now,
     );
 
-    final saved = await widget.controller.saveBill(record);
-    if (!mounted) return;
-    Navigator.of(context).pushReplacement(
-      MaterialPageRoute(
-        builder: (_) => ResultScreen(
-          controller: widget.controller,
-          billId: saved.id,
+    try {
+      final saved = await widget.controller.saveBill(record);
+      if (!mounted) return;
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(
+          builder: (_) => ResultScreen(
+            controller: widget.controller,
+            billId: saved.id,
+          ),
         ),
-      ),
-    );
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.toString())),
+      );
+    }
   }
 
   @override
@@ -314,28 +301,12 @@ class _QuickEqualScreenState extends State<QuickEqualScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          s.participantsCount(_participants.length),
-                          style: const TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                      ),
-                      IconButton(
-                        visualDensity: VisualDensity.compact,
-                        onPressed: () => _setCount(_participants.length - 1),
-                        icon: const Icon(Icons.remove_circle_outline_rounded),
-                      ),
-                      IconButton(
-                        visualDensity: VisualDensity.compact,
-                        onPressed: () => _setCount(_participants.length + 1),
-                        icon: const Icon(Icons.add_circle_outline_rounded),
-                      ),
-                    ],
+                  Text(
+                    s.participantsCount(_participants.length),
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
                   if (groups.isNotEmpty) ...[
                     const SizedBox(height: 6),

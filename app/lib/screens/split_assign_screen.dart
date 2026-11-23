@@ -342,16 +342,23 @@ class _SplitAssignScreenState extends State<SplitAssignScreen> {
       archivedAt: widget.existingBill?.archivedAt,
     );
 
-    final saved = await widget.controller.saveBill(record);
-    if (!mounted) return;
-    await Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (_) => ResultScreen(
-          controller: widget.controller,
-          billId: saved.id,
+    try {
+      final saved = await widget.controller.saveBill(record);
+      if (!mounted) return;
+      await Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => ResultScreen(
+            controller: widget.controller,
+            billId: saved.id,
+          ),
         ),
-      ),
-    );
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.toString())),
+      );
+    }
   }
 
   @override
