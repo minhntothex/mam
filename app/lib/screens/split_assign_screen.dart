@@ -70,8 +70,6 @@ class _SplitAssignScreenState extends State<SplitAssignScreen> {
     } else {
       _participants = [
         Participant(id: 'p_me', name: s.me, isHost: true, paid: true),
-        const Participant(id: 'p_2', name: 'Minh'),
-        const Participant(id: 'p_3', name: 'Lan'),
       ];
     }
 
@@ -221,30 +219,15 @@ class _SplitAssignScreenState extends State<SplitAssignScreen> {
 
   Future<void> _addPersonDialog() async {
     final s = context.s;
-    final ctrl = TextEditingController();
     final name = await showDialog<String>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(s.addPersonDialogTitle),
-        content: TextField(
-          controller: ctrl,
-          autofocus: true,
-          decoration: InputDecoration(hintText: s.personNameHint),
-          onSubmitted: (v) => Navigator.pop(ctx, v.trim()),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: Text(s.cancel),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(ctx, ctrl.text.trim()),
-            child: Text(s.add),
-          ),
-        ],
+      builder: (_) => _AddPersonDialog(
+        title: s.addPersonDialogTitle,
+        hintText: s.personNameHint,
+        cancelLabel: s.cancel,
+        addLabel: s.add,
       ),
     );
-    ctrl.dispose();
     if (name == null || name.isEmpty) return;
     final newPerson = Participant(
       id: 'p_${DateTime.now().microsecondsSinceEpoch}',
@@ -428,6 +411,37 @@ class _SplitAssignScreenState extends State<SplitAssignScreen> {
                         ),
                         const SizedBox(width: 8),
                       ],
+                      InkWell(
+                        key: const ValueKey('inline_add_person_chip'),
+                        borderRadius: BorderRadius.circular(12),
+                        onTap: _addPersonDialog,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 12,
+                          ),
+                          decoration: BoxDecoration(
+                            color: p.surfaceSubtle,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: p.border),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.add_rounded, size: 16, color: p.primary),
+                              const SizedBox(width: 4),
+                              Text(
+                                s.add,
+                                style: TextStyle(
+                                  color: p.primary,
+                                  fontWeight: FontWeight.w700,
+                                  fontSize: 13,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
                     ],
                   ),
                 ),
@@ -708,6 +722,56 @@ class _SplitAssignScreenState extends State<SplitAssignScreen> {
           ),
         ),
       ),
+    );
+  }
+}
+
+class _AddPersonDialog extends StatefulWidget {
+  const _AddPersonDialog({
+    required this.title,
+    required this.hintText,
+    required this.cancelLabel,
+    required this.addLabel,
+  });
+
+  final String title;
+  final String hintText;
+  final String cancelLabel;
+  final String addLabel;
+
+  @override
+  State<_AddPersonDialog> createState() => _AddPersonDialogState();
+}
+
+class _AddPersonDialogState extends State<_AddPersonDialog> {
+  final TextEditingController _ctrl = TextEditingController();
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: Text(widget.title),
+      content: TextField(
+        controller: _ctrl,
+        autofocus: true,
+        decoration: InputDecoration(hintText: widget.hintText),
+        onSubmitted: (v) => Navigator.pop(context, v.trim()),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: Text(widget.cancelLabel),
+        ),
+        FilledButton(
+          onPressed: () => Navigator.pop(context, _ctrl.text.trim()),
+          child: Text(widget.addLabel),
+        ),
+      ],
     );
   }
 }

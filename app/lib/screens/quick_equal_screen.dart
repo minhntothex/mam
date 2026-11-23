@@ -33,12 +33,10 @@ class _QuickEqualScreenState extends State<QuickEqualScreen> {
     final s = widget.controller.strings;
     final now = DateTime.now();
     _billDate = DateTime(now.year, now.month, now.day);
-    _titleCtrl = TextEditingController(text: defaultMealTitle(isVi: s.isVi));
+    _titleCtrl = TextEditingController();
     _roundingMode = widget.controller.settings.defaultRounding;
     _participants = [
       Participant(id: 'p_1', name: s.me, isHost: true, paid: true),
-      Participant(id: 'p_2', name: s.guestLabel(2)),
-      Participant(id: 'p_3', name: s.guestLabel(3)),
     ];
   }
 
@@ -102,7 +100,7 @@ class _QuickEqualScreenState extends State<QuickEqualScreen> {
   }
 
   void _setCount(int target) {
-    if (target < 2 || target > 20) return;
+    if (target < 1 || target > 20) return;
     final s = context.s;
     setState(() {
       if (target > _participants.length) {
@@ -215,7 +213,9 @@ class _QuickEqualScreenState extends State<QuickEqualScreen> {
                   const SizedBox(height: 6),
                   TextField(
                     controller: _titleCtrl,
-                    decoration: InputDecoration(hintText: s.mealHint),
+                    decoration: InputDecoration(
+                      hintText: defaultMealTitle(isVi: s.isVi),
+                    ),
                   ),
                   const SizedBox(height: 12),
                   Text(
@@ -273,7 +273,12 @@ class _QuickEqualScreenState extends State<QuickEqualScreen> {
                       fontWeight: FontWeight.w800,
                     ),
                     decoration: InputDecoration(
-                      hintText: currency.sampleHint,
+                      hintText: currency.decimalDigits > 0 ? '0.00' : '0',
+                      hintStyle: kTabularStyle.copyWith(
+                        fontSize: 22,
+                        fontWeight: FontWeight.w500,
+                        color: p.muted.withValues(alpha: 0.35),
+                      ),
                       prefixText:
                           currency.symbolBefore ? '${currency.symbol} ' : null,
                       suffixText: currency.symbolBefore ? null : currency.symbol,

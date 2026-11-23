@@ -710,8 +710,7 @@ class SettingsScreen extends StatelessWidget {
     final s = context.s;
     final nameCtrl = TextEditingController(text: existing?.name ?? '');
     final membersCtrl = TextEditingController(
-      text: existing?.members.map((m) => m.name).join(', ') ??
-          '${s.me}, Minh, Lan',
+      text: existing?.members.map((m) => m.name).join(', ') ?? '',
     );
 
     await showDialog<void>(
@@ -730,6 +729,7 @@ class SettingsScreen extends StatelessWidget {
               controller: membersCtrl,
               decoration: InputDecoration(
                 labelText: s.membersLabel,
+                hintText: '${s.me}, ...',
                 helperText: s.firstMemberIsHost,
                 helperMaxLines: 2,
               ),

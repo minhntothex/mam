@@ -217,10 +217,18 @@ class MamController extends ChangeNotifier {
   Future<BillRecord> saveBill(BillRecord bill) async {
     final now = DateTime.now().toUtc();
     final calc = BillCalculator.calculate(bill.payload);
+    final normalizedPayload = BillCalculator.normalizeParticipantPaidStates(
+      bill.payload,
+      calc: calc,
+    );
     final normalized = bill.copyWith(
       userId: _currentUserId,
       totalAmount: calc.computedGrandTotal,
-      paymentStatus: BillCalculator.computePaymentStatus(bill.payload),
+      paymentStatus: BillCalculator.computePaymentStatus(
+        normalizedPayload,
+        calc: calc,
+      ),
+      payload: normalizedPayload,
       updatedAt: now,
     );
 

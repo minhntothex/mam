@@ -244,10 +244,48 @@ abstract final class BillCalculator {
     };
   }
 
-  static PaymentStatus computePaymentStatus(BillPayload payload) {
+  /// Automatically marks non-host participants with 0 debt as `paid: true`
+  /// (`paidAt: null`). If a previously auto-paid member later receives a
+  /// positive amount on edit, resets `paid` to `false` while preserving
+  /// manual paid marks (`paidAt != null`).
+  static BillPayload normalizeParticipantPaidStates(
+    BillPayload payload, {
+    BillCalculationResult? calc,
+  }) {
+    final result = calc ?? calculate(payload);
+    final amountById = {
+      for (final b in result.breakdowns) b.participant.id: b.finalAmount,
+    };
+    var changed = false;
+    final updated = payload.participants.map((p) {
+      if (p.isHost) return p;
+      final owed = amountById[p.id] ?? 0;
+      if (owed <= 0) {
+        if (!p.paid) {
+          changed = true;
+          return p.copyWith(paid: true, paidAt: null);
+        }
+        return p;
+      }
+      if (p.paid && p.paidAt == null) {
+        changed = true;
+        return p.copyWith(paid: false, paidAt: null);
+      }
+      return p;
+    }).toList(growable: false);
+
+    return changed ? payload.copyWith(participants: updated) : payload;
+  }
+
+  static PaymentStatus computePaymentStatus(
+    BillPayload payload, {
+    BillCalculationResult? calc,
+  }) {
     if (payload.participants.isEmpty) return PaymentStatus.pending;
-    final allSettled =
-        payload.participants.every((p) => p.isHost || p.paid);
+    final result = calc ?? calculate(payload);
+    final allSettled = result.breakdowns.every(
+      (b) => b.participant.isHost || b.participant.paid || b.finalAmount <= 0,
+    );
     return allSettled ? PaymentStatus.settled : PaymentStatus.pending;
   }
 }

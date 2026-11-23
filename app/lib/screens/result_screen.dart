@@ -61,8 +61,14 @@ class _ResultScreenState extends State<ResultScreen> {
                 ctrl.defaultBankAccount?.toSnapshot())
             : null;
 
-        final paidCount =
-            bill.payload.participants.where((e) => e.isHost || e.paid).length;
+        final paidCount = calc.breakdowns
+            .where(
+              (b) =>
+                  b.participant.isHost ||
+                  b.participant.paid ||
+                  b.finalAmount <= 0,
+            )
+            .length;
         final totalPeople = bill.payload.participants.length;
 
         return Scaffold(
@@ -648,8 +654,9 @@ class _ParticipantResultCard extends StatelessWidget {
     final palette = context.mam;
     final s = context.s;
     final p = breakdown.participant;
-    final paid = p.isHost || p.paid;
-    final hasActionRow = !p.isHost;
+    final isZeroDebt = breakdown.finalAmount <= 0;
+    final paid = p.isHost || p.paid || isZeroDebt;
+    final hasActionRow = !p.isHost && !isZeroDebt;
 
     return Card(
       child: Column(

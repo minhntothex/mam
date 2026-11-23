@@ -102,11 +102,31 @@ void main() {
     expect(find.text('Quick Equal Split'), findsOneWidget);
     expect(find.byKey(const ValueKey('quick_equal_date_picker')), findsOneWidget);
 
+    // Quick Equal Split starts with empty title (placeholder only), subtle '0' total hint,
+    // and only Me (Host) without Guest 2 / Guest 3.
+    final titleField = tester.widget<TextField>(find.byType(TextField).at(0));
+    expect(titleField.controller?.text, isEmpty);
+    expect(titleField.decoration?.hintText, isNotEmpty);
+
+    final totalWidget = tester.widget<TextField>(find.byType(TextField).at(1));
+    expect(totalWidget.decoration?.hintText, '0');
+    expect(totalWidget.decoration?.hintStyle?.fontWeight, FontWeight.w500);
+
     // Typing letters + digits into total field rejects letters and formats 5923892 -> 5.923.892
     final totalField = find.byType(TextField).at(1);
     await tester.enterText(totalField, 'abc5923892xyz');
     await tester.pumpAndSettle();
     expect(find.text('5.923.892'), findsOneWidget);
+
+    // Scroll to Participants section -> starts with only Me (Host), no Guest 2 / Guest 3
+    await tester.scrollUntilVisible(
+      find.text('Me (Host)'),
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
+    expect(find.text('Me (Host)'), findsOneWidget);
+    expect(find.text('Guest 2'), findsNothing);
+    expect(find.text('Guest 3'), findsNothing);
   });
 
   testWidgets('Home supports AppBar search, swipe-left Archive, Archived divider & Restore', (tester) async {
@@ -203,6 +223,11 @@ void main() {
 
     await tester.tap(find.text('New bill'));
     await tester.pumpAndSettle();
+
+    // New bill starts with empty Restaurant / Meal input (placeholder only)
+    final restaurantField = tester.widget<TextField>(find.byType(TextField).first);
+    expect(restaurantField.controller?.text, isEmpty);
+    expect(restaurantField.decoration?.hintText, isNotEmpty);
 
     // Bill date picker sits below Restaurant / Meal
     expect(find.text('Bill date'), findsOneWidget);
@@ -311,5 +336,47 @@ void main() {
     expect(controller.language, AppLanguage.vi);
     expect(find.text('Tiền tệ & Định dạng số'), findsOneWidget);
     expect(find.text('Cài đặt'), findsOneWidget);
+  });
+
+  testWidgets('Fast Item Assign starts with only Me (no Minh/Lan) and auto-marks 0-debt member paid', (tester) async {
+    SharedPreferences.setMockInitialValues({});
+    final store = await LocalStore.open();
+    final controller = MamController(store: store);
+    await controller.init(); // Clean production start (0 saved groups)
+
+    await tester.pumpWidget(MamApp(controller: controller));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('New bill'));
+    await tester.pumpAndSettle();
+
+    await tester.enterText(find.widgetWithText(TextField, 'Unit price').first, '100000');
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Next: Assign'));
+    await tester.pumpAndSettle();
+
+    // No hardcoded Minh / Lan
+    expect(find.text('Minh'), findsNothing);
+    expect(find.text('Lan'), findsNothing);
+    expect(find.byKey(const ValueKey('inline_add_person_chip')), findsOneWidget);
+
+    // Assign item to Me only, then add Alex (who owes 0đ)
+    await tester.tap(find.text('Item'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const ValueKey('inline_add_person_chip')));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField).last, 'Alex');
+    await tester.tap(find.widgetWithText(FilledButton, 'Add'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Save & View result'));
+    await tester.pumpAndSettle();
+
+    // Alex has 0đ debt -> auto-marked Paid, no Mark paid button, bill settled
+    expect(controller.activeBills.single.paymentStatus, PaymentStatus.settled);
+    expect(find.text('Paid'), findsNWidgets(2)); // Me (Host) + Alex (0đ)
+    expect(find.text('Mark paid'), findsNothing);
   });
 }

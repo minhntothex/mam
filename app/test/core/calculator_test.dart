@@ -192,7 +192,9 @@ void main() {
           Participant(id: 'me', name: 'Tôi', isHost: true, paid: false),
           Participant(id: 'b', name: 'Bình', paid: false),
         ],
-        items: [],
+        items: [
+          BillItem(id: 'i1', name: 'Phở', lineTotal: 50000, shares: {'b': 1}),
+        ],
       );
       expect(BillCalculator.computePaymentStatus(pending), PaymentStatus.pending);
 
@@ -201,9 +203,53 @@ void main() {
           Participant(id: 'me', name: 'Tôi', isHost: true, paid: false),
           Participant(id: 'b', name: 'Bình', paid: true),
         ],
-        items: [],
+        items: [
+          BillItem(id: 'i1', name: 'Phở', lineTotal: 50000, shares: {'b': 1}),
+        ],
       );
       expect(BillCalculator.computePaymentStatus(settled), PaymentStatus.settled);
+    });
+
+    test('auto-marks zero-debt members paid and reverts auto-paid when edited to owe > 0', () {
+      final manualPaidAt = DateTime.utc(2026, 11, 23, 6, 0);
+      final payload = BillPayload(
+        participants: [
+          const Participant(id: 'me', name: 'Tôi', isHost: true, paid: true),
+          Participant(id: 'a', name: 'An', paid: true, paidAt: manualPaidAt),
+          const Participant(id: 'z', name: 'Zero', paid: false),
+        ],
+        items: const [
+          BillItem(id: 'i1', name: 'Lẩu', lineTotal: 200000, shares: {'me': 1, 'a': 1}),
+        ],
+      );
+
+      final normalized = BillCalculator.normalizeParticipantPaidStates(payload);
+      final zeroMember = normalized.participants.firstWhere((p) => p.id == 'z');
+      expect(zeroMember.paid, isTrue);
+      expect(zeroMember.paidAt, isNull);
+      expect(
+        BillCalculator.computePaymentStatus(normalized),
+        PaymentStatus.settled,
+      );
+
+      // Edit bill so `z` now owes money -> auto-paid reverts to false, manual `a` stays paid
+      final edited = normalized.copyWith(
+        items: const [
+          BillItem(
+            id: 'i1',
+            name: 'Lẩu',
+            lineTotal: 300000,
+            shares: {'me': 1, 'a': 1, 'z': 1},
+          ),
+        ],
+      );
+      final reNormalized = BillCalculator.normalizeParticipantPaidStates(edited);
+      expect(reNormalized.participants.firstWhere((p) => p.id == 'z').paid, isFalse);
+      expect(reNormalized.participants.firstWhere((p) => p.id == 'a').paid, isTrue);
+      expect(
+        BillCalculator.computePaymentStatus(reNormalized),
+        PaymentStatus.pending,
+      );
     });
   });
 }

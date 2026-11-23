@@ -130,11 +130,8 @@ class _BillInputScreenState extends State<BillInputScreen> {
     super.initState();
     final bill = widget.existingBill;
     final adj = bill?.payload.adjustments;
-    final isVi = widget.controller.strings.isVi;
 
-    _titleCtrl = TextEditingController(
-      text: bill?.title ?? defaultMealTitle(isVi: isVi),
-    );
+    _titleCtrl = TextEditingController(text: bill?.title ?? '');
     _billDate = bill?.billDate ?? DateTime.now();
     _taxCtrl = TextEditingController(text: _fmtInput(adj?.taxAmount ?? 0));
     _serviceCtrl =
@@ -423,7 +420,9 @@ class _BillInputScreenState extends State<BillInputScreen> {
                   const SizedBox(height: 6),
                   TextField(
                     controller: _titleCtrl,
-                    decoration: const InputDecoration(hintText: 'Haidilao Hotpot'),
+                    decoration: InputDecoration(
+                      hintText: defaultMealTitle(isVi: s.isVi),
+                    ),
                   ),
                   const SizedBox(height: 12),
                   Text(
