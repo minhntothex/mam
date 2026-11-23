@@ -60,5 +60,5 @@ jobs:
           SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
         run: |
-          supabase secrets set GEMINI_API_KEY="$GEMINI_API_KEY" --project-ref "$SUPABASE_PROJECT_REF"
-          supabase functions deploy scan-bill --project-ref "$SUPABASE_PROJECT_REF" --no-verify-jwt
+          supabase secrets set GEMINI_API_KEY="$GEMINI_API_KEY" --remote="$SUPABASE_PROJECT_REF" --yes
+          supabase functions deploy scan-bill --remote="$SUPABASE_PROJECT_REF" --no-verify-jwt --yes

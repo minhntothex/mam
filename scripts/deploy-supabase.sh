@@ -30,7 +30,7 @@ echo "2/3 Pushing SQL migrations (001..003)..."
 SUPABASE_DB_PASSWORD="$SUPABASE_DB_PASSWORD" "${SUPA[@]}" db push --remote --yes
 
 echo "3/3 Setting GEMINI_API_KEY & deploying Edge Function scan-bill..."
-"${SUPA[@]}" secrets set "GEMINI_API_KEY=${GEMINI_API_KEY}" --project-ref "$SUPABASE_PROJECT_REF"
-"${SUPA[@]}" functions deploy scan-bill --project-ref "$SUPABASE_PROJECT_REF" --no-verify-jwt
+"${SUPA[@]}" secrets set "GEMINI_API_KEY=${GEMINI_API_KEY}" --remote="$SUPABASE_PROJECT_REF" --yes
+"${SUPA[@]}" functions deploy scan-bill --remote="$SUPABASE_PROJECT_REF" --no-verify-jwt --yes
 
 echo "Done! Supabase Cloud Sync + AI OCR (scan-bill) is live."
