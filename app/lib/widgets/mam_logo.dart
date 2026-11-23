@@ -4,17 +4,16 @@ import 'package:material_ui/material_ui.dart';
 
 /// Vector brand mark for Mâm (Tri-Pastel Share): three rich pastel slices —
 /// sky periwinkle, fresh mint, and a detached honey-butter fair-share wedge —
-/// arranged as a shared round dining tray ("mâm") inside a clean flat
-/// borderless cloud-white tile.
+/// arranged as a shared round dining tray ("mâm") on a transparent background.
 ///
-/// Mirrors `assets/brand/mam-logo.svg` in a normalized 1024×1024 coordinate
-/// space so the AppBar mark, exported PNG Receipt Cards, and platform icons
-/// share identical geometry.
+/// Mirrors `assets/brand/mam-logo.svg` (`viewBox="173 154 700 700"`) so the
+/// AppBar mark, splash screen, and exported PNG Receipt Cards share identical
+/// geometry.
 class MamLogoMark extends StatelessWidget {
   const MamLogoMark({
     super.key,
     this.size = 32,
-    this.showTile = true,
+    this.showTile = false,
   });
 
   final double size;
@@ -37,16 +36,19 @@ class _MamLogoPainter extends CustomPainter {
 
   final bool showTile;
 
-  static const double _designSize = 1024.0;
+  static const double _tileDesignSize = 1024.0;
+  static const double _markViewSize = 700.0;
+  static const double _markOffsetX = 173.0;
+  static const double _markOffsetY = 154.0;
   static const double _degToRad = math.pi / 180.0;
 
   @override
   void paint(Canvas canvas, Size size) {
-    final scale = math.min(size.width, size.height) / _designSize;
+    final dim = math.min(size.width, size.height);
     canvas.save();
-    canvas.scale(scale);
 
     if (showTile) {
+      canvas.scale(dim / _tileDesignSize);
       const tileRect = Rect.fromLTWH(0, 0, 1024, 1024);
       final tileRRect = RRect.fromRectAndRadius(
         tileRect,
@@ -60,6 +62,9 @@ class _MamLogoPainter extends CustomPainter {
           colors: [Color(0xFFFFFFFF), Color(0xFFEAF1FF)],
         ).createShader(tileRect);
       canvas.drawRRect(tileRRect, tilePaint);
+    } else {
+      canvas.scale(dim / _markViewSize);
+      canvas.translate(-_markOffsetX, -_markOffsetY);
     }
 
     // Bottom-left Sky Periwinkle slice (15° -> 165°).

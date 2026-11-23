@@ -37,10 +37,8 @@
       inset: 0;
       z-index: 9999;
       display: flex;
-      flex-direction: column;
       align-items: center;
       justify-content: center;
-      gap: 18px;
       background-color: #F7F8FC;
       transition: opacity 220ms ease-out;
     }
@@ -51,24 +49,21 @@
     }
 
     .mam-splash-logo {
-      width: 72px;
-      height: 72px;
+      position: absolute;
+      top: calc(env(safe-area-inset-top, 0px) + 16vh);
+      left: 50%;
+      transform: translateX(-50%);
+      width: 112px;
+      height: 112px;
     }
 
     .mam-splash-spinner {
-      width: 24px;
-      height: 24px;
+      width: 28px;
+      height: 28px;
       border-radius: 50%;
-      border: 2.5px solid #E3E7F5;
+      border: 3px solid #E3E7F5;
       border-top-color: #564CE6;
       animation: mam-spin 0.75s linear infinite;
-    }
-
-    .mam-splash-text {
-      font-size: 13px;
-      font-weight: 600;
-      color: #64748B;
-      letter-spacing: 0.1px;
     }
 
     @keyframes mam-spin {
@@ -77,13 +72,9 @@
   </style>
 </head>
 <body>
-  <div id="mam-splash" role="status" aria-label="Loading Mâm">
-    <svg class="mam-splash-logo" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" aria-hidden="true">
+  <div id="mam-splash" role="status" aria-label="Loading">
+    <svg class="mam-splash-logo" xmlns="http://www.w3.org/2000/svg" viewBox="173 154 700 700" aria-hidden="true">
       <defs>
-        <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stop-color="#FFFFFF"/>
-          <stop offset="100%" stop-color="#EAF1FF"/>
-        </linearGradient>
         <linearGradient id="skyGrad" x1="0%" y1="0%" x2="100%" y2="100%">
           <stop offset="0%" stop-color="#72ADFF"/>
           <stop offset="100%" stop-color="#3E7EF5"/>
@@ -97,7 +88,6 @@
           <stop offset="100%" stop-color="#F79E38"/>
         </linearGradient>
       </defs>
-      <rect x="0" y="0" width="1024" height="1024" rx="220" fill="url(#bgGrad)"/>
       <g>
         <path d="M 795.64 600.68 A 304.00 304.00 0 0 1 208.36 600.68 L 372.57 556.68 A 134.00 134.00 0 0 0 631.43 556.68 Z" fill="url(#skyGrad)"/>
         <path d="M 198.42 537.91 A 304.00 304.00 0 0 1 486.09 218.42 L 494.99 388.18 A 134.00 134.00 0 0 0 368.18 529.01 Z" fill="url(#mintGrad)"/>
@@ -105,7 +95,6 @@
       </g>
     </svg>
     <div class="mam-splash-spinner"></div>
-    <div class="mam-splash-text">Loading Mâm...</div>
   </div>
 
   <script>

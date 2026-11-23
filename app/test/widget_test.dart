@@ -70,7 +70,8 @@ void main() {
 
     expect(controller.language, AppLanguage.en);
     expect(find.byType(MamLogoMark), findsOneWidget);
-    // Flat borderless logo matches 40px search bar height on HomeScreen
+    // Flat transparent logo (showTile: false) matches 40px search bar height on HomeScreen
+    expect(tester.widget<MamLogoMark>(find.byType(MamLogoMark)).showTile, isFalse);
     expect(
       find.descendant(of: find.byType(MamLogoMark), matching: find.byType(DecoratedBox)),
       findsNothing,
