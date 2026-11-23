@@ -7,6 +7,15 @@ on:
       - 'v*'
   workflow_dispatch:
     inputs:
+      platform:
+        description: 'Platform to build'
+        required: true
+        default: 'both'
+        type: choice
+        options:
+          - both
+          - android
+          - ios
       create_release:
         description: 'Also publish a GitHub Release with APK attached'
         required: false
@@ -36,6 +45,7 @@ jobs:
   build-android:
     name: Build Android APK
     needs: test
+    if: ${{ github.event_name != 'workflow_dispatch' || inputs.platform == 'both' || inputs.platform == 'android' }}
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -92,6 +102,7 @@ jobs:
   build-ios:
     name: Build iOS (Unsigned IPA)
     needs: test
+    if: ${{ github.event_name != 'workflow_dispatch' || inputs.platform == 'both' || inputs.platform == 'ios' }}
     runs-on: macos-latest
     defaults:
       run:
