@@ -1,0 +1,65 @@
+# Codemagic CI/CD configuration for signed iOS TestFlight & Android releases.
+# Connect this repo at https://codemagic.io and configure:
+# - Environment variable group `mam_supabase`: SUPABASE_URL, SUPABASE_ANON_KEY
+# - App Store Connect integration `mam_apple` (for iOS TestFlight signing)
+
+workflows:
+  ios-testflight:
+    name: Mâm iOS TestFlight
+    max_build_duration: 60
+    instance_type: mac_mini_m2
+    integrations:
+      app_store_connect: mam_apple
+    environment:
+      flutter: stable
+      xcode: latest
+      cocoapods: default
+      groups:
+        - mam_supabase
+      ios_signing:
+        distribution_type: app_store
+        bundle_identifier: dev.mam.mam
+    scripts:
+      - name: Get Flutter dependencies & run tests
+        script: |
+          cd app
+          flutter pub get
+          flutter analyze
+          flutter test
+      - name: Set up code signing on Xcode project
+        script: xcode-project use-profiles
+      - name: Build signed IPA
+        script: |
+          cd app
+          flutter build ipa --release \
+            --dart-define=SUPABASE_URL="$SUPABASE_URL" \
+            --dart-define=SUPABASE_ANON_KEY="$SUPABASE_ANON_KEY" \
+            --export-options-plist=/Users/builder/export_options.plist
+    artifacts:
+      - app/build/ios/ipa/*.ipa
+    publishing:
+      app_store_connect:
+        auth: integration
+        submit_to_testflight: true
+
+  android-release:
+    name: Mâm Android APK
+    max_build_duration: 45
+    instance_type: linux_x2
+    environment:
+      flutter: stable
+      java: 17
+      groups:
+        - mam_supabase
+    scripts:
+      - name: Test & Build Android APK
+        script: |
+          cd app
+          flutter pub get
+          flutter analyze
+          flutter test
+          flutter build apk --release \
+            --dart-define=SUPABASE_URL="$SUPABASE_URL" \
+            --dart-define=SUPABASE_ANON_KEY="$SUPABASE_ANON_KEY"
+    artifacts:
+      - app/build/app/outputs/flutter-apk/*.apk
