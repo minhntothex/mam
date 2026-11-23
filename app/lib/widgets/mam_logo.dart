@@ -5,7 +5,7 @@ import 'package:material_ui/material_ui.dart';
 /// Vector brand mark for Mâm (Tri-Pastel Share): three rich pastel slices —
 /// sky periwinkle, fresh mint, and a detached honey-butter fair-share wedge —
 /// arranged as a shared round dining tray ("mâm") inside a clean flat
-/// cloud-white tile with crisp border.
+/// borderless cloud-white tile.
 ///
 /// Mirrors `assets/brand/mam-logo.svg` in a normalized 1024×1024 coordinate
 /// space so the AppBar mark, exported PNG Receipt Cards, and platform icons
@@ -47,7 +47,7 @@ class _MamLogoPainter extends CustomPainter {
     canvas.scale(scale);
 
     if (showTile) {
-      const tileRect = Rect.fromLTWH(14, 14, 996, 996);
+      const tileRect = Rect.fromLTWH(0, 0, 1024, 1024);
       final tileRRect = RRect.fromRectAndRadius(
         tileRect,
         const Radius.circular(220),
@@ -60,13 +60,6 @@ class _MamLogoPainter extends CustomPainter {
           colors: [Color(0xFFFFFFFF), Color(0xFFEAF1FF)],
         ).createShader(tileRect);
       canvas.drawRRect(tileRRect, tilePaint);
-
-      final borderPaint = Paint()
-        ..isAntiAlias = true
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 28
-        ..color = const Color(0xFFCBD8EE);
-      canvas.drawRRect(tileRRect, borderPaint);
     }
 
     // Bottom-left Sky Periwinkle slice (15° -> 165°).

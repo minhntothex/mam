@@ -250,7 +250,7 @@ class MamStrings {
   String get markPaid => t('Mark paid', 'Tick đã trả');
   String get personQrBtn => t('VietQR', 'VietQR riêng');
   String get exportSummaryBtn =>
-      t('Export Summary Receipt (PNG)', 'Xuất Receipt Card tổng (PNG)');
+      t('Export Summary Receipt', 'Xuất Receipt Card tổng');
   String get pickBankTitle =>
       t('Choose receiving bank', 'Chọn tài khoản nhận tiền');
   String get receiptPreviewTitle =>

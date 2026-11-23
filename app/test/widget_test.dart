@@ -70,10 +70,17 @@ void main() {
 
     expect(controller.language, AppLanguage.en);
     expect(find.byType(MamLogoMark), findsOneWidget);
-    // Flat logo: no BoxShadow inside MamLogoMark
+    // Flat borderless logo matches 40px search bar height on HomeScreen
     expect(
       find.descendant(of: find.byType(MamLogoMark), matching: find.byType(DecoratedBox)),
       findsNothing,
+    );
+    expect(tester.getSize(find.byType(MamLogoMark)), const Size(40, 40));
+    expect(
+      tester.getSize(
+        find.descendant(of: find.byType(AppBar), matching: find.byType(TextField)),
+      ).height,
+      40,
     );
     expect(find.text('Mâm'), findsNothing);
     expect(find.text('Uncollected'), findsOneWidget);
@@ -147,6 +154,11 @@ void main() {
     await tester.enterText(find.byType(TextField), 'no-match-xyz');
     await tester.pumpAndSettle();
     expect(find.text('Clear search'), findsOneWidget);
+    // Empty filter/search state renders directly on app ground without Card wrapper
+    expect(
+      find.ancestor(of: find.text('Clear search'), matching: find.byType(Card)),
+      findsNothing,
+    );
 
     await tester.tap(find.text('Clear search'));
     await tester.pumpAndSettle();
@@ -197,9 +209,9 @@ void main() {
 
     expect(find.text('Per-person breakdown'), findsOneWidget);
     expect(find.text('Home'), findsOneWidget);
-    expect(find.text('Export Summary Receipt (PNG)'), findsOneWidget);
+    expect(find.text('Export Summary Receipt'), findsOneWidget);
 
-    await tester.tap(find.text('Export Summary Receipt (PNG)'));
+    await tester.tap(find.text('Export Summary Receipt'));
     await tester.pumpAndSettle();
     expect(find.byType(MamLogoMark), findsOneWidget);
     expect(find.text('MÂM'), findsNothing);

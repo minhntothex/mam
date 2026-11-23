@@ -110,10 +110,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     child: InkWell(
                       borderRadius: BorderRadius.circular(10),
                       onTap: () => Scaffold.of(ctx).openDrawer(),
-                      child: const Padding(
-                        padding: EdgeInsets.all(2),
-                        child: MamLogoMark(size: 34),
-                      ),
+                      child: const MamLogoMark(size: 40),
                     ),
                   ),
                 ),
@@ -1072,10 +1069,11 @@ class _EmptyBillsCard extends StatelessWidget {
             _HomeFilter.settled => s.emptySettled,
             _HomeFilter.archived => s.emptyArchived,
           };
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 32),
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 48),
+      child: Center(
         child: Column(
+          mainAxisSize: MainAxisSize.min,
           children: [
             Icon(
               isSearch
