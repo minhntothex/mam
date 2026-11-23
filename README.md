@@ -1,48 +1,63 @@
 # Mâm (`mam`)
 
-App chia bill cá nhân (**Single-Player + VietQR Offline**), đồng bộ 2 chiều **iOS ↔ Android** bằng **Flutter + Supabase** (Fresh Pastel UI, song ngữ EN / VI, hỗ trợ `đ / VNĐ` và `$ / USD`).
+Personal single-player bill-splitting app with **offline VietQR**, **AI receipt OCR**, and **two-way Cloud Sync** across iOS, Android, and Web — built with **Flutter** and **Supabase** (Fresh Pastel UI, EN / VI, `đ / VND` & `$ / USD`).
 
-## Tính năng chính
-- **Chia đều siêu tốc (< 5 giây):** Nhập tổng tiền + nhóm/số người → ra ngay kết quả & VietQR.
-- **Scan hóa đơn AI OCR (Gemini 2.5 Flash) hoặc nhập tay:** Kèm thanh đối chiếu tổng tự động (`computedGrandTotal` vs `ocrGrandTotal`), input chỉ nhận số live-format (`1.000` / ATM-POS `1.00`) và 3 hóa đơn mẫu VN test offline.
-- **Gán món siêu tốc:** Chọn người ở thanh trên → chạm liên tiếp vào món, nút `Cả bàn`, stepper `+/-` cho món số lượng > 1, giữ lâu để multi-select nhóm con, cảnh báo món chưa gán.
-- **Xử lý chuẩn hóa đơn VN & Quốc tế:** Pro-rata VAT / phí phục vụ / giảm giá toàn bill, tùy chọn tiền ship `Chia đều` hoặc `Theo tỷ lệ`, làm tròn (`Không` / `Làm tròn lên`) hiển thị rõ chênh lệch, hỗ trợ `đ / VNĐ` và `$ / USD`.
-- **Quản lý bill tiện lợi:** Thanh search trên AppBar (tên bill không dấu, ngày `DD/MM/YY`, thành viên, món), vuốt trái để `Archive` / `Restore` / `Delete`, tab `Archived` & sắp xếp ưu tiên `Pending > Settled > Archived`.
-- **VietQR động 100% offline (EMVCo NAPAS 247):** Tự sinh chuỗi TLV + bỏ dấu tiếng Việt + `CRC16-CCITT-FALSE`, hỗ trợ 32 ngân hàng VN.
-- **Xuất ảnh PNG chia sẻ Zalo/Messenger:** `SummaryReceiptCard` tổng hợp và `PersonQrCard` động từng người.
-- **Local-first + Đồng bộ 2 chiều iOS ↔ Android:** Hoạt động bình thường khi offline; đồng bộ delta Last-Write-Wins + soft-delete khi cấu hình Supabase.
+**Live Web PWA (iPhone / Desktop):** [minhntothex.github.io/mam](https://minhntothex.github.io/mam/)  
+On iPhone, open in **Safari → Share → Add to Home Screen** for a full-screen standalone app with no Developer Mode or 7-day re-signing required.
 
 ---
 
-## 1. Build App cài lên điện thoại (GitHub Actions & Codemagic)
+## Features
 
-Repo đã tích hợp sẵn 2 pipeline tự động:
+- **Quick Equal Split (< 5s):** Enter the total and select a group or headcount to generate per-person totals and VietQR codes immediately.
+- **AI Receipt OCR (Gemini 2.5 Flash) & Manual Entry:** Built-in reconciliation bar (`computedGrandTotal` vs. `ocrGrandTotal`), strict numeric live-formatting inputs (`1.000` / ATM-POS `1.00` / `Plain`), and 3 offline Vietnamese demo receipts.
+- **Fast Item Assignment:** Pick a person at the top and tap items continuously, assign `Whole Table`, adjust multi-quantity items with `+/-` steppers, long-press to multi-select a subgroup, and catch unassigned items before saving.
+- **Vietnamese & Multi-Currency Bill Math:** Pro-rata VAT, service charge, and bill-level discounts; `Flat` or `Pro-rata` shipping split; `None` or `Round up` rounding with explicit rounding delta; scalable `CurrencyRegistry` (`đ / VND` default + `$ / USD`).
+- **Search, Archive & Priority Sorting:** Multi-field AppBar search (accent-insensitive title, `DD/MM/YY` date, participant, item, note), swipe-left actions (`Archive` / `Restore` / `Delete` with Undo), dedicated `Archived` tab, and `Pending > Settled > Archived` ordering.
+- **100% Offline Dynamic VietQR (EMVCo NAPAS 247):** Generates TLV payloads with ASCII normalization and `CRC16-CCITT-FALSE` checksums across 32 Vietnamese banks.
+- **PNG Receipt Export:** High-DPI `SummaryReceiptCard` and per-person `PersonQrCard` ready to share via Zalo, Messenger, or Messages.
+- **Local-First + Two-Way Sync:** Works offline out of the box and performs Last-Write-Wins delta sync with soft deletes when signed in to Supabase.
+
+---
+
+## 1. Web PWA Deployment (GitHub Pages)
+
+[.github/workflows/deploy-web.yml](.github/workflows/deploy-web.yml) builds the Flutter Web PWA with live `SUPABASE_URL` & `SUPABASE_ANON_KEY` and publishes to GitHub Pages automatically on pushes to `app/**` or via **Actions → Deploy Web PWA → Run workflow**.
+
+---
+
+## 2. Mobile Builds (GitHub Actions & Codemagic)
 
 ### GitHub Actions ([.github/workflows/build-mobile.yml](.github/workflows/build-mobile.yml))
-- Tự động chạy khi push lên `main` hoặc bấm **Actions → Build Mobile Apps → Run workflow**:
-  - **Android:** tạo sẵn `mam-android-universal.apk` & `mam-android-arm64.apk` (tải trực tiếp ở mục **Artifacts** của run để cài ngay lên máy Android).
-  - **iOS:** tạo sẵn `mam-ios-unsigned.ipa` trên runner `macos-latest` (cài qua AltStore / Sideloadly hoặc ký lại).
-- Đẩy tag `v1.0.0` (hoặc tick `create_release` khi chạy tay) để tự phát hành **GitHub Release** đính kèm file `.apk`.
 
-### Codemagic cho iOS TestFlight ([codemagic.yaml](codemagic.yaml))
-- Kết nối repo với [Codemagic](https://codemagic.io) (free macOS M2 tier), cấu hình nhóm biến `mam_supabase` (`SUPABASE_URL`, `SUPABASE_ANON_KEY`) và App Store Connect `mam_apple` để build & đẩy thẳng lên **TestFlight**.
+Trigger on push to `main`, `v*` tags, or **Actions → Build Mobile Apps → Run workflow** with the **`Platform to build`** dropdown (`both`, `android`, or `ios`):
+
+- **Android:** Produces `mam-android-universal.apk` and `mam-android-arm64.apk` under the run's **Artifacts** for direct sideloading.
+- **iOS:** Produces `mam-ios-unsigned.ipa` on `macos-latest` (for re-signing / sideloading).
+- Push a `v*` tag (or check `create_release` on manual dispatch) to attach the APKs to a **GitHub Release**.
+
+### Codemagic for Signed iOS TestFlight ([codemagic.yaml](codemagic.yaml))
+
+Connect this repository to [Codemagic](https://codemagic.io), configure the `mam_supabase` variable group (`SUPABASE_URL`, `SUPABASE_ANON_KEY`) and the `mam_apple` App Store Connect integration, and run `ios-testflight` to build and upload directly to TestFlight.
 
 ---
 
-## 2. Kích hoạt Cloud Sync + AI OCR thật (Supabase)
+## 3. Cloud Sync & AI OCR Backend (Supabase)
 
-### Cách A — Tự động qua GitHub Actions ([.github/workflows/deploy-supabase.yml](.github/workflows/deploy-supabase.yml))
-1. Tạo 1 project mới tại [Supabase Dashboard](https://supabase.com/dashboard) và lấy API key tại [Google AI Studio](https://aistudio.google.com/apikey).
-2. Thêm **6 Repository Secrets** trong GitHub (`Settings → Secrets and variables → Actions`):
-   - `SUPABASE_ACCESS_TOKEN` (Personal Access Token từ Supabase Account → Access Tokens)
-   - `SUPABASE_PROJECT_REF` (mã 20 ký tự của project)
-   - `SUPABASE_DB_PASSWORD` (mật khẩu DB khi tạo project)
-   - `GEMINI_API_KEY` (API key Gemini 2.5 Flash)
-   - `SUPABASE_URL` (`https://<PROJECT_REF>.supabase.co`)
-   - `SUPABASE_ANON_KEY` (Publishable / Anon key của project)
-3. Chạy **Actions → Deploy Supabase → Run workflow** để đẩy cả 3 migration ([supabase/migrations](supabase/migrations)) + nạp `GEMINI_API_KEY` + deploy Edge Function [scan-bill](supabase/functions/scan-bill/index.ts), sau đó chạy lại **Build Mobile Apps** để nhúng `SUPABASE_URL` & `SUPABASE_ANON_KEY` vào file `.apk` / `.ipa`.
+### Option A — GitHub Actions ([.github/workflows/deploy-supabase.yml](.github/workflows/deploy-supabase.yml))
 
-### Cách B — Chạy 1 lệnh tại máy local
+1. Create a project in the [Supabase Dashboard](https://supabase.com/dashboard) and an API key in [Google AI Studio](https://aistudio.google.com/apikey).
+2. Add **6 Repository Secrets** under **Settings → Secrets and variables → Actions**:
+   - `SUPABASE_ACCESS_TOKEN` — Personal Access Token from Supabase Account → Access Tokens
+   - `SUPABASE_PROJECT_REF` — 20-character project reference ID
+   - `SUPABASE_DB_PASSWORD` — Database password set for the project
+   - `GEMINI_API_KEY` — Gemini 2.5 Flash API key
+   - `SUPABASE_URL` — `https://<PROJECT_REF>.supabase.co`
+   - `SUPABASE_ANON_KEY` — Project publishable / anon key
+3. Run **Actions → Deploy Supabase → Run workflow** to push all 3 migrations in [supabase/migrations](supabase/migrations), set `GEMINI_API_KEY`, and deploy the [scan-bill](supabase/functions/scan-bill/index.ts) Edge Function.
+
+### Option B — One-Command Local Deploy
+
 ```bash
 SUPABASE_ACCESS_TOKEN=... \
 SUPABASE_PROJECT_REF=... \
@@ -53,7 +68,7 @@ GEMINI_API_KEY=... \
 
 ---
 
-## 3. Chạy thử Local (Web / Tests)
+## 4. Local Development
 
 ```bash
 cd app
@@ -63,6 +78,7 @@ flutter test
 flutter run -d chrome
 ```
 
-## Tài liệu
-- Đặc tả MVP & Data Schema: [docs/mvp-spec.md](docs/mvp-spec.md)
-- Hệ thống thiết kế Fresh Pastel: [DESIGN.md](DESIGN.md)
+## Documentation
+
+- MVP Spec & Data Schema: [docs/mvp-spec.md](docs/mvp-spec.md)
+- Fresh Pastel Design System: [DESIGN.md](DESIGN.md)
