@@ -198,6 +198,8 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Currency & Number Format'), findsOneWidget);
+    expect(find.textContaining('Nearest'), findsNothing);
+    expect(find.byIcon(Icons.check), findsNothing);
     expect(controller.currentCurrency.code, 'VND');
 
     // Switch currency to USD
@@ -206,8 +208,32 @@ void main() {
     expect(controller.currentCurrency.code, 'USD');
     expect(controller.amountInputFormat, AmountInputFormat.auto);
 
-    // Switch language English -> Vietnamese
-    await tester.tap(find.text('Tiếng Việt'));
+    // Open Transfer note template dialog and verify helper text allows multi-line (not truncated)
+    final templateItem = find.text('Transfer note template');
+    await tester.scrollUntilVisible(
+      templateItem,
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.ensureVisible(templateItem);
+    await tester.pumpAndSettle();
+    await tester.tap(templateItem);
+    await tester.pumpAndSettle();
+    final helperField = tester.widget<TextField>(find.byType(TextField).last);
+    expect(helperField.decoration?.helperMaxLines, greaterThanOrEqualTo(3));
+    await tester.tap(find.text('Cancel'));
+    await tester.pumpAndSettle();
+
+    // Scroll back up and switch language English -> Vietnamese
+    final viOption = find.text('Tiếng Việt');
+    await tester.scrollUntilVisible(
+      viOption,
+      -300,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.ensureVisible(viOption);
+    await tester.pumpAndSettle();
+    await tester.tap(viOption);
     await tester.pumpAndSettle();
     expect(controller.language, AppLanguage.vi);
     expect(find.text('Tiền tệ & Định dạng số'), findsOneWidget);

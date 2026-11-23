@@ -69,6 +69,7 @@ class SettingsScreen extends StatelessWidget {
                   child: SizedBox(
                     width: double.infinity,
                     child: SegmentedButton<AppLanguage>(
+                      showSelectedIcon: false,
                       segments: [
                         ButtonSegment(
                           value: AppLanguage.en,
@@ -115,9 +116,15 @@ class SettingsScreen extends StatelessWidget {
                         children: [
                           for (final spec in CurrencyRegistry.all)
                             ChoiceChip(
+                              showCheckmark: false,
                               label: Text(spec.label),
                               selected: spec.code == currency.code,
-                              selectedColor: p.primary,
+                              selectedColor: p.primaryFill,
+                              side: BorderSide(
+                                color: spec.code == currency.code
+                                    ? p.primaryFill
+                                    : p.border,
+                              ),
                               labelStyle: TextStyle(
                                 fontSize: 13,
                                 fontWeight: FontWeight.w700,
@@ -417,14 +424,11 @@ class SettingsScreen extends StatelessWidget {
                       SizedBox(
                         width: double.infinity,
                         child: SegmentedButton<RoundingMode>(
+                          showSelectedIcon: false,
                           segments: [
                             ButtonSegment(
                               value: RoundingMode.none,
                               label: Text(s.roundNone),
-                            ),
-                            ButtonSegment(
-                              value: RoundingMode.nearest1000,
-                              label: Text(s.roundNearestStep(stepLabel)),
                             ),
                             ButtonSegment(
                               value: RoundingMode.ceil1000,
@@ -449,6 +453,7 @@ class SettingsScreen extends StatelessWidget {
                       SizedBox(
                         width: double.infinity,
                         child: SegmentedButton<ShippingSplitMode>(
+                          showSelectedIcon: false,
                           segments: [
                             ButtonSegment(
                               value: ShippingSplitMode.flat,
@@ -740,6 +745,7 @@ class SettingsScreen extends StatelessWidget {
               decoration: InputDecoration(
                 labelText: s.membersLabel,
                 helperText: s.firstMemberIsHost,
+                helperMaxLines: 2,
               ),
             ),
           ],
@@ -800,6 +806,7 @@ class SettingsScreen extends StatelessWidget {
           controller: ctrl,
           decoration: InputDecoration(
             helperText: s.transferTemplateHelp,
+            helperMaxLines: 3,
           ),
         ),
         actions: [

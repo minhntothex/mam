@@ -371,14 +371,11 @@ class _QuickEqualScreenState extends State<QuickEqualScreen> {
                   SizedBox(
                     width: double.infinity,
                     child: SegmentedButton<RoundingMode>(
+                      showSelectedIcon: false,
                       segments: [
                         ButtonSegment(
                           value: RoundingMode.none,
                           label: Text(s.roundNone),
-                        ),
-                        ButtonSegment(
-                          value: RoundingMode.nearest1000,
-                          label: Text(s.roundNearestStep(stepLabel)),
                         ),
                         ButtonSegment(
                           value: RoundingMode.ceil1000,

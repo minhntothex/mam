@@ -15,7 +15,7 @@ abstract final class MamReceiptColors {
   static const Color ink = Color(0xFF1E293B);
   static const Color muted = Color(0xFF56637A);
   static const Color border = Color(0xFFE6EAF2);
-  static const Color primary = Color(0xFF1E293B);
+  static const Color primary = Color(0xFF2F5EE5);
   static const Color success = Color(0xFF146E52);
 }
 
@@ -30,6 +30,7 @@ class MamPalette extends ThemeExtension<MamPalette> {
     required this.muted,
     required this.border,
     required this.primary,
+    required this.primaryFill,
     required this.primarySoft,
     required this.onPrimary,
     required this.heroBackground,
@@ -54,6 +55,7 @@ class MamPalette extends ThemeExtension<MamPalette> {
   final Color muted;
   final Color border;
   final Color primary;
+  final Color primaryFill;
   final Color primarySoft;
   final Color onPrimary;
   final Color heroBackground;
@@ -80,9 +82,10 @@ class MamPalette extends ThemeExtension<MamPalette> {
     ink: Color(0xFF1E293B),
     muted: Color(0xFF56637A),
     border: Color(0xFFE6EAF2),
-    primary: Color(0xFF1E293B),
-    primarySoft: Color(0xFFE9EFF8),
-    onPrimary: Color(0xFFFFFFFF),
+    primary: Color(0xFF2F5EE5),
+    primaryFill: Color(0xFF96BFFF),
+    primarySoft: Color(0xFFEDF3FF),
+    onPrimary: Color(0xFF0D2247),
     heroBackground: Color(0xFFFFE9A3),
     onHero: Color(0xFF3B2804),
     heroSettled: Color(0xFFBDF2DC),
@@ -116,6 +119,7 @@ class MamPalette extends ThemeExtension<MamPalette> {
     Color? muted,
     Color? border,
     Color? primary,
+    Color? primaryFill,
     Color? primarySoft,
     Color? onPrimary,
     Color? heroBackground,
@@ -140,6 +144,7 @@ class MamPalette extends ThemeExtension<MamPalette> {
       muted: muted ?? this.muted,
       border: border ?? this.border,
       primary: primary ?? this.primary,
+      primaryFill: primaryFill ?? this.primaryFill,
       primarySoft: primarySoft ?? this.primarySoft,
       onPrimary: onPrimary ?? this.onPrimary,
       heroBackground: heroBackground ?? this.heroBackground,
@@ -169,6 +174,7 @@ class MamPalette extends ThemeExtension<MamPalette> {
       muted: Color.lerp(muted, other.muted, t)!,
       border: Color.lerp(border, other.border, t)!,
       primary: Color.lerp(primary, other.primary, t)!,
+      primaryFill: Color.lerp(primaryFill, other.primaryFill, t)!,
       primarySoft: Color.lerp(primarySoft, other.primarySoft, t)!,
       onPrimary: Color.lerp(onPrimary, other.onPrimary, t)!,
       heroBackground: Color.lerp(heroBackground, other.heroBackground, t)!,
@@ -279,7 +285,7 @@ ThemeData buildMamTheme() {
     ),
     filledButtonTheme: FilledButtonThemeData(
       style: FilledButton.styleFrom(
-        backgroundColor: p.primary,
+        backgroundColor: p.primaryFill,
         foregroundColor: p.onPrimary,
         minimumSize: const Size(0, 48),
         padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 13),
@@ -305,7 +311,7 @@ ThemeData buildMamTheme() {
           return p.muted;
         }),
         backgroundColor: WidgetStateProperty.resolveWith((states) {
-          if (states.contains(WidgetState.selected)) return p.primary;
+          if (states.contains(WidgetState.selected)) return p.primaryFill;
           return p.surface;
         }),
         side: WidgetStatePropertyAll(BorderSide(color: p.border)),
@@ -315,6 +321,7 @@ ThemeData buildMamTheme() {
       ),
     ),
     chipTheme: ChipThemeData(
+      showCheckmark: false,
       backgroundColor: p.surfaceSubtle,
       selectedColor: p.primarySoft,
       side: BorderSide(color: p.border),

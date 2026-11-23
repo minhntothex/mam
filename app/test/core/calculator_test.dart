@@ -154,12 +154,12 @@ void main() {
         ],
       );
 
-      final nearest = BillCalculator.calculate(
-        base.copyWith(roundingMode: RoundingMode.nearest1000),
+      final exact = BillCalculator.calculate(
+        base.copyWith(roundingMode: RoundingMode.none),
       );
-      expect(nearest.breakdownFor('a')!.finalAmount, 33000);
-      expect(nearest.sumFinalAmounts, 99000);
-      expect(nearest.roundingDelta, -1000);
+      expect(exact.breakdownFor('a')!.finalAmount, 33333);
+      expect(exact.sumFinalAmounts, 99999);
+      expect(exact.roundingDelta, -1);
 
       final ceil = BillCalculator.calculate(
         base.copyWith(roundingMode: RoundingMode.ceil1000),
@@ -167,6 +167,9 @@ void main() {
       expect(ceil.breakdownFor('a')!.finalAmount, 34000);
       expect(ceil.sumFinalAmounts, 102000);
       expect(ceil.roundingDelta, 2000);
+
+      // Legacy persisted `nearest_1000` maps safely to `ceil1000`.
+      expect(RoundingMode.fromValue('nearest_1000'), RoundingMode.ceil1000);
     });
 
     test('reports OCR grand total reconciliation difference', () {

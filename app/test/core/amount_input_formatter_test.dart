@@ -80,7 +80,7 @@ void main() {
   test(r'BillCalculator uses currency roundingStep ($1 for USD vs 1,000đ for VND)', () {
     final usdPayload = BillPayload(
       currencyCode: 'USD',
-      roundingMode: RoundingMode.nearest1000,
+      roundingMode: RoundingMode.ceil1000,
       participants: const [
         Participant(id: 'a', name: 'Me', isHost: true, paid: true),
         Participant(id: 'b', name: 'Alex'),
@@ -90,14 +90,14 @@ void main() {
         BillItem(
           id: 'i1',
           name: 'Pizza',
-          lineTotal: 1000, // $10.00 in cents -> $3.333 each -> rounds to $3.00 (300 cents)
+          lineTotal: 1000, // $10.00 in cents -> $3.333 each -> rounds up to $4.00 (400 cents)
           shares: {'a': 1, 'b': 1, 'c': 1},
         ),
       ],
     );
 
     final res = BillCalculator.calculate(usdPayload);
-    expect(res.breakdowns.every((b) => b.finalAmount == 300), isTrue);
-    expect(res.roundingDelta, -100); // -$1.00
+    expect(res.breakdowns.every((b) => b.finalAmount == 400), isTrue);
+    expect(res.roundingDelta, 200); // +$2.00
   });
 }

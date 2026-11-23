@@ -48,17 +48,15 @@ enum PaymentStatus {
 
 enum RoundingMode {
   none('none'),
-  nearest1000('nearest_1000'),
   ceil1000('ceil_1000');
 
   const RoundingMode(this.value);
   final String value;
 
   static RoundingMode fromValue(String? raw) {
-    return RoundingMode.values.firstWhere(
-      (e) => e.value == raw,
-      orElse: () => RoundingMode.nearest1000,
-    );
+    if (raw == 'none') return RoundingMode.none;
+    // Map legacy `nearest_1000` and unknown values cleanly to `ceil1000`.
+    return RoundingMode.ceil1000;
   }
 }
 
@@ -297,7 +295,7 @@ final class FriendGroup {
 final class UserSettings {
   const UserSettings({
     required this.userId,
-    this.defaultRounding = RoundingMode.nearest1000,
+    this.defaultRounding = RoundingMode.ceil1000,
     this.defaultTransferTemplate = '{name} tra tien {title}',
     this.defaultShippingMode = ShippingSplitMode.flat,
     this.defaultCurrency = 'VND',
@@ -694,7 +692,7 @@ final class BillPayload {
     required this.participants,
     required this.items,
     this.adjustments = const BillAdjustments(),
-    this.roundingMode = RoundingMode.nearest1000,
+    this.roundingMode = RoundingMode.ceil1000,
     this.currencyCode = 'VND',
     this.bankAccountSnapshot,
     this.transferNoteTemplate = '{name} tra tien {title}',

@@ -833,10 +833,10 @@ class _FilterBar extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 8),
         decoration: BoxDecoration(
-          color: active ? p.primary : p.surface,
+          color: active ? p.primaryFill : p.surface,
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
-            color: active ? p.primary : p.border,
+            color: active ? p.primaryFill : p.border,
           ),
         ),
         child: Text(

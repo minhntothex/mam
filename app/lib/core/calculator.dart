@@ -240,8 +240,6 @@ abstract final class BillCalculator {
     final effectiveStep = step > 0 ? step : 1;
     return switch (mode) {
       RoundingMode.none => amount.round(),
-      RoundingMode.nearest1000 =>
-        (amount / effectiveStep).round() * effectiveStep,
       RoundingMode.ceil1000 => (amount / effectiveStep).ceil() * effectiveStep,
     };
   }
