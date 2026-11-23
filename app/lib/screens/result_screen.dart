@@ -66,7 +66,7 @@ class _ResultScreenState extends State<ResultScreen> {
               (b) =>
                   b.participant.isHost ||
                   b.participant.paid ||
-                  b.finalAmount <= 0,
+                  b.netAmount == 0,
             )
             .length;
         final totalPeople = bill.payload.participants.length;
@@ -149,6 +149,38 @@ class _ResultScreenState extends State<ResultScreen> {
                               ctrl.updateBillRounding(bill.id, sel.first),
                         ),
                       ),
+                      if (calc.hasMultiPayer) ...[
+                        const SizedBox(height: 10),
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 8,
+                          ),
+                          decoration: BoxDecoration(
+                            color: p.surfaceSubtle,
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(color: p.border),
+                          ),
+                          child: Text(
+                            s.hostSettlementSummary(
+                              formatMoney(
+                                calc.hostCollectTotal,
+                                currency: currency,
+                              ),
+                              formatMoney(
+                                calc.hostRefundTotal,
+                                currency: currency,
+                              ),
+                            ),
+                            style: kTabularStyle.copyWith(
+                              fontSize: 12.5,
+                              fontWeight: FontWeight.w700,
+                              color: p.ink,
+                            ),
+                          ),
+                        ),
+                      ],
                       if (calc.roundingDelta != 0) ...[
                         const SizedBox(height: 10),
                         Container(
@@ -246,6 +278,7 @@ class _ResultScreenState extends State<ResultScreen> {
                     breakdown: calc.breakdowns[i],
                     currency: currency,
                     accentColor: p.participantColor(i),
+                    hasMultiPayer: calc.hasMultiPayer,
                     expanded: _expandedPersonIds
                         .contains(calc.breakdowns[i].participant.id),
                     onToggleExpand: () {
@@ -256,7 +289,8 @@ class _ResultScreenState extends State<ResultScreen> {
                         }
                       });
                     },
-                    onTogglePaid: calc.breakdowns[i].participant.isHost
+                    onTogglePaid: (calc.breakdowns[i].participant.isHost ||
+                            calc.breakdowns[i].netAmount == 0)
                         ? null
                         : () => ctrl.toggleParticipantPaid(
                               bill.id,
@@ -264,7 +298,7 @@ class _ResultScreenState extends State<ResultScreen> {
                             ),
                     onShowQr: (!currency.supportsVietQr ||
                             calc.breakdowns[i].participant.isHost ||
-                            calc.breakdowns[i].finalAmount <= 0)
+                            calc.breakdowns[i].collectAmount <= 0)
                         ? null
                         : () => _openPersonQrModal(
                               context,
@@ -635,6 +669,7 @@ class _ParticipantResultCard extends StatelessWidget {
     required this.breakdown,
     required this.currency,
     required this.accentColor,
+    this.hasMultiPayer = false,
     required this.expanded,
     required this.onToggleExpand,
     this.onTogglePaid,
@@ -644,6 +679,7 @@ class _ParticipantResultCard extends StatelessWidget {
   final ParticipantBreakdown breakdown;
   final CurrencySpec currency;
   final Color accentColor;
+  final bool hasMultiPayer;
   final bool expanded;
   final VoidCallback onToggleExpand;
   final VoidCallback? onTogglePaid;
@@ -654,9 +690,42 @@ class _ParticipantResultCard extends StatelessWidget {
     final palette = context.mam;
     final s = context.s;
     final p = breakdown.participant;
-    final isZeroDebt = breakdown.finalAmount <= 0;
-    final paid = p.isHost || p.paid || isZeroDebt;
-    final hasActionRow = !p.isHost && !isZeroDebt;
+    final isEven = breakdown.netAmount == 0;
+    final isRefund = breakdown.isRefund;
+    final paid = p.isHost || p.paid || isEven;
+    final hasActionRow = !p.isHost && !isEven;
+
+    final String? badgeLabel;
+    final Color badgeBg;
+    final Color badgeFg;
+    if (isRefund) {
+      badgeLabel = p.paid ? s.refunded : s.refundBadge;
+      badgeBg = p.paid ? palette.successSoft : palette.warningSoft;
+      badgeFg = p.paid ? palette.success : palette.warning;
+    } else if (paid) {
+      badgeLabel = s.paid;
+      badgeBg = palette.successSoft;
+      badgeFg = palette.success;
+    } else {
+      badgeLabel = null;
+      badgeBg = Colors.transparent;
+      badgeFg = Colors.transparent;
+    }
+
+    final displayAmount = p.isHost
+        ? formatMoney(breakdown.finalAmount, currency: currency)
+        : (isRefund
+            ? formatSignedMoney(-breakdown.refundAmount, currency: currency)
+            : formatMoney(breakdown.collectAmount, currency: currency));
+    final amountColor = isRefund
+        ? (p.paid ? palette.success : palette.warning)
+        : (paid ? palette.success : palette.ink);
+    final subtitleText = hasMultiPayer
+        ? s.shareAndUpfront(
+            formatMoney(breakdown.finalAmount, currency: currency),
+            formatMoney(breakdown.paidUpfront, currency: currency),
+          )
+        : s.tapForDetails(breakdown.itemShares.length);
 
     return Card(
       child: Column(
@@ -691,44 +760,43 @@ class _ParticipantResultCard extends StatelessWidget {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Row(
+                            Wrap(
+                              spacing: 6,
+                              runSpacing: 4,
+                              crossAxisAlignment: WrapCrossAlignment.center,
                               children: [
-                                Flexible(
-                                  child: Text(
-                                    p.isHost ? '${p.name} (${s.host})' : p.name,
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: const TextStyle(
-                                      fontWeight: FontWeight.w700,
-                                      fontSize: 15,
-                                    ),
+                                Text(
+                                  p.isHost ? '${p.name} (${s.host})' : p.name,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.w700,
+                                    fontSize: 15,
                                   ),
                                 ),
-                                if (paid) ...[
-                                  const SizedBox(width: 6),
+                                if (badgeLabel != null)
                                   Container(
                                     padding: const EdgeInsets.symmetric(
                                       horizontal: 6,
                                       vertical: 2,
                                     ),
                                     decoration: BoxDecoration(
-                                      color: palette.successSoft,
+                                      color: badgeBg,
                                       borderRadius: BorderRadius.circular(6),
                                     ),
                                     child: Text(
-                                      s.paid,
+                                      badgeLabel,
                                       style: TextStyle(
                                         fontSize: 10.5,
                                         fontWeight: FontWeight.w700,
-                                        color: palette.success,
+                                        color: badgeFg,
                                       ),
                                     ),
                                   ),
-                                ],
                               ],
                             ),
                             Text(
-                              s.tapForDetails(breakdown.itemShares.length),
+                              subtitleText,
                               style: TextStyle(
                                 fontSize: 12,
                                 color: palette.muted,
@@ -739,11 +807,11 @@ class _ParticipantResultCard extends StatelessWidget {
                       ),
                       const SizedBox(width: 8),
                       Text(
-                        formatMoney(breakdown.finalAmount, currency: currency),
+                        displayAmount,
                         style: kTabularStyle.copyWith(
                           fontSize: 16,
                           fontWeight: FontWeight.w800,
-                          color: paid ? palette.success : palette.ink,
+                          color: amountColor,
                         ),
                       ),
                     ],
@@ -861,7 +929,11 @@ class _ParticipantResultCard extends StatelessWidget {
                             : Icons.radio_button_unchecked_rounded,
                         size: 16,
                       ),
-                      label: Text(paid ? s.paid : s.markPaid),
+                      label: Text(
+                        isRefund
+                            ? (p.paid ? s.refunded : s.markRefunded)
+                            : (paid ? s.paid : s.markPaid),
+                      ),
                     ),
                   ),
                   if (onShowQr != null) ...[

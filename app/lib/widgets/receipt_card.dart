@@ -104,6 +104,7 @@ class SummaryReceiptCard extends StatelessWidget {
               breakdown: calc.breakdowns[i],
               currency: currency,
               accentColor: MamPalette.light.participantColor(i),
+              hasMultiPayer: calc.hasMultiPayer,
             ),
             if (i < calc.breakdowns.length - 1) const SizedBox(height: 10),
           ],
@@ -163,6 +164,20 @@ class SummaryReceiptCard extends StatelessWidget {
               ),
             ],
           ),
+          if (calc.hasMultiPayer) ...[
+            const SizedBox(height: 6),
+            Text(
+              s.hostSettlementSummary(
+                formatMoney(calc.hostCollectTotal, currency: currency),
+                formatMoney(calc.hostRefundTotal, currency: currency),
+              ),
+              style: kTabularStyle.copyWith(
+                fontSize: 11.5,
+                fontWeight: FontWeight.w700,
+                color: MamReceiptColors.ink,
+              ),
+            ),
+          ],
           if (calc.roundingDelta != 0) ...[
             const SizedBox(height: 4),
             Text(
@@ -264,6 +279,7 @@ class PersonQrCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final s = context.s;
     final p = breakdown.participant;
+    final dueAmount = breakdown.collectAmount;
     final transferNote = VietQrGenerator.formatTransferNote(
       template: bill.payload.transferNoteTemplate,
       participantName: p.name,
@@ -272,7 +288,7 @@ class PersonQrCard extends StatelessWidget {
     final dynamicQr = VietQrGenerator.generate(
       bankBin: bank.bankBin,
       accountNo: bank.accountNo,
-      amount: breakdown.finalAmount,
+      amount: dueAmount,
       transferNote: transferNote,
     );
 
@@ -316,7 +332,7 @@ class PersonQrCard extends StatelessWidget {
           ),
           const SizedBox(height: 4),
           Text(
-            formatVnd(breakdown.finalAmount),
+            formatVnd(dueAmount),
             style: kTabularStyle.copyWith(
               fontSize: 28,
               fontWeight: FontWeight.w800,
@@ -324,6 +340,20 @@ class PersonQrCard extends StatelessWidget {
               letterSpacing: -0.6,
             ),
           ),
+          if (breakdown.paidUpfront > 0) ...[
+            const SizedBox(height: 2),
+            Text(
+              s.netQrBreakdown(
+                formatVnd(breakdown.finalAmount),
+                formatVnd(breakdown.paidUpfront),
+              ),
+              style: kTabularStyle.copyWith(
+                fontSize: 11.5,
+                fontWeight: FontWeight.w600,
+                color: MamReceiptColors.muted,
+              ),
+            ),
+          ],
           const SizedBox(height: 14),
           Container(
             padding: const EdgeInsets.all(10),
@@ -424,17 +454,31 @@ class _ReceiptPersonRow extends StatelessWidget {
     required this.breakdown,
     required this.currency,
     required this.accentColor,
+    this.hasMultiPayer = false,
   });
 
   final ParticipantBreakdown breakdown;
   final CurrencySpec currency;
   final Color accentColor;
+  final bool hasMultiPayer;
 
   @override
   Widget build(BuildContext context) {
     final s = context.s;
     final p = breakdown.participant;
-    final paid = p.isHost || p.paid;
+    final paid = p.isHost || p.paid || breakdown.netAmount == 0;
+    final isRefund = breakdown.isRefund;
+    final displayAmount = p.isHost
+        ? formatMoney(breakdown.finalAmount, currency: currency)
+        : (isRefund
+            ? s.refundAmountLabel(
+                formatMoney(breakdown.refundAmount, currency: currency),
+              )
+            : formatMoney(breakdown.collectAmount, currency: currency));
+    final amountColor = isRefund
+        ? (p.paid ? MamReceiptColors.success : const Color(0xFFB45309))
+        : MamReceiptColors.ink;
+
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -472,7 +516,20 @@ class _ReceiptPersonRow extends StatelessWidget {
                   ],
                 ],
               ),
-              if (breakdown.itemShares.isNotEmpty)
+              if (hasMultiPayer)
+                Text(
+                  s.shareAndUpfront(
+                    formatMoney(breakdown.finalAmount, currency: currency),
+                    formatMoney(breakdown.paidUpfront, currency: currency),
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: kTabularStyle.copyWith(
+                    fontSize: 11,
+                    color: MamReceiptColors.muted,
+                  ),
+                )
+              else if (breakdown.itemShares.isNotEmpty)
                 Text(
                   breakdown.itemShares.map((item) => item.itemName).join(', '),
                   maxLines: 2,
@@ -487,11 +544,11 @@ class _ReceiptPersonRow extends StatelessWidget {
         ),
         const SizedBox(width: 8),
         Text(
-          formatMoney(breakdown.finalAmount, currency: currency),
+          displayAmount,
           style: kTabularStyle.copyWith(
             fontSize: 14,
             fontWeight: FontWeight.w800,
-            color: MamReceiptColors.ink,
+            color: amountColor,
           ),
         ),
       ],

@@ -251,5 +251,88 @@ void main() {
         PaymentStatus.pending,
       );
     });
+
+    test('multi-payer hub-and-spoke via Host: A 100k, B 200k, C 50k, D 0, E 0 -> 70k each', () {
+      const payload = BillPayload(
+        participants: [
+          Participant(id: 'a', name: 'A', isHost: true, paid: true, paidUpfront: 100000),
+          Participant(id: 'b', name: 'B', paidUpfront: 200000),
+          Participant(id: 'c', name: 'C', paidUpfront: 50000),
+          Participant(id: 'd', name: 'D'),
+          Participant(id: 'e', name: 'E'),
+        ],
+        items: [
+          BillItem(
+            id: 'equal_total',
+            name: 'Equal split total',
+            lineTotal: 350000,
+            shares: {'a': 1, 'b': 1, 'c': 1, 'd': 1, 'e': 1},
+          ),
+        ],
+        roundingMode: RoundingMode.none,
+      );
+
+      final res = BillCalculator.calculate(payload);
+      expect(res.hasMultiPayer, isTrue);
+      expect(res.totalPaidUpfront, 350000);
+      expect(res.computedGrandTotal, 350000);
+
+      for (final b in res.breakdowns) {
+        expect(b.finalAmount, 70000);
+      }
+      expect(res.breakdownFor('a')!.netAmount, -30000);
+      expect(res.breakdownFor('b')!.netAmount, -130000);
+      expect(res.breakdownFor('b')!.isRefund, isTrue);
+      expect(res.breakdownFor('b')!.refundAmount, 130000);
+      expect(res.breakdownFor('b')!.collectAmount, 0);
+
+      expect(res.breakdownFor('c')!.netAmount, 20000);
+      expect(res.breakdownFor('c')!.collectAmount, 20000);
+      expect(res.breakdownFor('d')!.netAmount, 70000);
+      expect(res.breakdownFor('e')!.netAmount, 70000);
+
+      expect(res.hostCollectTotal, 160000);
+      expect(res.hostRefundTotal, 130000);
+      expect(BillCalculator.computePaymentStatus(payload, calc: res), PaymentStatus.pending);
+
+      // Even if C, D, E paid, bill remains pending until B is marked refunded
+      final onlyCollected = payload.copyWith(
+        participants: payload.participants
+            .map((p) => (p.id == 'c' || p.id == 'd' || p.id == 'e') ? p.copyWith(paid: true) : p)
+            .toList(),
+      );
+      expect(BillCalculator.computePaymentStatus(onlyCollected), PaymentStatus.pending);
+
+      // Once B is also marked refunded -> bill is settled
+      final allDone = onlyCollected.copyWith(
+        participants: onlyCollected.participants
+            .map((p) => p.id == 'b' ? p.copyWith(paid: true) : p)
+            .toList(),
+      );
+      expect(BillCalculator.computePaymentStatus(allDone), PaymentStatus.settled);
+    });
+
+    test('multi-payer auto-marks exact-break-even member (paidUpfront == share) as paid', () {
+      const payload = BillPayload(
+        participants: [
+          Participant(id: 'a', name: 'A', isHost: true, paid: true, paidUpfront: 140000),
+          Participant(id: 'b', name: 'B', paidUpfront: 70000),
+          Participant(id: 'c', name: 'C'),
+        ],
+        items: [
+          BillItem(
+            id: 'equal_total',
+            name: 'Total',
+            lineTotal: 210000,
+            shares: {'a': 1, 'b': 1, 'c': 1},
+          ),
+        ],
+        roundingMode: RoundingMode.none,
+      );
+
+      final normalized = BillCalculator.normalizeParticipantPaidStates(payload);
+      expect(normalized.participants.firstWhere((p) => p.id == 'b').paid, isTrue);
+      expect(normalized.participants.firstWhere((p) => p.id == 'c').paid, isFalse);
+    });
   });
 }

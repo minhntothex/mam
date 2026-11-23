@@ -22,10 +22,12 @@ class _QuickEqualScreenState extends State<QuickEqualScreen> {
   late final TextEditingController _titleCtrl;
   final TextEditingController _totalCtrl = TextEditingController();
   final TextEditingController _nameCtrl = TextEditingController();
+  final Map<String, TextEditingController> _upfrontCtrls = {};
 
   late RoundingMode _roundingMode;
   late DateTime _billDate;
   late List<Participant> _participants;
+  bool _multiPayer = false;
 
   @override
   void initState() {
@@ -38,6 +40,7 @@ class _QuickEqualScreenState extends State<QuickEqualScreen> {
     _participants = [
       Participant(id: 'p_1', name: s.me, isHost: true, paid: true),
     ];
+    _upfrontCtrls['p_1'] = TextEditingController();
   }
 
   @override
@@ -45,21 +48,49 @@ class _QuickEqualScreenState extends State<QuickEqualScreen> {
     _titleCtrl.dispose();
     _totalCtrl.dispose();
     _nameCtrl.dispose();
+    for (final ctrl in _upfrontCtrls.values) {
+      ctrl.dispose();
+    }
     super.dispose();
   }
 
-  int get _totalAmount => parseVndInput(_totalCtrl.text);
+  TextEditingController _upfrontCtrlFor(String participantId) {
+    return _upfrontCtrls.putIfAbsent(
+      participantId,
+      TextEditingController.new,
+    );
+  }
+
+  int _upfrontOf(String participantId) {
+    if (!_multiPayer) return 0;
+    final ctrl = _upfrontCtrls[participantId];
+    if (ctrl == null) return 0;
+    return parseAmountInput(ctrl.text);
+  }
+
+  int get _totalUpfrontAmount => _participants.fold<int>(
+        0,
+        (sum, p) => sum + _upfrontOf(p.id),
+      );
+
+  int get _effectiveTotalAmount =>
+      _multiPayer ? _totalUpfrontAmount : parseVndInput(_totalCtrl.text);
 
   BillPayload _buildPayload(MamStrings s) {
-    final shares = {for (final p in _participants) p.id: 1.0};
+    final total = _effectiveTotalAmount;
+    final effectiveParticipants = [
+      for (final p in _participants)
+        p.copyWith(paidUpfront: _multiPayer ? _upfrontOf(p.id) : 0),
+    ];
+    final shares = {for (final p in effectiveParticipants) p.id: 1.0};
     return BillPayload(
-      participants: _participants,
+      participants: effectiveParticipants,
       items: [
         BillItem(
           id: 'equal_total',
           name: s.equalTotalItemName,
           quantity: 1,
-          lineTotal: _totalAmount,
+          lineTotal: total,
           shares: shares,
         ),
       ],
@@ -72,7 +103,7 @@ class _QuickEqualScreenState extends State<QuickEqualScreen> {
 
   void _applyGroup(FriendGroup group) {
     setState(() {
-      _participants = group.members
+      final next = group.members
           .map(
             (m) => Participant(
               id: 'p_${m.id}',
@@ -82,20 +113,50 @@ class _QuickEqualScreenState extends State<QuickEqualScreen> {
             ),
           )
           .toList();
+      final nextIds = {for (final p in next) p.id};
+      final staleIds =
+          _upfrontCtrls.keys.where((id) => !nextIds.contains(id)).toList();
+      for (final id in staleIds) {
+        _upfrontCtrls.remove(id)?.dispose();
+      }
+      for (final p in next) {
+        _upfrontCtrlFor(p.id);
+      }
+      _participants = next;
     });
   }
 
   void _addParticipant() {
     final name = _nameCtrl.text.trim();
     if (name.isEmpty) return;
+    final id = 'p_${DateTime.now().microsecondsSinceEpoch}';
     setState(() {
-      _participants.add(
-        Participant(
-          id: 'p_${DateTime.now().microsecondsSinceEpoch}',
-          name: name,
-        ),
-      );
+      _participants.add(Participant(id: id, name: name));
+      _upfrontCtrlFor(id);
       _nameCtrl.clear();
+    });
+  }
+
+  void _removeParticipant(int index) {
+    if (_participants.length <= 1) return;
+    setState(() {
+      final removed = _participants.removeAt(index);
+      _upfrontCtrls.remove(removed.id)?.dispose();
+      if (removed.isHost && _participants.isNotEmpty) {
+        _participants[0] = _participants[0].copyWith(isHost: true, paid: true);
+      }
+    });
+  }
+
+  void _setHost(int index) {
+    setState(() {
+      _participants = [
+        for (var j = 0; j < _participants.length; j++)
+          _participants[j].copyWith(
+            isHost: j == index,
+            paid: j == index,
+          ),
+      ];
     });
   }
 
@@ -116,9 +177,14 @@ class _QuickEqualScreenState extends State<QuickEqualScreen> {
 
   Future<void> _submit() async {
     final s = context.s;
-    if (_totalAmount <= 0) {
+    final total = _effectiveTotalAmount;
+    if (total <= 0) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(s.enterPositiveTotal)),
+        SnackBar(
+          content: Text(
+            _multiPayer ? s.enterPositiveUpfront : s.enterPositiveTotal,
+          ),
+        ),
       );
       return;
     }
@@ -135,7 +201,7 @@ class _QuickEqualScreenState extends State<QuickEqualScreen> {
       title: title,
       billDate: _billDate,
       mode: BillMode.quickEqual,
-      totalAmount: _totalAmount,
+      totalAmount: total,
       payload: _buildPayload(s),
       createdAt: now,
       updatedAt: now,
@@ -173,10 +239,12 @@ class _QuickEqualScreenState extends State<QuickEqualScreen> {
     final stepLabel = s.isVi
         ? currency.roundingStepLabelVi
         : currency.roundingStepLabelEn;
+    final totalAmount = _effectiveTotalAmount;
     final preview = BillCalculator.calculate(_buildPayload(s));
     final perPerson =
         preview.breakdowns.isNotEmpty ? preview.breakdowns.first.finalAmount : 0;
     final groups = widget.controller.activeFriendGroups;
+    final zeroHint = currency.decimalDigits > 0 ? '0.00' : '0';
 
     return Scaffold(
       appBar: AppBar(title: Text(s.quickEqualTitle)),
@@ -242,54 +310,104 @@ class _QuickEqualScreenState extends State<QuickEqualScreen> {
                     ),
                   ),
                   const SizedBox(height: 14),
-                  Text(
-                    s.totalBillCurrency(currency.code),
-                    style: TextStyle(
-                      fontSize: 12.5,
-                      fontWeight: FontWeight.w600,
-                      color: p.muted,
+                  SizedBox(
+                    width: double.infinity,
+                    child: SegmentedButton<bool>(
+                      showSelectedIcon: false,
+                      segments: [
+                        ButtonSegment(
+                          value: false,
+                          label: Text(s.singlePayerMode),
+                        ),
+                        ButtonSegment(
+                          value: true,
+                          label: Text(s.multiPayerMode),
+                        ),
+                      ],
+                      selected: {_multiPayer},
+                      onSelectionChanged: (sel) =>
+                          setState(() => _multiPayer = sel.first),
                     ),
                   ),
-                  const SizedBox(height: 6),
-                  TextField(
-                    controller: _totalCtrl,
-                    keyboardType: TextInputType.number,
-                    inputFormatters: [amountFormatter],
-                    style: kTabularStyle.copyWith(
-                      fontSize: 22,
-                      fontWeight: FontWeight.w800,
-                    ),
-                    decoration: InputDecoration(
-                      hintText: currency.decimalDigits > 0 ? '0.00' : '0',
-                      hintStyle: kTabularStyle.copyWith(
-                        fontSize: 22,
-                        fontWeight: FontWeight.w500,
-                        color: p.muted.withValues(alpha: 0.35),
+                  const SizedBox(height: 14),
+                  if (!_multiPayer) ...[
+                    Text(
+                      s.totalBillCurrency(currency.code),
+                      style: TextStyle(
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w600,
+                        color: p.muted,
                       ),
-                      prefixText:
-                          currency.symbolBefore ? '${currency.symbol} ' : null,
-                      suffixText: currency.symbolBefore ? null : currency.symbol,
                     ),
-                    onChanged: (_) => setState(() {}),
-                  ),
-                  const SizedBox(height: 8),
-                  Wrap(
-                    spacing: 6,
-                    runSpacing: 6,
-                    children: currency.quickPresets.map((v) {
-                      return ActionChip(
-                        label: Text(formatMoney(v, currency: currency)),
-                        onPressed: () {
-                          _totalCtrl.text = formatAmountForInput(
-                            v,
-                            currency: currency,
-                            format: inputFormat,
-                          );
-                          setState(() {});
-                        },
-                      );
-                    }).toList(),
-                  ),
+                    const SizedBox(height: 6),
+                    TextField(
+                      controller: _totalCtrl,
+                      keyboardType: TextInputType.number,
+                      inputFormatters: [amountFormatter],
+                      style: kTabularStyle.copyWith(
+                        fontSize: 22,
+                        fontWeight: FontWeight.w800,
+                      ),
+                      decoration: InputDecoration(
+                        hintText: zeroHint,
+                        hintStyle: kTabularStyle.copyWith(
+                          fontSize: 22,
+                          fontWeight: FontWeight.w500,
+                          color: p.muted.withValues(alpha: 0.35),
+                        ),
+                        prefixText:
+                            currency.symbolBefore ? '${currency.symbol} ' : null,
+                        suffixText:
+                            currency.symbolBefore ? null : currency.symbol,
+                      ),
+                      onChanged: (_) => setState(() {}),
+                    ),
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 6,
+                      runSpacing: 6,
+                      children: currency.quickPresets.map((v) {
+                        return ActionChip(
+                          label: Text(formatMoney(v, currency: currency)),
+                          onPressed: () {
+                            _totalCtrl.text = formatAmountForInput(
+                              v,
+                              currency: currency,
+                              format: inputFormat,
+                            );
+                            setState(() {});
+                          },
+                        );
+                      }).toList(),
+                    ),
+                  ] else
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 11,
+                      ),
+                      decoration: BoxDecoration(
+                        color: p.surfaceSubtle,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              s.autoTotalFromUpfront(
+                                formatMoney(totalAmount, currency: currency),
+                              ),
+                              style: kTabularStyle.copyWith(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w700,
+                                color: p.ink,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                 ],
               ),
             ),
@@ -323,40 +441,141 @@ class _QuickEqualScreenState extends State<QuickEqualScreen> {
                     ),
                   ],
                   const SizedBox(height: 10),
-                  Wrap(
-                    spacing: 6,
-                    runSpacing: 6,
-                    children: [
-                      for (var i = 0; i < _participants.length; i++)
-                        InputChip(
-                          avatar: CircleAvatar(
-                            backgroundColor: p.participantColor(i),
-                            radius: 6,
+                  if (!_multiPayer)
+                    Wrap(
+                      spacing: 6,
+                      runSpacing: 6,
+                      children: [
+                        for (var i = 0; i < _participants.length; i++)
+                          InputChip(
+                            avatar: CircleAvatar(
+                              backgroundColor: p.participantColor(i),
+                              radius: 6,
+                            ),
+                            label: Text(
+                              _participants[i].isHost
+                                  ? '${_participants[i].name} (${s.host})'
+                                  : _participants[i].name,
+                            ),
+                            selected: _participants[i].isHost,
+                            selectedColor: p.primarySoft,
+                            onPressed: () => _setHost(i),
+                            onDeleted: _participants.length > 1
+                                ? () => _removeParticipant(i)
+                                : null,
                           ),
-                          label: Text(
-                            _participants[i].isHost
-                                ? '${_participants[i].name} (${s.host})'
-                                : _participants[i].name,
-                          ),
-                          selected: _participants[i].isHost,
-                          selectedColor: p.primarySoft,
-                          onPressed: () {
-                            setState(() {
-                              _participants = [
-                                for (var j = 0; j < _participants.length; j++)
-                                  _participants[j].copyWith(
-                                    isHost: j == i,
-                                    paid: j == i,
+                      ],
+                    )
+                  else
+                    Column(
+                      children: [
+                        for (var i = 0; i < _participants.length; i++)
+                          Padding(
+                            padding: EdgeInsets.only(
+                              bottom: i < _participants.length - 1 ? 8 : 0,
+                            ),
+                            child: Row(
+                              children: [
+                                Expanded(
+                                  child: InkWell(
+                                    borderRadius: BorderRadius.circular(10),
+                                    onTap: () => _setHost(i),
+                                    child: Padding(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 4,
+                                        vertical: 8,
+                                      ),
+                                      child: Row(
+                                        children: [
+                                          CircleAvatar(
+                                            backgroundColor:
+                                                p.participantColor(i),
+                                            radius: 6,
+                                          ),
+                                          const SizedBox(width: 8),
+                                          Flexible(
+                                            child: Text(
+                                              _participants[i].isHost
+                                                  ? '${_participants[i].name} (${s.host})'
+                                                  : _participants[i].name,
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
+                                              style: TextStyle(
+                                                fontSize: 13.5,
+                                                fontWeight:
+                                                    _participants[i].isHost
+                                                        ? FontWeight.w700
+                                                        : FontWeight.w600,
+                                                color: _participants[i].isHost
+                                                    ? p.primary
+                                                    : p.ink,
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
                                   ),
-                              ];
-                            });
-                          },
-                          onDeleted: _participants.length > 1
-                              ? () => setState(() => _participants.removeAt(i))
-                              : null,
-                        ),
-                    ],
-                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                SizedBox(
+                                  width: 136,
+                                  child: TextField(
+                                    key: ValueKey(
+                                      'upfront_${_participants[i].id}',
+                                    ),
+                                    controller:
+                                        _upfrontCtrlFor(_participants[i].id),
+                                    keyboardType: TextInputType.number,
+                                    inputFormatters: [amountFormatter],
+                                    textAlign: TextAlign.right,
+                                    style: kTabularStyle.copyWith(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                    decoration: InputDecoration(
+                                      isDense: true,
+                                      contentPadding:
+                                          const EdgeInsets.symmetric(
+                                        horizontal: 10,
+                                        vertical: 10,
+                                      ),
+                                      hintText: zeroHint,
+                                      hintStyle: kTabularStyle.copyWith(
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w500,
+                                        color: p.muted.withValues(alpha: 0.35),
+                                      ),
+                                      prefixText: currency.symbolBefore
+                                          ? '${currency.symbol} '
+                                          : null,
+                                      suffixText: currency.symbolBefore
+                                          ? null
+                                          : currency.symbol,
+                                    ),
+                                    onChanged: (_) => setState(() {}),
+                                  ),
+                                ),
+                                if (_participants.length > 1)
+                                  IconButton(
+                                    visualDensity: VisualDensity.compact,
+                                    padding: EdgeInsets.zero,
+                                    constraints: const BoxConstraints(
+                                      minWidth: 32,
+                                      minHeight: 32,
+                                    ),
+                                    onPressed: () => _removeParticipant(i),
+                                    icon: Icon(
+                                      Icons.close_rounded,
+                                      size: 16,
+                                      color: p.muted,
+                                    ),
+                                  ),
+                              ],
+                            ),
+                          ),
+                      ],
+                    ),
                   const SizedBox(height: 10),
                   Row(
                     children: [
@@ -417,7 +636,7 @@ class _QuickEqualScreenState extends State<QuickEqualScreen> {
                           setState(() => _roundingMode = sel.first),
                     ),
                   ),
-                  if (_totalAmount > 0) ...[
+                  if (totalAmount > 0) ...[
                     const SizedBox(height: 14),
                     Container(
                       padding: const EdgeInsets.all(12),
@@ -425,40 +644,69 @@ class _QuickEqualScreenState extends State<QuickEqualScreen> {
                         color: p.primarySoft,
                         borderRadius: BorderRadius.circular(12),
                       ),
-                      child: Row(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Expanded(
-                            child: Text(
-                              s.eachPersonPays,
-                              style: const TextStyle(fontWeight: FontWeight.w600),
-                            ),
-                          ),
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.end,
+                          Row(
                             children: [
-                              Text(
-                                formatMoney(perPerson, currency: currency),
-                                style: kTabularStyle.copyWith(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.w800,
-                                  color: p.primary,
+                              Expanded(
+                                child: Text(
+                                  s.eachPersonPays,
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.w600,
+                                  ),
                                 ),
                               ),
-                              if (preview.roundingDelta != 0)
-                                Text(
-                                  s.roundingDeltaShort(
-                                    formatSignedMoney(
-                                      preview.roundingDelta,
-                                      currency: currency,
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.end,
+                                children: [
+                                  Text(
+                                    formatMoney(perPerson, currency: currency),
+                                    style: kTabularStyle.copyWith(
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.w800,
+                                      color: p.primary,
                                     ),
                                   ),
-                                  style: TextStyle(
-                                    fontSize: 11.5,
-                                    color: p.muted,
-                                  ),
-                                ),
+                                  if (preview.roundingDelta != 0)
+                                    Text(
+                                      s.roundingDeltaShort(
+                                        formatSignedMoney(
+                                          preview.roundingDelta,
+                                          currency: currency,
+                                        ),
+                                      ),
+                                      style: TextStyle(
+                                        fontSize: 11.5,
+                                        color: p.muted,
+                                      ),
+                                    ),
+                                ],
+                              ),
                             ],
                           ),
+                          if (preview.hasMultiPayer &&
+                              (preview.hostCollectTotal > 0 ||
+                                  preview.hostRefundTotal > 0)) ...[
+                            const SizedBox(height: 6),
+                            Text(
+                              s.hostSettlementSummary(
+                                formatMoney(
+                                  preview.hostCollectTotal,
+                                  currency: currency,
+                                ),
+                                formatMoney(
+                                  preview.hostRefundTotal,
+                                  currency: currency,
+                                ),
+                              ),
+                              style: kTabularStyle.copyWith(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                                color: p.muted,
+                              ),
+                            ),
+                          ],
                         ],
                       ),
                     ),

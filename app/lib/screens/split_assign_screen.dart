@@ -1,5 +1,6 @@
 import 'package:material_ui/material_ui.dart';
 
+import '../core/amount_input_formatter.dart';
 import '../core/calculator.dart';
 import '../core/currency.dart';
 import '../core/formatters.dart';
@@ -239,6 +240,25 @@ class _SplitAssignScreenState extends State<SplitAssignScreen> {
     });
   }
 
+  Future<void> _openUpfrontSheet() async {
+    final updated = await showModalBottomSheet<Map<String, int>>(
+      context: context,
+      isScrollControlled: true,
+      builder: (_) => _UpfrontPaymentsSheet(
+        participants: _participants,
+        currency: _currency,
+        inputFormat: widget.controller.amountInputFormat,
+      ),
+    );
+    if (updated == null || !mounted) return;
+    setState(() {
+      _participants = [
+        for (final person in _participants)
+          person.copyWith(paidUpfront: updated[person.id] ?? 0),
+      ];
+    });
+  }
+
   Future<void> _pickGroupSheet() async {
     final s = context.s;
     final groups = widget.controller.activeFriendGroups;
@@ -375,6 +395,23 @@ class _SplitAssignScreenState extends State<SplitAssignScreen> {
       appBar: AppBar(
         title: Text(s.assignTitle),
         actions: [
+          TextButton.icon(
+            key: const ValueKey('assign_upfront_btn'),
+            onPressed: _openUpfrontSheet,
+            icon: Icon(
+              Icons.payments_outlined,
+              size: 18,
+              color: calc.hasMultiPayer ? p.primary : p.ink,
+            ),
+            label: Text(
+              s.upfrontBtn,
+              style: TextStyle(
+                color: calc.hasMultiPayer ? p.primary : p.ink,
+                fontWeight:
+                    calc.hasMultiPayer ? FontWeight.w700 : FontWeight.w600,
+              ),
+            ),
+          ),
           if (widget.controller.activeFriendGroups.isNotEmpty)
             TextButton.icon(
               onPressed: _pickGroupSheet,
@@ -723,6 +760,161 @@ class _SplitAssignScreenState extends State<SplitAssignScreen> {
                   onPressed: _saveAndFinish,
                   icon: const Icon(Icons.check_rounded),
                   label: Text(s.saveAndViewResult),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _UpfrontPaymentsSheet extends StatefulWidget {
+  const _UpfrontPaymentsSheet({
+    required this.participants,
+    required this.currency,
+    required this.inputFormat,
+  });
+
+  final List<Participant> participants;
+  final CurrencySpec currency;
+  final AmountInputFormat inputFormat;
+
+  @override
+  State<_UpfrontPaymentsSheet> createState() => _UpfrontPaymentsSheetState();
+}
+
+class _UpfrontPaymentsSheetState extends State<_UpfrontPaymentsSheet> {
+  late final Map<String, TextEditingController> _ctrls;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrls = {
+      for (final p in widget.participants)
+        p.id: TextEditingController(
+          text: formatAmountForInput(
+            p.paidUpfront,
+            currency: widget.currency,
+            format: widget.inputFormat,
+          ),
+        ),
+    };
+  }
+
+  @override
+  void dispose() {
+    for (final ctrl in _ctrls.values) {
+      ctrl.dispose();
+    }
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final p = context.mam;
+    final s = context.s;
+    final currency = widget.currency;
+    final formatter = AmountTextInputFormatter(
+      currency: currency,
+      format: widget.inputFormat,
+    );
+    final zeroHint = currency.decimalDigits > 0 ? '0.00' : '0';
+
+    return SafeArea(
+      child: Padding(
+        padding: EdgeInsets.fromLTRB(
+          16,
+          16,
+          16,
+          MediaQuery.of(context).viewInsets.bottom + 16,
+        ),
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                s.upfrontSheetTitle,
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                s.upfrontSheetHint,
+                style: TextStyle(fontSize: 12.5, color: p.muted),
+              ),
+              const SizedBox(height: 14),
+              for (var i = 0; i < widget.participants.length; i++)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 10),
+                  child: Row(
+                    children: [
+                      CircleAvatar(
+                        backgroundColor: p.participantColor(i),
+                        radius: 6,
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          widget.participants[i].isHost
+                              ? '${widget.participants[i].name} (${s.host})'
+                              : widget.participants[i].name,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      SizedBox(
+                        width: 144,
+                        child: TextField(
+                          controller: _ctrls[widget.participants[i].id],
+                          keyboardType: TextInputType.number,
+                          inputFormatters: [formatter],
+                          textAlign: TextAlign.right,
+                          style: kTabularStyle.copyWith(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w700,
+                          ),
+                          decoration: InputDecoration(
+                            isDense: true,
+                            hintText: zeroHint,
+                            hintStyle: kTabularStyle.copyWith(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w500,
+                              color: p.muted.withValues(alpha: 0.35),
+                            ),
+                            prefixText: currency.symbolBefore
+                                ? '${currency.symbol} '
+                                : null,
+                            suffixText: currency.symbolBefore
+                                ? null
+                                : currency.symbol,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              const SizedBox(height: 6),
+              SizedBox(
+                width: double.infinity,
+                child: FilledButton(
+                  onPressed: () {
+                    final result = {
+                      for (final entry in _ctrls.entries)
+                        entry.key: parseAmountInput(entry.value.text),
+                    };
+                    Navigator.pop(context, result);
+                  },
+                  child: Text(s.apply),
                 ),
               ),
             ],

@@ -71,6 +71,8 @@ class MamStrings {
   String get allSettledTitle =>
       t('All bills settled', 'Tất cả bill đã thu đủ');
   String get uncollectedTitle => t('Uncollected', 'Còn chưa thu');
+  String toRefundBanner(String formatted) =>
+      isVi ? 'Cần trả lại: $formatted' : 'To refund: $formatted';
   String get allSettledBadge => t('All clear', 'Đã chốt đủ');
   String pendingBillsBadge(int count) =>
       isVi ? '$count bill đang chờ' : '$count pending';
@@ -118,6 +120,21 @@ class MamStrings {
 
   // Quick Equal
   String get quickEqualTitle => t('Quick Equal Split', 'Chia đều siêu tốc');
+  String get singlePayerMode => t('Single payer', '1 người trả');
+  String get multiPayerMode => t('Multiple payers', 'Nhiều người ứng');
+  String get paidUpfrontLabel => t('Paid upfront', 'Đã ứng');
+  String get upfrontBtn => t('Upfront', 'Tiền ứng');
+  String get upfrontSheetTitle => t('Upfront payments', 'Ai đã ứng tiền trước?');
+  String get upfrontSheetHint => t(
+        'Enter how much each person already paid. Host collects and refunds the net difference.',
+        'Nhập số tiền mỗi người đã trả trước. Chủ xị sẽ thu và trả lại phần chênh lệch.',
+      );
+  String autoTotalFromUpfront(String formatted) =>
+      isVi ? 'Tổng tiền đã ứng: $formatted' : 'Total from upfront: $formatted';
+  String get enterPositiveUpfront => t(
+        'Please enter at least one upfront amount greater than 0',
+        'Vui lòng nhập ít nhất 1 khoản đã ứng lớn hơn 0',
+      );
   String get mealName => t('Meal / Event name', 'Tên bữa ăn');
   String get mealHint => t('e.g. Morning coffee', 'vd: Cà phê sáng');
   String get totalBillVnd => t('Total bill (VND)', 'Tổng tiền hóa đơn (VNĐ)');
@@ -248,6 +265,18 @@ class MamStrings {
       );
   String get flatShipLine => t('Shipping (equal split)', 'Tiền ship (chia đều)');
   String get markPaid => t('Mark paid', 'Tick đã trả');
+  String get markRefunded => t('Mark refunded', 'Tick đã trả lại');
+  String get refunded => t('Refunded', 'Đã trả lại');
+  String get refundBadge => t('Refund', 'Trả lại');
+  String refundAmountLabel(String amount) =>
+      isVi ? 'Trả lại $amount' : 'Refund $amount';
+  String shareAndUpfront(String share, String paid) =>
+      isVi ? 'Phần $share · Đã ứng $paid' : 'Share $share · Paid $paid';
+  String hostSettlementSummary(String collect, String refund) => isVi
+      ? 'Chủ xị thu: $collect · Trả lại: $refund'
+      : 'Host collects: $collect · Refunds: $refund';
+  String netQrBreakdown(String share, String paid) =>
+      isVi ? 'Phần $share − Đã ứng $paid' : 'Share $share − Paid $paid';
   String get personQrBtn => t('VietQR', 'VietQR riêng');
   String get exportSummaryBtn =>
       t('Export Summary Receipt', 'Xuất Receipt Card tổng');

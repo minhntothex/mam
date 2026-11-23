@@ -36,6 +36,8 @@ final class ParticipantBreakdown {
     required this.flatAdjustment,
     required this.rawAmount,
     required this.finalAmount,
+    this.paidUpfront = 0,
+    required this.netAmount,
   });
 
   final Participant participant;
@@ -44,7 +46,22 @@ final class ParticipantBreakdown {
   final double proRataAdjustment;
   final double flatAdjustment;
   final double rawAmount;
+
+  /// This person's fair share of the bill after rounding.
   final int finalAmount;
+
+  /// Amount this person paid out of pocket up front.
+  final int paidUpfront;
+
+  /// Net Hub-and-Spoke settlement relative to the Host:
+  /// - `> 0`: person owes Host `netAmount`
+  /// - `< 0`: Host refunds `-netAmount` to this person
+  /// - `== 0`: already settled / even
+  final int netAmount;
+
+  bool get isRefund => !participant.isHost && netAmount < 0;
+  int get collectAmount => netAmount > 0 ? netAmount : 0;
+  int get refundAmount => netAmount < 0 ? -netAmount : 0;
 }
 
 final class BillCalculationResult {
@@ -59,6 +76,10 @@ final class BillCalculationResult {
     required this.ocrDifference,
     required this.sumFinalAmounts,
     required this.roundingDelta,
+    this.hasMultiPayer = false,
+    this.totalPaidUpfront = 0,
+    this.hostCollectTotal = 0,
+    this.hostRefundTotal = 0,
   });
 
   /// Ordered list matching `payload.participants`.
@@ -83,6 +104,18 @@ final class BillCalculationResult {
   /// `sumFinalAmounts - assignedGrandTotal`.
   /// Positive = host collects extra; negative = host absorbs shortfall.
   final int roundingDelta;
+
+  /// True when at least one participant recorded an upfront payment.
+  final bool hasMultiPayer;
+
+  /// Sum of all participants' `paidUpfront`.
+  final int totalPaidUpfront;
+
+  /// Sum of positive `netAmount` owed by non-host participants to the Host.
+  final int hostCollectTotal;
+
+  /// Sum of `abs(netAmount)` that the Host refunds to overpaid non-host participants.
+  final int hostRefundTotal;
 
   bool get hasUnassignedItems => unassignedItems.isNotEmpty;
 
@@ -185,6 +218,10 @@ abstract final class BillCalculator {
 
     final breakdowns = <ParticipantBreakdown>[];
     var sumFinalAmounts = 0;
+    final hasMultiPayer = participants.any((p) => p.paidUpfront > 0);
+    var totalPaidUpfront = 0;
+    var hostCollectTotal = 0;
+    var hostRefundTotal = 0;
 
     final currency = CurrencyRegistry.byCode(payload.currencyCode);
     final roundingStep = currency.roundingStep;
@@ -203,6 +240,19 @@ abstract final class BillCalculator {
         step: roundingStep,
       );
       sumFinalAmounts += finalAmt;
+      final upfront = participant.paidUpfront > 0 ? participant.paidUpfront : 0;
+      totalPaidUpfront += upfront;
+
+      final netAmt = hasMultiPayer
+          ? (finalAmt - upfront)
+          : (participant.isHost ? 0 : finalAmt);
+      if (!participant.isHost) {
+        if (netAmt > 0) {
+          hostCollectTotal += netAmt;
+        } else if (netAmt < 0) {
+          hostRefundTotal += -netAmt;
+        }
+      }
 
       breakdowns.add(
         ParticipantBreakdown(
@@ -213,6 +263,8 @@ abstract final class BillCalculator {
           flatAdjustment: flat,
           rawAmount: clampedRaw,
           finalAmount: finalAmt,
+          paidUpfront: upfront,
+          netAmount: netAmt,
         ),
       );
     }
@@ -232,6 +284,10 @@ abstract final class BillCalculator {
       ocrDifference: ocrDiff,
       sumFinalAmounts: sumFinalAmounts,
       roundingDelta: sumFinalAmounts - assignedGrandTotal,
+      hasMultiPayer: hasMultiPayer,
+      totalPaidUpfront: totalPaidUpfront,
+      hostCollectTotal: hostCollectTotal,
+      hostRefundTotal: hostRefundTotal,
     );
   }
 
@@ -244,23 +300,23 @@ abstract final class BillCalculator {
     };
   }
 
-  /// Automatically marks non-host participants with 0 debt as `paid: true`
-  /// (`paidAt: null`). If a previously auto-paid member later receives a
-  /// positive amount on edit, resets `paid` to `false` while preserving
+  /// Automatically marks non-host participants with 0 net settlement (`netAmount == 0`)
+  /// as `paid: true` (`paidAt: null`). If a previously auto-paid member later
+  /// owes or needs a refund on edit, resets `paid` to `false` while preserving
   /// manual paid marks (`paidAt != null`).
   static BillPayload normalizeParticipantPaidStates(
     BillPayload payload, {
     BillCalculationResult? calc,
   }) {
     final result = calc ?? calculate(payload);
-    final amountById = {
-      for (final b in result.breakdowns) b.participant.id: b.finalAmount,
+    final netById = {
+      for (final b in result.breakdowns) b.participant.id: b.netAmount,
     };
     var changed = false;
     final updated = payload.participants.map((p) {
       if (p.isHost) return p;
-      final owed = amountById[p.id] ?? 0;
-      if (owed <= 0) {
+      final net = netById[p.id] ?? 0;
+      if (net == 0) {
         if (!p.paid) {
           changed = true;
           return p.copyWith(paid: true, paidAt: null);
@@ -284,7 +340,7 @@ abstract final class BillCalculator {
     if (payload.participants.isEmpty) return PaymentStatus.pending;
     final result = calc ?? calculate(payload);
     final allSettled = result.breakdowns.every(
-      (b) => b.participant.isHost || b.participant.paid || b.finalAmount <= 0,
+      (b) => b.participant.isHost || b.participant.paid || b.netAmount == 0,
     );
     return allSettled ? PaymentStatus.settled : PaymentStatus.pending;
   }

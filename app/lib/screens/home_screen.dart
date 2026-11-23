@@ -188,6 +188,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       padding: const EdgeInsets.only(bottom: 14),
                       child: _UncollectedBanner(
                         totalsByCurrency: ctrl.uncollectedByCurrency,
+                        toRefundByCurrency: ctrl.toRefundByCurrency,
                         defaultCurrency: ctrl.currentCurrency,
                         pendingCount: ctrl.pendingBills.length,
                       ),
@@ -694,11 +695,13 @@ class _SyncBadge extends StatelessWidget {
 class _UncollectedBanner extends StatelessWidget {
   const _UncollectedBanner({
     required this.totalsByCurrency,
+    this.toRefundByCurrency = const {},
     required this.defaultCurrency,
     required this.pendingCount,
   });
 
   final Map<String, int> totalsByCurrency;
+  final Map<String, int> toRefundByCurrency;
   final CurrencySpec defaultCurrency;
   final int pendingCount;
 
@@ -735,6 +738,9 @@ class _UncollectedBanner extends StatelessWidget {
     final primaryAmount = totalsByCurrency[primaryCode] ?? 0;
     final secondaryEntries = totalsByCurrency.entries
         .where((e) => e.key != primaryCode && e.value > 0)
+        .toList(growable: false);
+    final refundEntries = toRefundByCurrency.entries
+        .where((e) => e.value > 0)
         .toList(growable: false);
 
     return Container(
@@ -817,6 +823,26 @@ class _UncollectedBanner extends StatelessWidget {
               style: kTabularStyle.copyWith(
                 color: fg.withValues(alpha: 0.82),
                 fontSize: 13.5,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ],
+          if (refundEntries.isNotEmpty) ...[
+            const SizedBox(height: 4),
+            Text(
+              s.toRefundBanner(
+                refundEntries
+                    .map(
+                      (e) => formatMoney(
+                        e.value,
+                        currency: CurrencyRegistry.byCode(e.key),
+                      ),
+                    )
+                    .join(' · '),
+              ),
+              style: kTabularStyle.copyWith(
+                color: fg.withValues(alpha: 0.85),
+                fontSize: 12.5,
                 fontWeight: FontWeight.w700,
               ),
             ),

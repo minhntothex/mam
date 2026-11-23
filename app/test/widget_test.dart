@@ -469,4 +469,76 @@ void main() {
     expect(find.text('Per-person breakdown'), findsOneWidget);
     expect(controller.activeBills.length, 2);
   });
+
+  testWidgets('Multi-payer Quick Equal Split (A 100k, B 200k, C 50k, D 0, E 0) settles via Host', (tester) async {
+    SharedPreferences.setMockInitialValues({});
+    final store = await LocalStore.open();
+    final controller = MamController(store: store);
+    await controller.init();
+
+    await tester.pumpWidget(MamApp(controller: controller));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Equal split'));
+    await tester.pumpAndSettle();
+
+    // Switch to Multiple payers mode
+    await tester.tap(find.text('Multiple payers'));
+    await tester.pumpAndSettle();
+
+    // Add B, C, D, E
+    for (final name in ['B', 'C', 'D', 'E']) {
+      final addNameField = find.widgetWithText(TextField, 'Add person name...');
+      await tester.ensureVisible(addNameField);
+      await tester.enterText(addNameField, name);
+      await tester.tap(find.widgetWithText(OutlinedButton, 'Add'));
+      await tester.pumpAndSettle();
+    }
+
+    // Enter upfront amounts: Me(Host)=100k, B=200k, C=50k (D, E left 0)
+    final upfrontFields = find.byWidgetPredicate(
+      (w) => w.key is ValueKey<String> && (w.key! as ValueKey<String>).value.startsWith('upfront_'),
+    );
+    expect(upfrontFields, findsNWidgets(5));
+    await tester.ensureVisible(upfrontFields.at(0));
+    await tester.enterText(upfrontFields.at(0), '100000');
+    await tester.ensureVisible(upfrontFields.at(1));
+    await tester.enterText(upfrontFields.at(1), '200000');
+    await tester.ensureVisible(upfrontFields.at(2));
+    await tester.enterText(upfrontFields.at(2), '50000');
+    await tester.pumpAndSettle();
+
+    await tester.scrollUntilVisible(
+      find.text('Total from upfront: 350.000đ'),
+      -200,
+      scrollable: find.byType(Scrollable).first,
+    );
+    expect(find.text('Total from upfront: 350.000đ'), findsOneWidget);
+
+    await tester.tap(find.text('Create result & VietQR'));
+    await tester.pumpAndSettle();
+
+    // ResultScreen shows Host settlement, Refund badge + -130.000đ for B, 20.000đ for C, 70.000đ for D & E
+    expect(find.text('Host collects: 160.000đ · Refunds: 130.000đ'), findsOneWidget);
+    await tester.scrollUntilVisible(
+      find.text('-130.000đ'),
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
+    expect(find.text('Refund'), findsOneWidget);
+    expect(find.text('-130.000đ'), findsOneWidget);
+    expect(find.text('Mark refunded'), findsOneWidget);
+    await tester.scrollUntilVisible(
+      find.text('20.000đ'),
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
+    expect(find.text('20.000đ'), findsOneWidget);
+
+    // Home shows Uncollected 160.000đ + To refund: 130.000đ
+    await tester.tap(find.text('Home'));
+    await tester.pumpAndSettle();
+    expect(find.text('160.000đ'), findsOneWidget);
+    expect(find.text('To refund: 130.000đ'), findsOneWidget);
+  });
 }

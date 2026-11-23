@@ -477,6 +477,7 @@ final class Participant {
     this.isHost = false,
     this.paid = false,
     this.paidAt,
+    this.paidUpfront = 0,
   });
 
   final String id;
@@ -484,15 +485,18 @@ final class Participant {
   final bool isHost;
   final bool paid;
   final DateTime? paidAt;
+  final int paidUpfront;
 
   factory Participant.fromJson(Map<String, dynamic> json) {
     final isHost = (json['isHost'] as bool?) ?? false;
+    final upfront = _parseInt(json['paidUpfront']);
     return Participant(
       id: json['id'] as String,
       name: json['name'] as String,
       isHost: isHost,
       paid: (json['paid'] as bool?) ?? isHost,
       paidAt: _parseNullableDateTime(json['paidAt']),
+      paidUpfront: upfront > 0 ? upfront : 0,
     );
   }
 
@@ -502,6 +506,7 @@ final class Participant {
         'isHost': isHost,
         'paid': paid,
         if (paidAt != null) 'paidAt': paidAt!.toUtc().toIso8601String(),
+        if (paidUpfront > 0) 'paidUpfront': paidUpfront,
       };
 
   Participant copyWith({
@@ -510,6 +515,7 @@ final class Participant {
     bool? isHost,
     bool? paid,
     Object? paidAt = _unset,
+    int? paidUpfront,
   }) {
     return Participant(
       id: id ?? this.id,
@@ -517,6 +523,7 @@ final class Participant {
       isHost: isHost ?? this.isHost,
       paid: paid ?? this.paid,
       paidAt: identical(paidAt, _unset) ? this.paidAt : paidAt as DateTime?,
+      paidUpfront: paidUpfront ?? this.paidUpfront,
     );
   }
 }

@@ -95,16 +95,32 @@ class MamController extends ChangeNotifier {
   List<FriendGroup> get activeFriendGroups =>
       _friendGroups.where((g) => !g.isDeleted).toList(growable: false);
 
-  /// Sum of unpaid amounts owed by non-host participants across pending bills,
-  /// grouped by currency code so multi-currency bills never mix units.
+  /// Sum of unpaid positive net amounts owed by non-host participants across
+  /// pending bills, grouped by currency code so multi-currency bills never mix.
   Map<String, int> get uncollectedByCurrency {
     final totals = <String, int>{};
     for (final bill in pendingBills) {
       final code = CurrencyRegistry.byCode(bill.payload.currencyCode).code;
       final calc = BillCalculator.calculate(bill.payload);
       for (final b in calc.breakdowns) {
-        if (!b.participant.isHost && !b.participant.paid) {
-          totals[code] = (totals[code] ?? 0) + b.finalAmount;
+        if (!b.participant.isHost && !b.participant.paid && b.collectAmount > 0) {
+          totals[code] = (totals[code] ?? 0) + b.collectAmount;
+        }
+      }
+    }
+    return totals;
+  }
+
+  /// Sum of unpaid refunds the Host still owes to overpaid non-host members
+  /// across pending multi-payer bills, grouped by currency code.
+  Map<String, int> get toRefundByCurrency {
+    final totals = <String, int>{};
+    for (final bill in pendingBills) {
+      final code = CurrencyRegistry.byCode(bill.payload.currencyCode).code;
+      final calc = BillCalculator.calculate(bill.payload);
+      for (final b in calc.breakdowns) {
+        if (!b.participant.isHost && !b.participant.paid && b.refundAmount > 0) {
+          totals[code] = (totals[code] ?? 0) + b.refundAmount;
         }
       }
     }
