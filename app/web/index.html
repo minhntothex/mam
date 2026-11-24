@@ -51,30 +51,13 @@
     }
 
     .mam-splash-logo {
-      position: absolute;
-      top: calc(env(safe-area-inset-top, 0px) + 15vh);
-      left: 50%;
-      transform: translateX(-50%);
       width: 128px;
       height: 128px;
-    }
-
-    .mam-splash-spinner {
-      width: 28px;
-      height: 28px;
-      border-radius: 50%;
-      border: 3px solid #E3E7F5;
-      border-top-color: #564CE6;
-      animation: mam-spin 0.75s linear infinite;
-    }
-
-    @keyframes mam-spin {
-      to { transform: rotate(360deg); }
     }
   </style>
 </head>
 <body>
-  <div id="mam-splash" role="status" aria-label="Loading">
+  <div id="mam-splash" role="status" aria-label="Mâm">
     <svg class="mam-splash-logo" xmlns="http://www.w3.org/2000/svg" viewBox="188 168 670 670" aria-hidden="true">
       <defs>
         <linearGradient id="skyGrad" x1="0%" y1="0%" x2="100%" y2="100%">
@@ -96,7 +79,6 @@
         <path d="M 602.01 181.59 A 304.00 304.00 0 0 1 847.95 474.69 L 677.98 477.66 A 134.00 134.00 0 0 0 569.57 348.46 Z" fill="url(#butterGrad)"/>
       </g>
     </svg>
-    <div class="mam-splash-spinner"></div>
   </div>
 
   <script>
