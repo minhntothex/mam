@@ -14,9 +14,9 @@ const corsHeaders = {
 const MAX_BASE64_CHARS = 3_000_000; // ~2.2 MB binary image limit
 
 const PRIMARY_MODEL = (Deno.env.get("GEMINI_MODEL") ?? "gemini-3.8-flash").trim();
-const FALLBACK_MODELS = PRIMARY_MODEL === "gemini-3.6-flash"
-  ? [PRIMARY_MODEL]
-  : [PRIMARY_MODEL, "gemini-3.6-flash"];
+const FALLBACK_MODELS = Array.from(
+  new Set([PRIMARY_MODEL, "gemini-3.6-flash", "gemini-3.5-flash-lite"]),
+);
 
 const EXTRACTION_PROMPT = `Bạn là bộ trích xuất hóa đơn ăn uống (hóa đơn giấy nhiệt Việt Nam, GrabFood, ShopeeFood, nhà hàng VN hoặc quốc tế).
 Hãy đọc ảnh hóa đơn và trả về DUY NHẤT một JSON object hợp lệ theo đúng schema sau:
@@ -71,12 +71,26 @@ function extractGeminiErrorMessage(rawText: string): string {
 }
 
 function shouldFallbackModel(status: number, errMessage: string): boolean {
-  if (status === 404) return true;
+  if (
+    status === 404 ||
+    status === 429 ||
+    status === 500 ||
+    status === 502 ||
+    status === 503 ||
+    status === 504
+  ) {
+    return true;
+  }
   const lower = errMessage.toLowerCase();
   return (
     lower.includes("no longer available") ||
     lower.includes("not found") ||
-    lower.includes("deprecated")
+    lower.includes("deprecated") ||
+    lower.includes("high demand") ||
+    lower.includes("overloaded") ||
+    lower.includes("temporarily") ||
+    lower.includes("unavailable") ||
+    lower.includes("rate limit")
   );
 }
 
