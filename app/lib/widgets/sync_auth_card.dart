@@ -1,10 +1,70 @@
 import 'package:material_ui/material_ui.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../core/formatters.dart';
 import '../l10n/mam_strings.dart';
 import '../services/sync_service.dart';
 import '../state/mam_controller.dart';
 import '../theme/mam_theme.dart';
+
+/// Maps raw Supabase / network auth exceptions to concise, user-friendly text.
+String formatFriendlyAuthError(Object error, MamStrings s) {
+  String code = '';
+  String message = '';
+  String? statusCode;
+
+  if (error is AuthException) {
+    code = (error.code ?? '').toLowerCase().trim();
+    message = error.message.trim();
+    statusCode = error.statusCode;
+  } else {
+    message = error.toString().trim();
+  }
+
+  final lower = '$code ${message.toLowerCase()}';
+
+  if (code == 'invalid_credentials' ||
+      lower.contains('invalid login credentials') ||
+      lower.contains('invalid_grant')) {
+    return s.authErrInvalidCredentials;
+  }
+  if (code == 'email_not_confirmed' || lower.contains('email not confirmed')) {
+    return s.authErrEmailNotConfirmed;
+  }
+  if (code == 'user_already_exists' ||
+      lower.contains('user already registered') ||
+      lower.contains('already exists')) {
+    return s.authErrUserExists;
+  }
+  if (code == 'weak_password' ||
+      lower.contains('password should be at least') ||
+      lower.contains('weak password')) {
+    return s.authErrWeakPassword;
+  }
+  if (code == 'validation_failed' ||
+      lower.contains('unable to validate email') ||
+      lower.contains('invalid email') ||
+      lower.contains('valid email')) {
+    return s.authErrInvalidEmail;
+  }
+  if (statusCode == '429' ||
+      code.contains('rate_limit') ||
+      lower.contains('too many requests') ||
+      lower.contains('rate limit')) {
+    return s.authErrRateLimited;
+  }
+  if (lower.contains('socketexception') ||
+      lower.contains('clientexception') ||
+      lower.contains('failed host lookup') ||
+      lower.contains('failed to fetch') ||
+      lower.contains('network')) {
+    return s.authErrNetwork;
+  }
+  if (error is AuthException && message.isNotEmpty) {
+    return message;
+  }
+  return s.authErrGeneric;
+}
 
 class SyncAuthCard extends StatefulWidget {
   const SyncAuthCard({
@@ -60,7 +120,9 @@ class _SyncAuthCardState extends State<SyncAuthCard> {
         await widget.syncService.signInWithEmail(email: email, password: pass);
       }
     } catch (e) {
-      if (mounted) setState(() => _error = e.toString());
+      if (mounted) {
+        setState(() => _error = formatFriendlyAuthError(e, s));
+      }
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -192,10 +254,39 @@ class _SyncAuthCardState extends State<SyncAuthCard> {
               decoration: InputDecoration(labelText: s.passwordLabel),
             ),
             if (_error != null) ...[
-              const SizedBox(height: 8),
-              Text(
-                _error!,
-                style: TextStyle(fontSize: 12, color: p.danger),
+              const SizedBox(height: 10),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 9,
+                ),
+                decoration: BoxDecoration(
+                  color: p.dangerSoft,
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: p.danger.withValues(alpha: 0.3)),
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Icon(
+                      Icons.error_outline_rounded,
+                      size: 16,
+                      color: p.danger,
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        _error!,
+                        style: TextStyle(
+                          fontSize: 12.5,
+                          fontWeight: FontWeight.w500,
+                          color: p.ink,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ],
             if (_info != null) ...[

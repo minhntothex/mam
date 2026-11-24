@@ -439,6 +439,38 @@ class MamStrings {
         'Đã tạo tài khoản! Kiểm tra email để xác nhận rồi đăng nhập.',
       );
   String get working => t('Working...', 'Đang xử lý...');
+  String get authErrInvalidCredentials => t(
+        'Incorrect email or password. Please check and try again.',
+        'Email hoặc mật khẩu chưa đúng. Vui lòng kiểm tra lại.',
+      );
+  String get authErrEmailNotConfirmed => t(
+        'Your email is not confirmed yet. Please check your inbox.',
+        'Email chưa được xác nhận. Vui lòng kiểm tra hộp thư của bạn.',
+      );
+  String get authErrUserExists => t(
+        'This email is already registered. Try signing in instead.',
+        'Email này đã được đăng ký. Hãy thử đăng nhập.',
+      );
+  String get authErrWeakPassword => t(
+        'Password is too weak. Please use at least 6 characters.',
+        'Mật khẩu quá yếu. Vui lòng dùng ít nhất 6 ký tự.',
+      );
+  String get authErrInvalidEmail => t(
+        'Please enter a valid email address.',
+        'Vui lòng nhập địa chỉ email hợp lệ.',
+      );
+  String get authErrRateLimited => t(
+        'Too many attempts. Please wait a moment and try again.',
+        'Bạn thử quá nhiều lần. Vui lòng đợi một lát rồi thử lại.',
+      );
+  String get authErrNetwork => t(
+        'Network error. Please check your internet connection.',
+        'Lỗi kết nối mạng. Vui lòng kiểm tra internet và thử lại.',
+      );
+  String get authErrGeneric => t(
+        'Could not sign in right now. Please try again.',
+        'Không thể đăng nhập lúc này. Vui lòng thử lại.',
+      );
 
   // OCR Sheet
   String get ocrSheetTitle => t('Scan receipt (AI OCR)', 'Scan hóa đơn (AI OCR)');
