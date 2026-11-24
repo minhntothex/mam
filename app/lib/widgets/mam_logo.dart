@@ -6,7 +6,7 @@ import 'package:material_ui/material_ui.dart';
 /// sky periwinkle, fresh mint, and a detached honey-butter fair-share wedge —
 /// arranged as a shared round dining tray ("mâm") on a transparent background.
 ///
-/// Mirrors `assets/brand/mam-logo.svg` (`viewBox="173 154 700 700"`) so the
+/// Mirrors `assets/brand/mam-logo.svg` (`viewBox="188 168 670 670"`) so the
 /// AppBar mark, splash screen, and exported PNG Receipt Cards share identical
 /// geometry.
 class MamLogoMark extends StatelessWidget {
@@ -37,9 +37,12 @@ class _MamLogoPainter extends CustomPainter {
   final bool showTile;
 
   static const double _tileDesignSize = 1024.0;
-  static const double _markViewSize = 700.0;
-  static const double _markOffsetX = 173.0;
-  static const double _markOffsetY = 154.0;
+  static const double _markViewSize = 670.0;
+  static const double _markOffsetX = 188.0;
+  static const double _markOffsetY = 168.0;
+  static const double _tileMarkScale = 1.26;
+  static const double _visualCenterX = 523.19;
+  static const double _visualCenterY = 503.80;
   static const double _degToRad = math.pi / 180.0;
 
   @override
@@ -62,6 +65,9 @@ class _MamLogoPainter extends CustomPainter {
           colors: [Color(0xFFFFFFFF), Color(0xFFEAF1FF)],
         ).createShader(tileRect);
       canvas.drawRRect(tileRRect, tilePaint);
+      canvas.translate(512, 512);
+      canvas.scale(_tileMarkScale);
+      canvas.translate(-_visualCenterX, -_visualCenterY);
     } else {
       canvas.scale(dim / _markViewSize);
       canvas.translate(-_markOffsetX, -_markOffsetY);
