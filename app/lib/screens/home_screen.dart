@@ -42,7 +42,8 @@ class _HomeScreenState extends State<HomeScreen> {
   _HomeFilter _filter = _HomeFilter.all;
   String? _openSwipeBillId;
 
-  /// Active page tab inside IndexedStack: 0 = Home, 1 = Members, 2 = Settings.
+  /// Active page tab inside IndexedStack:
+  /// 0 = Home, 1 = Members, 2 = Balances (per-person), 3 = Settings.
   int _tabIndex = 0;
 
   @override
@@ -60,34 +61,6 @@ class _HomeScreenState extends State<HomeScreen> {
         curve: Curves.easeOutCubic,
       );
     }
-  }
-
-  Future<void> _handleSyncTap() async {
-    final ctrl = widget.controller;
-    final s = context.s;
-    if (ctrl.signedInEmail == null) {
-      setState(() => _tabIndex = 2);
-      if (mounted) {
-        ScaffoldMessenger.of(context)
-          ..hideCurrentSnackBar()
-          ..showSnackBar(SnackBar(content: Text(s.syncSignInPrompt)));
-      }
-      return;
-    }
-    if (ctrl.syncStatus == SyncStatus.syncing) {
-      ScaffoldMessenger.of(context)
-        ..hideCurrentSnackBar()
-        ..showSnackBar(SnackBar(content: Text(s.syncAlreadyRunning)));
-      return;
-    }
-    await ctrl.triggerSync();
-    if (!mounted) return;
-    final msg = ctrl.syncStatus == SyncStatus.error
-        ? (ctrl.lastSyncError ?? s.syncError)
-        : s.syncDoneSnack;
-    ScaffoldMessenger.of(context)
-      ..hideCurrentSnackBar()
-      ..showSnackBar(SnackBar(content: Text(msg)));
   }
 
   Future<void> _openCreateActionSheet(BuildContext context) async {
@@ -222,6 +195,7 @@ class _HomeScreenState extends State<HomeScreen> {
             children: [
               _buildHomeTab(context, ctrl),
               MembersScreen(controller: ctrl),
+              _BalancesTab(controller: ctrl),
               SettingsScreen(
                 controller: ctrl,
                 syncAuthSectionBuilder: widget.syncAuthSectionBuilder,
@@ -231,7 +205,7 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
           bottomNavigationBar: _MamBottomBar(
             tabIndex: _tabIndex,
-            syncStatus: ctrl.syncStatus,
+            hasPendingBalances: ctrl.pendingBills.isNotEmpty,
             onSelectTab: (idx) {
               if (idx == 0 && _tabIndex == 0) {
                 _scrollHomeToTop();
@@ -240,7 +214,6 @@ class _HomeScreenState extends State<HomeScreen> {
               }
             },
             onCreateTap: () => _openCreateActionSheet(context),
-            onSyncTap: _handleSyncTap,
           ),
         );
       },
@@ -383,9 +356,6 @@ class _HomeScreenState extends State<HomeScreen> {
                     toRefundByCurrency: ctrl.toRefundByCurrency,
                     defaultCurrency: ctrl.currentCurrency,
                     pendingCount: ctrl.pendingBills.length,
-                    onTap: ctrl.pendingBills.isEmpty
-                        ? null
-                        : () => _openPersonLedgerSheet(context),
                   ),
                 );
               }
@@ -438,16 +408,6 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ),
       ),
-    );
-  }
-
-  Future<void> _openPersonLedgerSheet(BuildContext context) async {
-    final p = context.mam;
-    await showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: p.surface,
-      builder: (_) => _PersonLedgerSheet(controller: widget.controller),
     );
   }
 
@@ -613,30 +573,20 @@ class _HomeScreenState extends State<HomeScreen> {
 class _MamBottomBar extends StatelessWidget {
   const _MamBottomBar({
     required this.tabIndex,
-    required this.syncStatus,
+    required this.hasPendingBalances,
     required this.onSelectTab,
     required this.onCreateTap,
-    required this.onSyncTap,
   });
 
   final int tabIndex;
-  final SyncStatus syncStatus;
+  final bool hasPendingBalances;
   final ValueChanged<int> onSelectTab;
   final VoidCallback onCreateTap;
-  final VoidCallback onSyncTap;
 
   @override
   Widget build(BuildContext context) {
     final p = context.mam;
     final s = context.s;
-
-    final (syncIcon, syncDotColor) = switch (syncStatus) {
-      SyncStatus.synced => (Icons.cloud_done_outlined, p.success),
-      SyncStatus.pendingPush => (Icons.cloud_upload_outlined, p.warning),
-      SyncStatus.error => (Icons.cloud_off_rounded, p.danger),
-      SyncStatus.syncing => (Icons.sync_rounded, p.primary),
-      SyncStatus.localOnly => (Icons.cloud_outlined, null),
-    };
 
     return Container(
       decoration: BoxDecoration(
@@ -698,24 +648,25 @@ class _MamBottomBar extends StatelessWidget {
               ),
               Expanded(
                 child: _BottomNavItem(
-                  key: const ValueKey('nav_sync'),
-                  icon: syncIcon,
-                  label: s.navSync,
-                  active: false,
-                  loading: syncStatus == SyncStatus.syncing,
-                  badgeColor: syncDotColor,
-                  onTap: onSyncTap,
+                  key: const ValueKey('nav_balances'),
+                  icon: tabIndex == 2
+                      ? Icons.account_balance_wallet_rounded
+                      : Icons.account_balance_wallet_outlined,
+                  label: s.navBalances,
+                  active: tabIndex == 2,
+                  badgeColor: hasPendingBalances ? p.warning : null,
+                  onTap: () => onSelectTab(2),
                 ),
               ),
               Expanded(
                 child: _BottomNavItem(
                   key: const ValueKey('nav_settings'),
-                  icon: tabIndex == 2
+                  icon: tabIndex == 3
                       ? Icons.tune_rounded
                       : Icons.tune_outlined,
                   label: s.navSettings,
-                  active: tabIndex == 2,
-                  onTap: () => onSelectTab(2),
+                  active: tabIndex == 3,
+                  onTap: () => onSelectTab(3),
                 ),
               ),
             ],
@@ -733,7 +684,6 @@ class _BottomNavItem extends StatelessWidget {
     required this.label,
     required this.active,
     required this.onTap,
-    this.loading = false,
     this.badgeColor,
   });
 
@@ -741,7 +691,6 @@ class _BottomNavItem extends StatelessWidget {
   final String label;
   final bool active;
   final VoidCallback onTap;
-  final bool loading;
   final Color? badgeColor;
 
   @override
@@ -760,18 +709,8 @@ class _BottomNavItem extends StatelessWidget {
             Stack(
               clipBehavior: Clip.none,
               children: [
-                if (loading)
-                  SizedBox(
-                    width: 20,
-                    height: 20,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2.2,
-                      color: p.primary,
-                    ),
-                  )
-                else
-                  Icon(icon, size: 22, color: fg),
-                if (!loading && badgeColor != null)
+                Icon(icon, size: 22, color: fg),
+                if (badgeColor != null)
                   Positioned(
                     right: -3,
                     top: -2,
@@ -805,8 +744,8 @@ class _BottomNavItem extends StatelessWidget {
   }
 }
 
-class _PersonLedgerSheet extends StatelessWidget {
-  const _PersonLedgerSheet({required this.controller});
+class _BalancesTab extends StatelessWidget {
+  const _BalancesTab({required this.controller});
 
   final MamController controller;
 
@@ -823,266 +762,242 @@ class _PersonLedgerSheet extends StatelessWidget {
           contacts: controller.activeMembers,
         );
 
-        return SafeArea(
-          child: DraggableScrollableSheet(
-            expand: false,
-            initialChildSize: 0.72,
-            minChildSize: 0.4,
-            maxChildSize: 0.92,
-            builder: (_, scrollCtrl) => Column(
-              children: [
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 12, 8, 6),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          s.personLedgerTitle,
-                          style: const TextStyle(
-                            fontSize: 16.5,
-                            fontWeight: FontWeight.w800,
-                          ),
+        return Scaffold(
+          appBar: AppBar(
+            automaticallyImplyLeading: false,
+            title: Text(s.personLedgerTitle),
+          ),
+          body: ledger.isEmpty
+              ? Center(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 28,
+                      vertical: 40,
+                    ),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.check_circle_outline_rounded,
+                          size: 40,
+                          color: p.success,
                         ),
-                      ),
-                      IconButton(
-                        onPressed: () => Navigator.pop(context),
-                        icon: const Icon(Icons.close_rounded),
-                      ),
-                    ],
+                        const SizedBox(height: 10),
+                        Text(
+                          s.noUnsettledPeople,
+                          textAlign: TextAlign.center,
+                          style: TextStyle(color: p.muted, fontSize: 14),
+                        ),
+                      ],
+                    ),
                   ),
-                ),
-                Expanded(
-                  child: ledger.isEmpty
-                      ? Center(
-                          child: Text(
-                            s.noUnsettledPeople,
-                            style: TextStyle(color: p.muted),
-                          ),
-                        )
-                      : ListView.builder(
-                          controller: scrollCtrl,
-                          padding: const EdgeInsets.fromLTRB(16, 6, 16, 20),
-                          itemCount: ledger.summaries.length,
-                          itemBuilder: (context, index) {
-                            final item = ledger.summaries[index];
-                            final currency =
-                                CurrencyRegistry.byCode(item.currencyCode);
-                            final isRefund = item.isRefund;
-                            final bankSnapshot = currency.supportsVietQr
-                                ? controller.defaultBankAccount?.toSnapshot()
-                                : null;
+                )
+              : ListView.builder(
+                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 28),
+                  itemCount: ledger.summaries.length,
+                  itemBuilder: (context, index) {
+                    final item = ledger.summaries[index];
+                    final currency = CurrencyRegistry.byCode(item.currencyCode);
+                    final isRefund = item.isRefund;
+                    final bankSnapshot = currency.supportsVietQr
+                        ? controller.defaultBankAccount?.toSnapshot()
+                        : null;
 
-                            return Padding(
-                              padding: const EdgeInsets.only(bottom: 10),
-                              child: Card(
-                                child: Padding(
-                                  padding: const EdgeInsets.all(14),
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Row(
-                                        children: [
-                                          CircleAvatar(
-                                            radius: 16,
-                                            backgroundColor: p
-                                                .participantColor(index)
-                                                .withValues(alpha: 0.16),
-                                            child: Text(
-                                              item.displayName.isEmpty
-                                                  ? '?'
-                                                  : item.displayName[0]
-                                                      .toUpperCase(),
-                                              style: TextStyle(
-                                                color:
-                                                    p.participantColor(index),
-                                                fontWeight: FontWeight.w800,
-                                              ),
-                                            ),
-                                          ),
-                                          const SizedBox(width: 10),
-                                          Expanded(
-                                            child: Column(
-                                              crossAxisAlignment:
-                                                  CrossAxisAlignment.start,
-                                              children: [
-                                                Text(
-                                                  item.displayName,
-                                                  style: const TextStyle(
-                                                    fontSize: 15,
-                                                    fontWeight: FontWeight.w700,
-                                                  ),
-                                                ),
-                                                Text(
-                                                  s.memberPendingBillsCount(
-                                                    item.entries.length,
-                                                  ),
-                                                  style: TextStyle(
-                                                    fontSize: 12,
-                                                    color: p.muted,
-                                                  ),
-                                                ),
-                                              ],
-                                            ),
-                                          ),
-                                          Text(
-                                            isRefund
-                                                ? formatSignedMoney(
-                                                    -item.refundNet,
-                                                    currency: currency,
-                                                  )
-                                                : formatMoney(
-                                                    item.collectNet,
-                                                    currency: currency,
-                                                  ),
-                                            style: kTabularStyle.copyWith(
-                                              fontSize: 16.5,
-                                              fontWeight: FontWeight.w800,
-                                              color: isRefund
-                                                  ? p.warning
-                                                  : p.primary,
-                                            ),
-                                          ),
-                                        ],
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 10),
+                      child: Card(
+                        child: Padding(
+                          padding: const EdgeInsets.all(14),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  CircleAvatar(
+                                    radius: 16,
+                                    backgroundColor: p
+                                        .participantColor(index)
+                                        .withValues(alpha: 0.16),
+                                    child: Text(
+                                      item.displayName.isEmpty
+                                          ? '?'
+                                          : item.displayName[0].toUpperCase(),
+                                      style: TextStyle(
+                                        color: p.participantColor(index),
+                                        fontWeight: FontWeight.w800,
                                       ),
-                                      const SizedBox(height: 10),
-                                      for (final entry in item.entries)
-                                        Padding(
-                                          padding:
-                                              const EdgeInsets.only(bottom: 4),
-                                          child: Row(
-                                            children: [
-                                              Expanded(
-                                                child: Text(
-                                                  '${entry.billTitle} (${formatDateVn(entry.billDate)})',
-                                                  maxLines: 1,
-                                                  overflow:
-                                                      TextOverflow.ellipsis,
-                                                  style: TextStyle(
-                                                    fontSize: 12.5,
-                                                    color: p.muted,
-                                                  ),
-                                                ),
-                                              ),
-                                              const SizedBox(width: 8),
-                                              Text(
-                                                formatSignedMoney(
-                                                  entry.netAmount,
-                                                  currency: currency,
-                                                ),
-                                                style: kTabularStyle.copyWith(
-                                                  fontSize: 12.5,
-                                                  fontWeight: FontWeight.w600,
-                                                  color: p.ink,
-                                                ),
-                                              ),
-                                            ],
+                                    ),
+                                  ),
+                                  const SizedBox(width: 10),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          item.displayName,
+                                          style: const TextStyle(
+                                            fontSize: 15,
+                                            fontWeight: FontWeight.w700,
                                           ),
                                         ),
-                                      const SizedBox(height: 10),
-                                      Row(
-                                        children: [
-                                          if (currency.supportsVietQr &&
-                                              item.collectNet > 0) ...[
-                                            Expanded(
-                                              child: OutlinedButton.icon(
-                                                style: OutlinedButton.styleFrom(
-                                                  padding: const EdgeInsets
-                                                      .symmetric(
-                                                    horizontal: 10,
-                                                    vertical: 8,
-                                                  ),
-                                                ),
-                                                onPressed: () {
-                                                  final lines = item.entries
-                                                      .map(
-                                                        (e) => (
-                                                          label: e.billTitle,
-                                                          amount: e.netAmount,
-                                                        ),
-                                                      )
-                                                      .toList(growable: false);
-                                                  openCombinedPersonQrModal(
-                                                    context,
-                                                    headerTitle:
-                                                        s.combinedBillsTitle(
-                                                      item.entries.length,
-                                                    ),
-                                                    personName:
-                                                        item.displayName,
-                                                    amountVnd: item.collectNet,
-                                                    rawTransferNote:
-                                                        s.combinedTransferNote(
-                                                      item.displayName,
-                                                      item.entries.length,
-                                                    ),
-                                                    bank: bankSnapshot,
-                                                    lines: lines,
-                                                  );
-                                                },
-                                                icon: const Icon(
-                                                  Icons.qr_code_2_rounded,
-                                                  size: 17,
-                                                ),
-                                                label: Text(s.combinedQrBtn),
-                                              ),
-                                            ),
-                                            const SizedBox(width: 8),
-                                          ],
-                                          Expanded(
-                                            child: FilledButton.icon(
-                                              style: FilledButton.styleFrom(
-                                                padding:
-                                                    const EdgeInsets.symmetric(
-                                                  horizontal: 10,
-                                                  vertical: 8,
-                                                ),
-                                              ),
-                                              onPressed: () async {
-                                                final updated = await controller
-                                                    .markPersonPaidAcrossBills(
-                                                  item.targets,
-                                                );
-                                                if (context.mounted &&
-                                                    updated > 0) {
-                                                  ScaffoldMessenger.of(context)
-                                                    ..hideCurrentSnackBar()
-                                                    ..showSnackBar(
-                                                      SnackBar(
-                                                        content: Text(
-                                                          s.markedAllPaidSnack(
-                                                            item.displayName,
-                                                            updated,
-                                                          ),
-                                                        ),
-                                                      ),
-                                                    );
-                                                }
-                                              },
-                                              icon: const Icon(
-                                                Icons.check_rounded,
-                                                size: 17,
-                                              ),
-                                              label: Text(
-                                                isRefund
-                                                    ? s.markAllRefundedBtn
-                                                    : s.markAllPaidBtn,
-                                              ),
-                                            ),
+                                        Text(
+                                          s.memberPendingBillsCount(
+                                            item.entries.length,
                                           ),
-                                        ],
+                                          style: TextStyle(
+                                            fontSize: 12,
+                                            color: p.muted,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  Text(
+                                    isRefund
+                                        ? formatSignedMoney(
+                                            -item.refundNet,
+                                            currency: currency,
+                                          )
+                                        : formatMoney(
+                                            item.collectNet,
+                                            currency: currency,
+                                          ),
+                                    style: kTabularStyle.copyWith(
+                                      fontSize: 16.5,
+                                      fontWeight: FontWeight.w800,
+                                      color: isRefund ? p.warning : p.primary,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 10),
+                              for (final entry in item.entries)
+                                Padding(
+                                  padding: const EdgeInsets.only(bottom: 4),
+                                  child: Row(
+                                    children: [
+                                      Expanded(
+                                        child: Text(
+                                          '${entry.billTitle} (${formatDateVn(entry.billDate)})',
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: TextStyle(
+                                            fontSize: 12.5,
+                                            color: p.muted,
+                                          ),
+                                        ),
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Text(
+                                        formatSignedMoney(
+                                          entry.netAmount,
+                                          currency: currency,
+                                        ),
+                                        style: kTabularStyle.copyWith(
+                                          fontSize: 12.5,
+                                          fontWeight: FontWeight.w600,
+                                          color: p.ink,
+                                        ),
                                       ),
                                     ],
                                   ),
                                 ),
+                              const SizedBox(height: 10),
+                              Row(
+                                children: [
+                                  if (currency.supportsVietQr &&
+                                      item.collectNet > 0) ...[
+                                    Expanded(
+                                      child: OutlinedButton.icon(
+                                        style: OutlinedButton.styleFrom(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 10,
+                                            vertical: 8,
+                                          ),
+                                        ),
+                                        onPressed: () {
+                                          final lines = item.entries
+                                              .map(
+                                                (e) => (
+                                                  label: e.billTitle,
+                                                  amount: e.netAmount,
+                                                ),
+                                              )
+                                              .toList(growable: false);
+                                          openCombinedPersonQrModal(
+                                            context,
+                                            headerTitle: s.combinedBillsTitle(
+                                              item.entries.length,
+                                            ),
+                                            personName: item.displayName,
+                                            amountVnd: item.collectNet,
+                                            rawTransferNote:
+                                                s.combinedTransferNote(
+                                              item.displayName,
+                                              item.entries.length,
+                                            ),
+                                            bank: bankSnapshot,
+                                            lines: lines,
+                                          );
+                                        },
+                                        icon: const Icon(
+                                          Icons.qr_code_2_rounded,
+                                          size: 17,
+                                        ),
+                                        label: Text(s.combinedQrBtn),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 8),
+                                  ],
+                                  Expanded(
+                                    child: FilledButton.icon(
+                                      style: FilledButton.styleFrom(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 10,
+                                          vertical: 8,
+                                        ),
+                                      ),
+                                      onPressed: () async {
+                                        final updated = await controller
+                                            .markPersonPaidAcrossBills(
+                                          item.targets,
+                                        );
+                                        if (context.mounted && updated > 0) {
+                                          ScaffoldMessenger.of(context)
+                                            ..hideCurrentSnackBar()
+                                            ..showSnackBar(
+                                              SnackBar(
+                                                content: Text(
+                                                  s.markedAllPaidSnack(
+                                                    item.displayName,
+                                                    updated,
+                                                  ),
+                                                ),
+                                              ),
+                                            );
+                                        }
+                                      },
+                                      icon: const Icon(
+                                        Icons.check_rounded,
+                                        size: 17,
+                                      ),
+                                      label: Text(
+                                        isRefund
+                                            ? s.markAllRefundedBtn
+                                            : s.markAllPaidBtn,
+                                      ),
+                                    ),
+                                  ),
+                                ],
                               ),
-                            );
-                          },
+                            ],
+                          ),
                         ),
+                      ),
+                    );
+                  },
                 ),
-              ],
-            ),
-          ),
         );
       },
     );
@@ -1136,14 +1051,12 @@ class _UncollectedBanner extends StatelessWidget {
     this.toRefundByCurrency = const {},
     required this.defaultCurrency,
     required this.pendingCount,
-    this.onTap,
   });
 
   final Map<String, int> totalsByCurrency;
   final Map<String, int> toRefundByCurrency;
   final CurrencySpec defaultCurrency;
   final int pendingCount;
-  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -1183,147 +1096,113 @@ class _UncollectedBanner extends StatelessWidget {
         .where((e) => e.value > 0)
         .toList(growable: false);
 
-    return Material(
-      color: Colors.transparent,
-      borderRadius: BorderRadius.circular(16),
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        key: const ValueKey('uncollected_banner'),
-        onTap: onTap,
-        child: Ink(
-          padding: const EdgeInsets.all(18),
-          decoration: BoxDecoration(
-            gradient: heroGradient,
-            borderRadius: BorderRadius.circular(16),
-            border: heroBorder,
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+    return Container(
+      key: const ValueKey('uncollected_banner'),
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        gradient: heroGradient,
+        borderRadius: BorderRadius.circular(16),
+        border: heroBorder,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
             children: [
-              Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      allDone ? s.allSettledTitle : s.uncollectedTitle,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
+              Expanded(
+                child: Text(
+                  allDone ? s.allSettledTitle : s.uncollectedTitle,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: fg.withValues(alpha: allDone ? 0.88 : 0.82),
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+                decoration: BoxDecoration(
+                  color: pillBg,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      width: 7,
+                      height: 7,
+                      decoration: BoxDecoration(
+                        color: dotColor,
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      allDone
+                          ? s.allSettledBadge
+                          : s.pendingBillsBadge(pendingCount),
                       style: TextStyle(
-                        color: fg.withValues(alpha: allDone ? 0.88 : 0.82),
-                        fontSize: 13,
+                        color: fg,
+                        fontSize: 12,
                         fontWeight: FontWeight.w600,
                       ),
                     ),
-                  ),
-                  const SizedBox(width: 8),
-                  Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: pillBg,
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Container(
-                          width: 7,
-                          height: 7,
-                          decoration: BoxDecoration(
-                            color: dotColor,
-                            shape: BoxShape.circle,
-                          ),
-                        ),
-                        const SizedBox(width: 6),
-                        Text(
-                          allDone
-                              ? s.allSettledBadge
-                              : s.pendingBillsBadge(pendingCount),
-                          style: TextStyle(
-                            color: fg,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 6),
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  Expanded(
-                    child: Text(
-                      formatMoney(primaryAmount, currency: primarySpec),
-                      style: kTabularStyle.copyWith(
-                        color: fg,
-                        fontSize: 30,
-                        fontWeight: FontWeight.w800,
-                        letterSpacing: -0.6,
-                      ),
-                    ),
-                  ),
-                  if (!allDone)
-                    Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          s.viewByPersonHint,
-                          style: TextStyle(
-                            color: fg.withValues(alpha: 0.78),
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                        Icon(
-                          Icons.chevron_right_rounded,
-                          size: 16,
-                          color: fg.withValues(alpha: 0.78),
-                        ),
-                      ],
-                    ),
-                ],
-              ),
-              if (secondaryEntries.isNotEmpty) ...[
-                const SizedBox(height: 2),
-                Text(
-                  secondaryEntries
-                      .map(
-                        (e) =>
-                            '+ ${formatMoney(e.value, currency: CurrencyRegistry.byCode(e.key))}',
-                      )
-                      .join(' · '),
-                  style: kTabularStyle.copyWith(
-                    color: fg.withValues(alpha: 0.82),
-                    fontSize: 13.5,
-                    fontWeight: FontWeight.w700,
-                  ),
+                  ],
                 ),
-              ],
-              if (refundEntries.isNotEmpty) ...[
-                const SizedBox(height: 4),
-                Text(
-                  s.toRefundBanner(
-                    refundEntries
-                        .map(
-                          (e) => formatMoney(
-                            e.value,
-                            currency: CurrencyRegistry.byCode(e.key),
-                          ),
-                        )
-                        .join(' · '),
-                  ),
-                  style: kTabularStyle.copyWith(
-                    color: fg.withValues(alpha: 0.85),
-                    fontSize: 12.5,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ],
+              ),
             ],
           ),
-        ),
+          const SizedBox(height: 6),
+          Text(
+            formatMoney(primaryAmount, currency: primarySpec),
+            style: kTabularStyle.copyWith(
+              color: fg,
+              fontSize: 30,
+              fontWeight: FontWeight.w800,
+              letterSpacing: -0.6,
+            ),
+          ),
+          if (secondaryEntries.isNotEmpty) ...[
+            const SizedBox(height: 2),
+            Text(
+              secondaryEntries
+                  .map(
+                    (e) =>
+                        '+ ${formatMoney(e.value, currency: CurrencyRegistry.byCode(e.key))}',
+                  )
+                  .join(' · '),
+              style: kTabularStyle.copyWith(
+                color: fg.withValues(alpha: 0.82),
+                fontSize: 13.5,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ],
+          if (refundEntries.isNotEmpty) ...[
+            const SizedBox(height: 4),
+            Text(
+              s.toRefundBanner(
+                refundEntries
+                    .map(
+                      (e) => formatMoney(
+                        e.value,
+                        currency: CurrencyRegistry.byCode(e.key),
+                      ),
+                    )
+                    .join(' · '),
+              ),
+              style: kTabularStyle.copyWith(
+                color: fg.withValues(alpha: 0.85),
+                fontSize: 12.5,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ],
+        ],
       ),
     );
   }

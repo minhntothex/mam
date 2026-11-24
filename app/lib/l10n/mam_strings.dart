@@ -514,6 +514,7 @@ class MamStrings {
   // Bottom Navigation & Create Action Sheet
   String get navHome => t('Home', 'Trang chủ');
   String get navMembers => t('Members', 'Danh bạ');
+  String get navBalances => t('Balances', 'Công nợ');
   String get navSync => t('Sync', 'Đồng bộ');
   String get navSettings => t('Settings', 'Cài đặt');
   String get createActionTooltip => t('Create bill', 'Tạo hóa đơn');

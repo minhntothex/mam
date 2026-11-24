@@ -70,18 +70,11 @@ void main() {
     expect(migratedController.activeFriendGroups, isEmpty);
   });
 
-  testWidgets('Bottom bar has 5 items (Home, Members, +, Sync, Settings), logo has no Drawer, and + opens 3 create actions', (tester) async {
+  testWidgets('Bottom bar has 5 items (Home, Members, +, Balances, Settings), logo has no Drawer, and + opens 3 create actions', (tester) async {
     SharedPreferences.setMockInitialValues({});
     final store = await LocalStore.open();
     final controller = MamController(store: store);
     await controller.init(seedDemo: true);
-
-    var syncCalls = 0;
-    controller.attachSyncHandler(
-      onSyncRequested: () async => syncCalls++,
-      signedInUserId: 'u1',
-      email: 'host@mam.app',
-    );
 
     await tester.pumpWidget(MamApp(controller: controller));
     await tester.pumpAndSettle();
@@ -91,22 +84,23 @@ void main() {
     expect(tester.widget<MamLogoMark>(find.byType(MamLogoMark)).showTile, isFalse);
     expect(tester.getSize(find.byType(MamLogoMark)), const Size(40, 40));
 
-    // Bottom bar has all 5 slots
+    // Bottom bar has all 5 slots (Balances replaces Sync) & banner has no View by person
     expect(find.byKey(const ValueKey('nav_home')), findsOneWidget);
     expect(find.byKey(const ValueKey('nav_members')), findsOneWidget);
     expect(find.byKey(const ValueKey('nav_create_btn')), findsOneWidget);
-    expect(find.byKey(const ValueKey('nav_sync')), findsOneWidget);
+    expect(find.byKey(const ValueKey('nav_balances')), findsOneWidget);
     expect(find.byKey(const ValueKey('nav_settings')), findsOneWidget);
+    expect(find.text('View by person'), findsNothing);
 
     // Tapping logo does NOT open any sidebar Drawer
     await tester.tap(find.byType(MamLogoMark));
     await tester.pumpAndSettle();
     expect(find.byType(Drawer), findsNothing);
 
-    // Tapping Sync triggers sync handler directly
-    await tester.tap(find.byKey(const ValueKey('nav_sync')));
+    // Tapping Balances opens per-person unsettled balances tab
+    await tester.tap(find.byKey(const ValueKey('nav_balances')));
     await tester.pumpAndSettle();
-    expect(syncCalls, 1);
+    expect(find.text('Unsettled by person'), findsOneWidget);
 
     // Tapping + opens action sheet with Equal split, New bill, and Scan receipt
     await tester.tap(find.byKey(const ValueKey('nav_create_btn')));
@@ -136,7 +130,7 @@ void main() {
     expect(find.text('Guest 3'), findsNothing);
   });
 
-  testWidgets('Sync tab switches to Settings when signed out, and Settings tab updates Currency & Language', (tester) async {
+  testWidgets('Settings tab updates Currency & Language cleanly', (tester) async {
     SharedPreferences.setMockInitialValues({});
     final store = await LocalStore.open();
     final controller = MamController(store: store);
@@ -145,8 +139,7 @@ void main() {
     await tester.pumpWidget(MamApp(controller: controller));
     await tester.pumpAndSettle();
 
-    // Signed out -> tapping Sync jumps straight to Settings tab
-    await tester.tap(find.byKey(const ValueKey('nav_sync')));
+    await tester.tap(find.byKey(const ValueKey('nav_settings')));
     await tester.pumpAndSettle();
 
     expect(find.text('Currency & Number Format'), findsOneWidget);
@@ -424,10 +417,10 @@ void main() {
     expect(find.text('Consolidated settlement'), findsOneWidget);
     expect(find.text('Bình'), findsOneWidget);
 
-    // Return to Home and test Uncollected banner -> Person Ledger -> Mark all paid
+    // Return to Home and test Balances tab -> Mark all paid
     await tester.pageBack();
     await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const ValueKey('uncollected_banner')));
+    await tester.tap(find.byKey(const ValueKey('nav_balances')));
     await tester.pumpAndSettle();
     expect(find.text('Unsettled by person'), findsOneWidget);
     expect(find.text('Mark all paid'), findsOneWidget);
