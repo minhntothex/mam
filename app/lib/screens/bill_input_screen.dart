@@ -89,11 +89,13 @@ class BillInputScreen extends StatefulWidget {
     super.key,
     required this.controller,
     this.existingBill,
+    this.initialOcrResult,
     this.onOpenScanOcr,
   });
 
   final MamController controller;
   final BillRecord? existingBill;
+  final OcrScanResult? initialOcrResult;
   final Future<OcrScanResult?> Function(BuildContext context)? onOpenScanOcr;
 
   @override
@@ -102,6 +104,8 @@ class BillInputScreen extends StatefulWidget {
 
 class _BillInputScreenState extends State<BillInputScreen> {
   late final TextEditingController _titleCtrl;
+  late final TextEditingController _noteCtrl;
+  late final TextEditingController _tripCtrl;
   late final TextEditingController _taxCtrl;
   late final TextEditingController _serviceCtrl;
   late final TextEditingController _shipCtrl;
@@ -109,11 +113,13 @@ class _BillInputScreenState extends State<BillInputScreen> {
   late final TextEditingController _ocrTotalCtrl;
   late ShippingSplitMode _shippingMode;
   late DateTime _billDate;
+  String? _ocrCurrencyOverride;
   final List<_EditableItemRow> _rows = [];
   bool _scanning = false;
 
   CurrencySpec get _currency => CurrencyRegistry.byCode(
         widget.existingBill?.payload.currencyCode ??
+            _ocrCurrencyOverride ??
             widget.controller.currentCurrency.code,
       );
 
@@ -132,6 +138,8 @@ class _BillInputScreenState extends State<BillInputScreen> {
     final adj = bill?.payload.adjustments;
 
     _titleCtrl = TextEditingController(text: bill?.title ?? '');
+    _noteCtrl = TextEditingController(text: bill?.payload.note ?? '');
+    _tripCtrl = TextEditingController(text: bill?.payload.tripName ?? '');
     _billDate = bill?.billDate ?? DateTime.now();
     _taxCtrl = TextEditingController(text: _fmtInput(adj?.taxAmount ?? 0));
     _serviceCtrl =
@@ -159,6 +167,8 @@ class _BillInputScreenState extends State<BillInputScreen> {
           ),
         );
       }
+    } else if (widget.initialOcrResult != null) {
+      _applyOcrResultFields(widget.initialOcrResult!);
     } else {
       _rows.add(_EditableItemRow(id: 'item_1'));
       _rows.add(_EditableItemRow(id: 'item_2'));
@@ -168,6 +178,8 @@ class _BillInputScreenState extends State<BillInputScreen> {
   @override
   void dispose() {
     _titleCtrl.dispose();
+    _noteCtrl.dispose();
+    _tripCtrl.dispose();
     _taxCtrl.dispose();
     _serviceCtrl.dispose();
     _shipCtrl.dispose();
@@ -228,40 +240,52 @@ class _BillInputScreenState extends State<BillInputScreen> {
 
   void _applyOcrResult(OcrScanResult result) {
     setState(() {
-      if (result.title != null && result.title!.trim().isNotEmpty) {
-        _titleCtrl.text = result.title!.trim();
-      }
-      if (result.billDate != null) {
-        _billDate = result.billDate!;
-      }
-      for (final row in _rows) {
-        row.dispose();
-      }
-      _rows.clear();
-      for (var i = 0; i < result.items.length; i++) {
-        final item = result.items[i];
-        _rows.add(
-          _EditableItemRow.fromLineTotal(
-            id: 'ocr_${DateTime.now().microsecondsSinceEpoch}_$i',
-            name: item.name,
-            quantity: item.quantity,
-            lineTotal: item.lineTotal > item.itemDiscount
-                ? item.lineTotal - item.itemDiscount
-                : item.lineTotal,
-            currency: _currency,
-            format: _inputFormat,
-          ),
-        );
-      }
-      if (_rows.isEmpty) {
-        _rows.add(_EditableItemRow(id: 'item_1'));
-      }
-      _taxCtrl.text = _fmtInput(result.taxAmount);
-      _serviceCtrl.text = _fmtInput(result.serviceChargeAmount);
-      _shipCtrl.text = _fmtInput(result.shippingAmount);
-      _discountCtrl.text = _fmtInput(result.billDiscountAmount);
-      _ocrTotalCtrl.text = _fmtInput(result.ocrGrandTotal ?? 0);
+      _applyOcrResultFields(result);
     });
+  }
+
+  void _applyOcrResultFields(OcrScanResult result) {
+    if (widget.existingBill == null && result.currencyCode != null) {
+      final supported = CurrencyRegistry.all.any(
+        (c) => c.code == result.currencyCode,
+      );
+      if (supported) {
+        _ocrCurrencyOverride = result.currencyCode;
+      }
+    }
+    if (result.title != null && result.title!.trim().isNotEmpty) {
+      _titleCtrl.text = result.title!.trim();
+    }
+    if (result.billDate != null) {
+      _billDate = result.billDate!;
+    }
+    for (final row in _rows) {
+      row.dispose();
+    }
+    _rows.clear();
+    for (var i = 0; i < result.items.length; i++) {
+      final item = result.items[i];
+      _rows.add(
+        _EditableItemRow.fromLineTotal(
+          id: 'ocr_${DateTime.now().microsecondsSinceEpoch}_$i',
+          name: item.name,
+          quantity: item.quantity,
+          lineTotal: item.lineTotal > item.itemDiscount
+              ? item.lineTotal - item.itemDiscount
+              : item.lineTotal,
+          currency: _currency,
+          format: _inputFormat,
+        ),
+      );
+    }
+    if (_rows.isEmpty) {
+      _rows.add(_EditableItemRow(id: 'item_1'));
+    }
+    _taxCtrl.text = _fmtInput(result.taxAmount);
+    _serviceCtrl.text = _fmtInput(result.serviceChargeAmount);
+    _shipCtrl.text = _fmtInput(result.shippingAmount);
+    _discountCtrl.text = _fmtInput(result.billDiscountAmount);
+    _ocrTotalCtrl.text = _fmtInput(result.ocrGrandTotal ?? 0);
   }
 
   Future<void> _pickBillDate() async {
@@ -305,6 +329,8 @@ class _BillInputScreenState extends State<BillInputScreen> {
     final title = _titleCtrl.text.trim().isEmpty
         ? defaultMealTitle(isVi: s.isVi)
         : _titleCtrl.text.trim();
+    final note = _noteCtrl.text.trim();
+    final tripName = _tripCtrl.text.trim();
 
     Navigator.of(context).push(
       MaterialPageRoute(
@@ -316,6 +342,8 @@ class _BillInputScreenState extends State<BillInputScreen> {
           items: items,
           adjustments: adjustments,
           currencyCode: _currency.code,
+          note: note.isEmpty ? null : note,
+          tripName: tripName.isEmpty ? null : tripName,
         ),
       ),
     );
@@ -461,6 +489,48 @@ class _BillInputScreenState extends State<BillInputScreen> {
                       ),
                     ),
                   ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    key: const ValueKey('bill_input_note_field'),
+                    controller: _noteCtrl,
+                    decoration: InputDecoration(
+                      labelText: s.noteLabel,
+                      hintText: s.noteHint,
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  TextField(
+                    key: const ValueKey('bill_input_trip_field'),
+                    controller: _tripCtrl,
+                    decoration: InputDecoration(
+                      labelText: s.tripLabel,
+                      hintText: s.tripHint,
+                      prefixIcon: Icon(
+                        Icons.luggage_outlined,
+                        size: 18,
+                        color: p.muted,
+                      ),
+                    ),
+                    onChanged: (_) => setState(() {}),
+                  ),
+                  if (widget.controller.activeTripNames.isNotEmpty) ...[
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 6,
+                      runSpacing: 6,
+                      children: [
+                        for (final trip in widget.controller.activeTripNames)
+                          ActionChip(
+                            avatar: const Icon(Icons.luggage_outlined, size: 15),
+                            label: Text(trip),
+                            onPressed: () {
+                              _tripCtrl.text = trip;
+                              setState(() {});
+                            },
+                          ),
+                      ],
+                    ),
+                  ],
                 ],
               ),
             ),

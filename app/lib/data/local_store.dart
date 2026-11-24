@@ -13,6 +13,7 @@ final class LocalDataSnapshot {
     required this.bills,
     required this.bankAccounts,
     required this.friendGroups,
+    this.members = const [],
     required this.settings,
     required this.pendingSyncKeys,
     required this.lastSyncedAt,
@@ -22,6 +23,7 @@ final class LocalDataSnapshot {
   final List<BillRecord> bills;
   final List<BankAccount> bankAccounts;
   final List<FriendGroup> friendGroups;
+  final List<MemberContact> members;
   final UserSettings settings;
   final Set<String> pendingSyncKeys;
   final DateTime? lastSyncedAt;
@@ -38,6 +40,7 @@ class LocalStore {
   static const String _kBills = 'mam_bills_v1';
   static const String _kBankAccounts = 'mam_bank_accounts_v1';
   static const String _kFriendGroups = 'mam_friend_groups_v1';
+  static const String _kMembers = 'mam_members_v1';
   static const String _kSettings = 'mam_settings_v1';
   static const String _kPendingSync = 'mam_pending_sync_v1';
   static const String _kLastSyncedAt = 'mam_last_synced_at_v1';
@@ -79,6 +82,8 @@ class LocalStore {
         _decodeList(_prefs.getString(_kBankAccounts), BankAccount.fromJson);
     var groups =
         _decodeList(_prefs.getString(_kFriendGroups), FriendGroup.fromJson);
+    final members =
+        _decodeList(_prefs.getString(_kMembers), MemberContact.fromJson);
 
     final rawSettings = _prefs.getString(_kSettings);
     final settings = rawSettings != null
@@ -131,6 +136,7 @@ class LocalStore {
       bills: bills,
       bankAccounts: banks,
       friendGroups: groups,
+      members: members,
       settings: settings,
       pendingSyncKeys: pending,
       lastSyncedAt: lastSync,
@@ -165,6 +171,7 @@ class LocalStore {
       saveBills(snapshot.bills),
       saveBankAccounts(snapshot.bankAccounts),
       saveFriendGroups(snapshot.friendGroups),
+      saveMembers(snapshot.members),
       saveSettings(snapshot.settings),
       savePendingSyncKeys(snapshot.pendingSyncKeys),
       saveLastSyncedAt(snapshot.lastSyncedAt),
@@ -189,6 +196,13 @@ class LocalStore {
     await _prefs.setString(
       _kFriendGroups,
       jsonEncode(groups.map((e) => e.toJson()).toList(growable: false)),
+    );
+  }
+
+  Future<void> saveMembers(List<MemberContact> members) async {
+    await _prefs.setString(
+      _kMembers,
+      jsonEncode(members.map((e) => e.toJson()).toList(growable: false)),
     );
   }
 

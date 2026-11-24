@@ -13,11 +13,17 @@ const corsHeaders = {
 
 const MAX_BASE64_CHARS = 3_000_000; // ~2.2 MB binary image limit
 
-const EXTRACTION_PROMPT = `Bạn là bộ trích xuất hóa đơn ăn uống Việt Nam (giấy nhiệt, GrabFood, ShopeeFood, nhà hàng).
-Hãy đọc ảnh hóa đơn và trả về DUY NHẤT một JSON object hợp lệ theo đúng schema sau (tất cả số tiền là số nguyên VNĐ, không dấu phẩy/chấm):
+const PRIMARY_MODEL = (Deno.env.get("GEMINI_MODEL") ?? "gemini-3.8-flash").trim();
+const FALLBACK_MODELS = PRIMARY_MODEL === "gemini-3.6-flash"
+  ? [PRIMARY_MODEL]
+  : [PRIMARY_MODEL, "gemini-3.6-flash"];
+
+const EXTRACTION_PROMPT = `Bạn là bộ trích xuất hóa đơn ăn uống (hóa đơn giấy nhiệt Việt Nam, GrabFood, ShopeeFood, nhà hàng VN hoặc quốc tế).
+Hãy đọc ảnh hóa đơn và trả về DUY NHẤT một JSON object hợp lệ theo đúng schema sau:
 {
   "title": "Tên quán hoặc nhà hàng (string hoặc null)",
   "billDate": "YYYY-MM-DD (string hoặc null)",
+  "currencyCode": "VND" | "USD",
   "items": [
     {
       "name": "Tên món",
@@ -34,6 +40,10 @@ Hãy đọc ảnh hóa đơn và trả về DUY NHẤT một JSON object hợp l
   "confidence": "high" | "medium" | "low"
 }
 Quy tắc:
+- Xác định currencyCode là "USD" nếu hóa đơn ghi giá bằng $ / USD; ngược lại dùng "VND".
+- Mọi số tiền PHẢI là số nguyên theo đơn vị nhỏ nhất (minor unit, không dấu phẩy/chấm):
+  + Nếu VND: số nguyên đồng (vd: 120.000đ -> 120000).
+  + Nếu USD: số nguyên cents (vd: $12.50 -> 1250).
 - lineTotal là thành tiền của cả dòng (đã nhân số lượng), trước giảm giá riêng của dòng.
 - Nếu giảm giá gắn riêng cho 1 món thì đưa vào itemDiscount của món đó; giảm giá/voucher toàn hóa đơn đưa vào billDiscountAmount (số dương).
 - ocrGrandTotal là tổng tiền cuối cùng in trên hóa đơn để app tự đối chiếu.
@@ -44,6 +54,30 @@ function jsonResponse(body: unknown, status = 200): Response {
     status,
     headers: { ...corsHeaders, "Content-Type": "application/json" },
   });
+}
+
+function extractGeminiErrorMessage(rawText: string): string {
+  try {
+    const parsed = JSON.parse(rawText);
+    const msg = parsed?.error?.message;
+    if (typeof msg === "string" && msg.trim().length > 0) {
+      return msg.trim();
+    }
+  } catch {
+    // Fall back to raw text snippet
+  }
+  const trimmed = rawText.trim();
+  return trimmed.length > 220 ? `${trimmed.slice(0, 220)}...` : trimmed;
+}
+
+function shouldFallbackModel(status: number, errMessage: string): boolean {
+  if (status === 404) return true;
+  const lower = errMessage.toLowerCase();
+  return (
+    lower.includes("no longer available") ||
+    lower.includes("not found") ||
+    lower.includes("deprecated")
+  );
 }
 
 Deno.serve(async (req: Request) => {
@@ -98,51 +132,64 @@ Deno.serve(async (req: Request) => {
     return jsonResponse({ error: "Image payload too large (max ~2MB)" }, 400);
   }
 
-  // 3. Call Gemini 2.5 Flash structured JSON output
-  try {
-    const geminiRes = await fetch(
-      "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent",
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-goog-api-key": geminiApiKey,
-        },
-        body: JSON.stringify({
-          contents: [
-            {
-              parts: [
-                { text: EXTRACTION_PROMPT },
-                { inline_data: { mime_type: mimeType, data: imageBase64 } },
-              ],
-            },
-          ],
-          generationConfig: {
-            responseMimeType: "application/json",
-            temperature: 0.1,
-          },
-        }),
-      },
-    );
+  // 3. Call Gemini Flash structured JSON output (with automatic fallback on 404/deprecated)
+  let lastErrorMessage = "Upstream OCR provider failed";
+  let lastStatus = 502;
 
-    if (!geminiRes.ok) {
-      const detail = await geminiRes.text();
+  for (let i = 0; i < FALLBACK_MODELS.length; i++) {
+    const model = FALLBACK_MODELS[i];
+    try {
+      const geminiRes = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "x-goog-api-key": geminiApiKey,
+          },
+          body: JSON.stringify({
+            contents: [
+              {
+                parts: [
+                  { text: EXTRACTION_PROMPT },
+                  { inline_data: { mime_type: mimeType, data: imageBase64 } },
+                ],
+              },
+            ],
+            generationConfig: {
+              responseMimeType: "application/json",
+              temperature: 0.1,
+            },
+          }),
+        },
+      );
+
+      if (!geminiRes.ok) {
+        const rawErr = await geminiRes.text();
+        lastErrorMessage = extractGeminiErrorMessage(rawErr);
+        lastStatus = geminiRes.status;
+        if (i + 1 < FALLBACK_MODELS.length && shouldFallbackModel(geminiRes.status, lastErrorMessage)) {
+          continue;
+        }
+        return jsonResponse(
+          { error: lastErrorMessage, model, upstreamStatus: lastStatus },
+          502,
+        );
+      }
+
+      const geminiJson = await geminiRes.json();
+      const rawText: string =
+        geminiJson?.candidates?.[0]?.content?.parts?.[0]?.text ?? "{}";
+
+      const parsed = JSON.parse(rawText);
+      return jsonResponse(parsed, 200);
+    } catch (err) {
       return jsonResponse(
-        { error: "Upstream OCR provider failed", detail },
+        { error: `Failed to parse OCR response: ${String(err)}`, model },
         502,
       );
     }
-
-    const geminiJson = await geminiRes.json();
-    const rawText: string =
-      geminiJson?.candidates?.[0]?.content?.parts?.[0]?.text ?? "{}";
-
-    const parsed = JSON.parse(rawText);
-    return jsonResponse(parsed, 200);
-  } catch (err) {
-    return jsonResponse(
-      { error: "Failed to parse OCR response", detail: String(err) },
-      502,
-    );
   }
+
+  return jsonResponse({ error: lastErrorMessage, upstreamStatus: lastStatus }, 502);
 });

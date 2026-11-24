@@ -12,6 +12,7 @@ BillRecord _makeBill({
   List<String> members = const ['Me', 'Minh'],
   List<String> items = const ['Hotpot'],
   String? note,
+  String? tripName,
 }) {
   return BillRecord(
     id: id,
@@ -30,6 +31,7 @@ BillRecord _makeBill({
           BillItem(id: 'i$i', name: items[i], lineTotal: 50000),
       ],
       note: note,
+      tripName: tripName,
     ),
     createdAt: billDate,
     updatedAt: updatedAt,
@@ -104,6 +106,7 @@ void main() {
       members: ['Tôi', 'Minh Khôi', 'Lan'],
       items: ['Nước lẩu cà chua', 'Ba chỉ bò Mỹ'],
       note: 'Sinh nhật phòng',
+      tripName: 'Đà Lạt 24/11',
     );
 
     expect(matchesBillSearch(bill, ''), isTrue);
@@ -115,7 +118,56 @@ void main() {
     expect(matchesBillSearch(bill, 'lan 22/11/26'), isTrue);
     expect(matchesBillSearch(bill, 'ba chi bo'), isTrue);
     expect(matchesBillSearch(bill, 'sinh nhat'), isTrue);
+    expect(matchesBillSearch(bill, 'da lat'), isTrue);
     expect(matchesBillSearch(bill, 'pizza'), isFalse);
     expect(matchesBillSearch(bill, '21/11/26'), isFalse);
+  });
+
+  test('OcrScanResult & BillPayload & MemberContact JSON round-trip preserves new v1.1 fields', () {
+    final ocrUsd = OcrScanResult.fromJson({
+      'title': 'Shake Shack',
+      'currencyCode': 'usd',
+      'items': [
+        {'name': 'ShackBurger', 'quantity': 1, 'lineTotal': 899},
+      ],
+      'ocrGrandTotal': 899,
+      'confidence': 'high',
+    });
+    expect(ocrUsd.currencyCode, 'USD');
+    expect(ocrUsd.toJson()['currencyCode'], 'USD');
+
+    final ocrLegacy = OcrScanResult.fromJson({
+      'title': 'Phở',
+      'items': const [],
+    });
+    expect(ocrLegacy.currencyCode, isNull);
+
+    final payload = BillPayload.fromJson(
+      const BillPayload(
+        participants: [
+          Participant(id: 'p1', name: 'Minh', contactId: 'c_1'),
+        ],
+        items: [],
+        note: 'Bàn 5',
+        tripName: 'Phú Quốc',
+      ).toJson(),
+    );
+    expect(payload.note, 'Bàn 5');
+    expect(payload.tripName, 'Phú Quốc');
+    expect(payload.participants.single.contactId, 'c_1');
+
+    final now = DateTime.utc(2026, 11, 24);
+    final contact = MemberContact.fromJson(
+      MemberContact(
+        id: 'c_1',
+        userId: 'u1',
+        name: 'Minh',
+        createdAt: now,
+        updatedAt: now,
+      ).toJson(),
+    );
+    expect(contact.id, 'c_1');
+    expect(contact.name, 'Minh');
+    expect(contact.isDeleted, isFalse);
   });
 }

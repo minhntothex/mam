@@ -12,7 +12,9 @@ import '../state/mam_controller.dart';
 import '../theme/mam_theme.dart';
 import '../widgets/receipt_card.dart';
 import 'bill_input_screen.dart';
+import 'quick_equal_screen.dart';
 import 'settings_screen.dart';
+import 'trip_summary_screen.dart';
 
 class ResultScreen extends StatefulWidget {
   const ResultScreen({
@@ -75,11 +77,20 @@ class _ResultScreenState extends State<ResultScreen> {
           appBar: AppBar(
             title: Text(bill.title),
             actions: [
-              if (bill.mode == BillMode.itemized)
-                IconButton(
-                  tooltip: s.editBillTitle,
-                  icon: const Icon(Icons.edit_outlined),
-                  onPressed: () {
+              IconButton(
+                tooltip: s.editBillTitle,
+                icon: const Icon(Icons.edit_outlined),
+                onPressed: () {
+                  if (bill.mode == BillMode.quickEqual) {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => QuickEqualScreen(
+                          controller: ctrl,
+                          existingBill: bill,
+                        ),
+                      ),
+                    );
+                  } else {
                     Navigator.of(context).push(
                       MaterialPageRoute(
                         builder: (_) => BillInputScreen(
@@ -89,8 +100,9 @@ class _ResultScreenState extends State<ResultScreen> {
                         ),
                       ),
                     );
-                  },
-                ),
+                  }
+                },
+              ),
             ],
           ),
           body: ListView(
@@ -129,6 +141,78 @@ class _ResultScreenState extends State<ResultScreen> {
                           ),
                         ],
                       ),
+                      if (bill.payload.tripName != null &&
+                          bill.payload.tripName!.trim().isNotEmpty) ...[
+                        const SizedBox(height: 8),
+                        InkWell(
+                          borderRadius: BorderRadius.circular(8),
+                          onTap: () {
+                            Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (_) => TripSummaryScreen(
+                                  controller: ctrl,
+                                  tripName: bill.payload.tripName!.trim(),
+                                  onOpenScanOcr: widget.onOpenScanOcr,
+                                ),
+                              ),
+                            );
+                          },
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 9,
+                              vertical: 4,
+                            ),
+                            decoration: BoxDecoration(
+                              color: p.primarySoft,
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  Icons.luggage_outlined,
+                                  size: 14,
+                                  color: p.primary,
+                                ),
+                                const SizedBox(width: 5),
+                                Text(
+                                  bill.payload.tripName!.trim(),
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w700,
+                                    color: p.primary,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
+                      if (bill.payload.note != null &&
+                          bill.payload.note!.trim().isNotEmpty) ...[
+                        const SizedBox(height: 8),
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Icon(
+                              Icons.notes_rounded,
+                              size: 15,
+                              color: p.muted,
+                            ),
+                            const SizedBox(width: 6),
+                            Expanded(
+                              child: Text(
+                                bill.payload.note!.trim(),
+                                style: TextStyle(
+                                  fontSize: 12.5,
+                                  fontStyle: FontStyle.italic,
+                                  color: p.muted,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
                       const SizedBox(height: 12),
                       SizedBox(
                         width: double.infinity,
@@ -635,7 +719,7 @@ class _ResultScreenState extends State<ResultScreen> {
                                 fileName:
                                     'mam_qr_${slug.isEmpty ? 'person' : slug}.png',
                                 shareText:
-                                    '${breakdown.participant.name}: ${formatVnd(breakdown.finalAmount)} ($transferNote)',
+                                    '${breakdown.participant.name}: ${formatVnd(breakdown.collectAmount)} ($transferNote)',
                               );
                             } catch (e) {
                               if (ctx.mounted) {

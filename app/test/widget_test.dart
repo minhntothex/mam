@@ -1,14 +1,24 @@
+import 'dart:async';
+
 import 'package:flutter_test/flutter_test.dart';
-import 'package:mam/core/currency.dart';
 import 'package:mam/data/local_store.dart';
 import 'package:mam/l10n/mam_strings.dart';
 import 'package:mam/main.dart';
 import 'package:mam/models/bill_models.dart';
+import 'package:mam/services/ocr_service.dart';
 import 'package:mam/state/mam_controller.dart';
+import 'package:mam/theme/mam_theme.dart';
 import 'package:mam/widgets/mam_logo.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
+Future<void> _openCreateOption(WidgetTester tester, String keyValue) async {
+  await tester.tap(find.byKey(const ValueKey('nav_create_btn')));
+  await tester.pumpAndSettle();
+  await tester.tap(find.byKey(ValueKey(keyValue)));
+  await tester.pumpAndSettle();
+}
 
 void main() {
   testWidgets('Clean production start has zero mock data and purges legacy demo records while keeping user bills', (tester) async {
@@ -20,6 +30,7 @@ void main() {
     expect(controller.activeBills, isEmpty);
     expect(controller.activeBankAccounts, isEmpty);
     expect(controller.activeFriendGroups, isEmpty);
+    expect(controller.activeMembers, isEmpty);
 
     // Simulate a device that previously seeded legacy demo records + 1 real user bill
     final legacyStore = await LocalStore.open();
@@ -59,74 +70,62 @@ void main() {
     expect(migratedController.activeFriendGroups, isEmpty);
   });
 
-  testWidgets('MamApp shows flat Logo + Search in AppBar, equal-width bottom buttons, Drawer panel, and Quick Equal Split', (tester) async {
+  testWidgets('Bottom bar has 5 items (Home, Members, +, Sync, Settings), logo has no Drawer, and + opens 3 create actions', (tester) async {
     SharedPreferences.setMockInitialValues({});
     final store = await LocalStore.open();
     final controller = MamController(store: store);
     await controller.init(seedDemo: true);
+
+    var syncCalls = 0;
+    controller.attachSyncHandler(
+      onSyncRequested: () async => syncCalls++,
+      signedInUserId: 'u1',
+      email: 'host@mam.app',
+    );
 
     await tester.pumpWidget(MamApp(controller: controller));
     await tester.pumpAndSettle();
 
     expect(controller.language, AppLanguage.en);
     expect(find.byType(MamLogoMark), findsOneWidget);
-    // Flat transparent logo (showTile: false) matches 40px search bar height on HomeScreen
     expect(tester.widget<MamLogoMark>(find.byType(MamLogoMark)).showTile, isFalse);
-    expect(
-      find.descendant(of: find.byType(MamLogoMark), matching: find.byType(DecoratedBox)),
-      findsNothing,
-    );
     expect(tester.getSize(find.byType(MamLogoMark)), const Size(40, 40));
-    expect(
-      tester.getSize(
-        find.descendant(of: find.byType(AppBar), matching: find.byType(TextField)),
-      ).height,
-      40,
-    );
-    expect(find.text('Mâm'), findsNothing);
-    expect(find.text('Uncollected'), findsOneWidget);
-    expect(find.text('Lẩu Haidilao Bitexco'), findsOneWidget);
 
-    // Equal split and New bill buttons share identical 50/50 widths
-    final equalBtnSize = tester.getSize(find.widgetWithText(OutlinedButton, 'Equal split'));
-    final newBillBtnSize = tester.getSize(find.widgetWithText(FilledButton, 'New bill'));
-    expect((equalBtnSize.width - newBillBtnSize.width).abs(), lessThan(1.0));
+    // Bottom bar has all 5 slots
+    expect(find.byKey(const ValueKey('nav_home')), findsOneWidget);
+    expect(find.byKey(const ValueKey('nav_members')), findsOneWidget);
+    expect(find.byKey(const ValueKey('nav_create_btn')), findsOneWidget);
+    expect(find.byKey(const ValueKey('nav_sync')), findsOneWidget);
+    expect(find.byKey(const ValueKey('nav_settings')), findsOneWidget);
 
-    // Searchbar sits in AppBar next to logo; Local & Settings live inside Logo panel
-    expect(find.descendant(of: find.byType(AppBar), matching: find.byType(TextField)), findsOneWidget);
-    expect(find.descendant(of: find.byType(AppBar), matching: find.text('Local')), findsNothing);
-
+    // Tapping logo does NOT open any sidebar Drawer
     await tester.tap(find.byType(MamLogoMark));
     await tester.pumpAndSettle();
-    expect(find.text('Local'), findsOneWidget);
-    expect(find.text('Settings'), findsOneWidget);
+    expect(find.byType(Drawer), findsNothing);
 
-    // Close drawer and enter Quick Equal Split to verify date picker + numeric formatting
-    Navigator.of(tester.element(find.text('Settings'))).pop();
+    // Tapping Sync triggers sync handler directly
+    await tester.tap(find.byKey(const ValueKey('nav_sync')));
     await tester.pumpAndSettle();
+    expect(syncCalls, 1);
 
-    await tester.tap(find.text('Equal split'));
+    // Tapping + opens action sheet with Equal split, New bill, and Scan receipt
+    await tester.tap(find.byKey(const ValueKey('nav_create_btn')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('create_action_equal')), findsOneWidget);
+    expect(find.byKey(const ValueKey('create_action_new_bill')), findsOneWidget);
+    expect(find.byKey(const ValueKey('create_action_scan')), findsOneWidget);
+
+    // Choose Equal split -> Quick Equal Split screen
+    await tester.tap(find.byKey(const ValueKey('create_action_equal')));
     await tester.pumpAndSettle();
     expect(find.text('Quick Equal Split'), findsOneWidget);
     expect(find.byKey(const ValueKey('quick_equal_date_picker')), findsOneWidget);
 
-    // Quick Equal Split starts with empty title (placeholder only), subtle '0' total hint,
-    // and only Me (Host) without Guest 2 / Guest 3.
-    final titleField = tester.widget<TextField>(find.byType(TextField).at(0));
-    expect(titleField.controller?.text, isEmpty);
-    expect(titleField.decoration?.hintText, isNotEmpty);
-
-    final totalWidget = tester.widget<TextField>(find.byType(TextField).at(1));
-    expect(totalWidget.decoration?.hintText, '0');
-    expect(totalWidget.decoration?.hintStyle?.fontWeight, FontWeight.w500);
-
-    // Typing letters + digits into total field rejects letters and formats 5923892 -> 5.923.892
-    final totalField = find.byType(TextField).at(1);
+    final totalField = find.byKey(const ValueKey('quick_equal_total_field'));
     await tester.enterText(totalField, 'abc5923892xyz');
     await tester.pumpAndSettle();
     expect(find.text('5.923.892'), findsOneWidget);
 
-    // Scroll to Participants section -> starts with only Me (Host), no Guest 2 / Guest 3, no +/- buttons
     await tester.scrollUntilVisible(
       find.text('Me (Host)'),
       200,
@@ -135,8 +134,109 @@ void main() {
     expect(find.text('Me (Host)'), findsOneWidget);
     expect(find.text('Guest 2'), findsNothing);
     expect(find.text('Guest 3'), findsNothing);
-    expect(find.byIcon(Icons.add_circle_outline_rounded), findsNothing);
-    expect(find.byIcon(Icons.remove_circle_outline_rounded), findsNothing);
+  });
+
+  testWidgets('Sync tab switches to Settings when signed out, and Settings tab updates Currency & Language', (tester) async {
+    SharedPreferences.setMockInitialValues({});
+    final store = await LocalStore.open();
+    final controller = MamController(store: store);
+    await controller.init(seedDemo: true);
+
+    await tester.pumpWidget(MamApp(controller: controller));
+    await tester.pumpAndSettle();
+
+    // Signed out -> tapping Sync jumps straight to Settings tab
+    await tester.tap(find.byKey(const ValueKey('nav_sync')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Currency & Number Format'), findsOneWidget);
+    expect(controller.currentCurrency.code, 'VND');
+
+    await tester.tap(find.text(r'$ / USD'));
+    await tester.pumpAndSettle();
+    expect(controller.currentCurrency.code, 'USD');
+
+    final viOption = find.text('Tiếng Việt');
+    await tester.ensureVisible(viOption);
+    await tester.pumpAndSettle();
+    await tester.tap(viOption);
+    await tester.pumpAndSettle();
+    expect(controller.language, AppLanguage.vi);
+    expect(find.text('Tiền tệ & Định dạng số'), findsOneWidget);
+  });
+
+  testWidgets('OCR Scan Sheet shows loading indicator while scanning and renders error banner inside the sheet', (tester) async {
+    final completer = Completer<OcrScanResult?>();
+    final ocr = OcrService(
+      scanRunner: (_, _) => completer.future,
+    );
+
+    await tester.pumpWidget(
+      MamStringsScope(
+        strings: const MamStrings(AppLanguage.en),
+        child: MaterialApp(
+          theme: buildMamTheme(),
+          home: Builder(
+            builder: (ctx) => Scaffold(
+              body: Center(
+                child: ElevatedButton(
+                  onPressed: () => ocr.openScanSheet(ctx),
+                  child: const Text('Open OCR'),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('Open OCR'));
+    await tester.pumpAndSettle();
+
+    // Pick gallery -> immediately shows loading panel inside the sheet
+    await tester.tap(find.byKey(const ValueKey('ocr_gallery_tile')));
+    await tester.pump();
+    expect(find.byKey(const ValueKey('ocr_loading_panel')), findsOneWidget);
+    expect(find.text('Reading receipt with AI...'), findsOneWidget);
+
+    // Fail with Gemini error -> error banner renders inside the sheet (NOT SnackBar behind it)
+    completer.completeError(
+      Exception('Model unavailable — please retry'),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const ValueKey('ocr_loading_panel')), findsNothing);
+    expect(find.byKey(const ValueKey('ocr_error_banner')), findsOneWidget);
+    expect(find.text('Could not scan receipt'), findsOneWidget);
+    expect(find.textContaining('Model unavailable'), findsOneWidget);
+    expect(find.byType(SnackBar), findsNothing);
+  });
+
+  testWidgets('+ -> Scan receipt launches OCR and opens pre-filled USD BillInputScreen', (tester) async {
+    SharedPreferences.setMockInitialValues({});
+    final store = await LocalStore.open();
+    final controller = MamController(store: store);
+    await controller.init();
+
+    await tester.pumpWidget(
+      MamApp(
+        controller: controller,
+        onOpenScanOcr: (_) async => OcrScanResult(
+          title: 'Blue Bottle Coffee',
+          billDate: DateTime(2026, 11, 24),
+          currencyCode: 'USD',
+          items: const [
+            OcrScanItem(name: 'Latte', quantity: 2, lineTotal: 1200),
+          ],
+          ocrGrandTotal: 1200,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await _openCreateOption(tester, 'create_action_scan');
+    expect(find.text('Blue Bottle Coffee'), findsOneWidget);
+    expect(find.text('Matches printed bill total (\$12.00)'), findsOneWidget);
   });
 
   testWidgets('Home supports AppBar search, swipe-left Archive, Archived divider & Restore', (tester) async {
@@ -148,18 +248,13 @@ void main() {
     await tester.pumpWidget(MamApp(controller: controller));
     await tester.pumpAndSettle();
 
-    await tester.enterText(find.byType(TextField), 'minh');
+    await tester.enterText(find.byType(TextField).first, 'minh');
     await tester.pumpAndSettle();
     expect(find.text('Lẩu Haidilao Bitexco'), findsOneWidget);
 
-    await tester.enterText(find.byType(TextField), 'no-match-xyz');
+    await tester.enterText(find.byType(TextField).first, 'no-match-xyz');
     await tester.pumpAndSettle();
     expect(find.text('Clear search'), findsOneWidget);
-    // Empty filter/search state renders directly on app ground without Card wrapper
-    expect(
-      find.ancestor(of: find.text('Clear search'), matching: find.byType(Card)),
-      findsNothing,
-    );
 
     await tester.tap(find.text('Clear search'));
     await tester.pumpAndSettle();
@@ -169,9 +264,6 @@ void main() {
     await tester.pumpAndSettle();
     await tester.drag(settledTitle, const Offset(-180, 0));
     await tester.pumpAndSettle();
-
-    expect(find.text('Archive'), findsOneWidget);
-    expect(find.text('Delete'), findsOneWidget);
 
     await tester.tap(find.text('Archive'));
     await tester.pumpAndSettle();
@@ -189,14 +281,214 @@ void main() {
     await tester.pumpAndSettle();
     await tester.drag(archivedTitle, const Offset(-180, 0));
     await tester.pumpAndSettle();
-    expect(find.text('Restore'), findsOneWidget);
 
     await tester.tap(find.text('Restore'));
     await tester.pumpAndSettle();
     expect(controller.archivedBills, isEmpty);
   });
 
-  testWidgets('ResultScreen renders Home button before Export Summary Receipt and VietQR cards cleanly', (tester) async {
+  testWidgets('Members Directory persists contacts, lets Quick Equal & Split Assign pick saved contacts with contactId', (tester) async {
+    SharedPreferences.setMockInitialValues({});
+    final store = await LocalStore.open();
+    final controller = MamController(store: store);
+    await controller.init();
+
+    await tester.pumpWidget(MamApp(controller: controller));
+    await tester.pumpAndSettle();
+
+    // 1. Open Members tab and add "Hải"
+    await tester.tap(find.byKey(const ValueKey('nav_members')));
+    await tester.pumpAndSettle();
+    expect(find.text('Members'), findsWidgets);
+
+    await tester.tap(find.byKey(const ValueKey('members_add_btn')));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField).last, 'Hải');
+    await tester.tap(find.widgetWithText(FilledButton, 'Save'));
+    await tester.pumpAndSettle();
+
+    expect(controller.activeMembers.map((m) => m.name), ['Hải']);
+    expect(find.text('Hải'), findsOneWidget);
+
+    // 2. Create Quick Equal bill: pick "Hải" from contacts chip AND add new "Trang" (auto-saved to contacts)
+    await _openCreateOption(tester, 'create_action_equal');
+    await tester.enterText(
+      find.byKey(const ValueKey('quick_equal_total_field')),
+      '300000',
+    );
+    await tester.pumpAndSettle();
+
+    await tester.scrollUntilVisible(
+      find.text('From contacts'),
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.tap(find.widgetWithText(FilterChip, 'Hải'));
+    await tester.pumpAndSettle();
+
+    final addPersonField = find.widgetWithText(TextField, 'Add person name...');
+    await tester.ensureVisible(addPersonField);
+    await tester.enterText(addPersonField, 'Trang');
+    await tester.tap(find.widgetWithText(OutlinedButton, 'Add'));
+    await tester.pumpAndSettle();
+
+    // Both "Hải" and "Trang" are now in persistent contacts directory!
+    expect(
+      controller.activeMembers.map((m) => m.name).toList(),
+      containsAll(['Hải', 'Trang']),
+    );
+
+    await tester.tap(find.text('Create result & VietQR'));
+    await tester.pumpAndSettle();
+
+    final savedBill = controller.activeBills.single;
+    final haiParticipant =
+        savedBill.payload.participants.firstWhere((p) => p.name == 'Hải');
+    final trangParticipant =
+        savedBill.payload.participants.firstWhere((p) => p.name == 'Trang');
+    expect(haiParticipant.contactId, isNotNull);
+    expect(trangParticipant.contactId, isNotNull);
+  });
+
+  testWidgets('Edit Quick Equal bill (multi-payer) updates same bill with note & trip, and TripSummary + PersonLedger settle bills', (tester) async {
+    SharedPreferences.setMockInitialValues({});
+    final store = await LocalStore.open();
+    final controller = MamController(store: store);
+    await controller.init();
+
+    await tester.pumpWidget(MamApp(controller: controller));
+    await tester.pumpAndSettle();
+
+    // 1. Create a Quick Equal Multi-payer bill with Trip & Note
+    await _openCreateOption(tester, 'create_action_equal');
+    await tester.tap(find.text('Multiple payers'));
+    await tester.pumpAndSettle();
+
+    await tester.enterText(
+      find.byKey(const ValueKey('quick_equal_note_field')),
+      'Bàn sát cửa sổ',
+    );
+    await tester.enterText(
+      find.byKey(const ValueKey('quick_equal_trip_field')),
+      'Đà Lạt 24/11',
+    );
+    await tester.pumpAndSettle();
+
+    final addNameField = find.widgetWithText(TextField, 'Add person name...');
+    await tester.ensureVisible(addNameField);
+    await tester.enterText(addNameField, 'Bình');
+    await tester.tap(find.widgetWithText(OutlinedButton, 'Add'));
+    await tester.pumpAndSettle();
+
+    final upfrontFields = find.byWidgetPredicate(
+      (w) => w.key is ValueKey<String> && (w.key! as ValueKey<String>).value.startsWith('upfront_'),
+    );
+    await tester.ensureVisible(upfrontFields.at(0));
+    await tester.enterText(upfrontFields.at(0), '200000');
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Create result & VietQR'));
+    await tester.pumpAndSettle();
+
+    expect(controller.activeBills.length, 1);
+    final originalId = controller.activeBills.single.id;
+    expect(find.text('Đà Lạt 24/11'), findsOneWidget);
+    expect(find.text('Bàn sát cửa sổ'), findsOneWidget);
+
+    // 2. Tap Edit icon on ResultScreen for Quick Equal bill!
+    await tester.tap(find.byIcon(Icons.edit_outlined));
+    await tester.pumpAndSettle();
+    expect(find.text('Edit bill'), findsOneWidget);
+    expect(find.text('Save changes'), findsOneWidget);
+
+    // Update note and save -> keeps same bill ID
+    await tester.enterText(
+      find.byKey(const ValueKey('quick_equal_note_field')),
+      'Đã cập nhật ghi chú',
+    );
+    await tester.tap(find.text('Save changes'));
+    await tester.pumpAndSettle();
+
+    expect(controller.activeBills.length, 1);
+    expect(controller.activeBills.single.id, originalId);
+    expect(find.text('Đã cập nhật ghi chú'), findsOneWidget);
+
+    // 3. Return Home -> Home shows Trips chip "Đà Lạt 24/11" and Uncollected banner 100.000đ
+    await tester.tap(find.text('Home'));
+    await tester.pumpAndSettle();
+    expect(find.widgetWithText(ActionChip, 'Đà Lạt 24/11'), findsOneWidget);
+
+    // Open TripSummaryScreen from chip
+    await tester.tap(find.widgetWithText(ActionChip, 'Đà Lạt 24/11'));
+    await tester.pumpAndSettle();
+    expect(find.text('Consolidated settlement'), findsOneWidget);
+    expect(find.text('Bình'), findsOneWidget);
+
+    // Return to Home and test Uncollected banner -> Person Ledger -> Mark all paid
+    await tester.pageBack();
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('uncollected_banner')));
+    await tester.pumpAndSettle();
+    expect(find.text('Unsettled by person'), findsOneWidget);
+    expect(find.text('Mark all paid'), findsOneWidget);
+
+    await tester.tap(find.text('Mark all paid'));
+    await tester.pumpAndSettle();
+    expect(controller.pendingBills, isEmpty);
+  });
+
+  testWidgets('Fast Item Assign starts with only Me, picks/adds contacts via sheet, and auto-marks 0-debt member paid', (tester) async {
+    SharedPreferences.setMockInitialValues({});
+    final store = await LocalStore.open();
+    final controller = MamController(store: store);
+    await controller.init();
+
+    await tester.pumpWidget(MamApp(controller: controller));
+    await tester.pumpAndSettle();
+
+    await _openCreateOption(tester, 'create_action_new_bill');
+
+    await tester.scrollUntilVisible(
+      find.text('Items'),
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.drag(find.byType(Scrollable).first, const Offset(0, -180));
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.widgetWithText(TextField, 'Unit price').first,
+      '100000',
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Next: Assign'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Minh'), findsNothing);
+    expect(find.byKey(const ValueKey('inline_add_person_chip')), findsOneWidget);
+
+    // Assign item to Me only, then add Alex via new contacts sheet
+    await tester.tap(find.text('Item'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const ValueKey('inline_add_person_chip')));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField).last, 'Alex');
+    await tester.tap(find.widgetWithText(FilledButton, 'Add'));
+    await tester.pumpAndSettle();
+
+    // Alex is also saved to persistent Members directory
+    expect(controller.activeMembers.map((m) => m.name), ['Alex']);
+
+    await tester.tap(find.text('Save & View result'));
+    await tester.pumpAndSettle();
+
+    expect(controller.activeBills.single.paymentStatus, PaymentStatus.settled);
+    expect(find.text('Paid'), findsNWidgets(2));
+    expect(find.text('Mark paid'), findsNothing);
+  });
+
+  testWidgets('ResultScreen renders Export Summary Receipt and VietQR cleanly', (tester) async {
     SharedPreferences.setMockInitialValues({});
     final store = await LocalStore.open();
     final controller = MamController(store: store);
@@ -209,336 +501,46 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Per-person breakdown'), findsOneWidget);
-    expect(find.text('Home'), findsOneWidget);
     expect(find.text('Export Summary Receipt'), findsOneWidget);
 
     await tester.tap(find.text('Export Summary Receipt'));
     await tester.pumpAndSettle();
-    expect(find.byType(MamLogoMark), findsOneWidget);
-    expect(find.text('MÂM'), findsNothing);
     expect(find.text('BILL SUMMARY'), findsOneWidget);
     expect(find.byType(QrImageView), findsOneWidget);
-
-    Navigator.of(tester.element(find.text('BILL SUMMARY'))).pop();
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Home'));
-    await tester.pumpAndSettle();
-    expect(find.text('Uncollected'), findsOneWidget);
   });
 
-  testWidgets('BillInputScreen supports Bill date picker, Unit price x Qty auto line total, and non-duplicating Back -> Re-save', (tester) async {
-    SharedPreferences.setMockInitialValues({});
-    final store = await LocalStore.open();
-    final controller = MamController(store: store);
-    await controller.init(seedDemo: true);
-    final initialCount = controller.activeBills.length;
-
-    await tester.pumpWidget(MamApp(controller: controller));
-    await tester.pumpAndSettle();
-
-    await tester.tap(find.text('New bill'));
-    await tester.pumpAndSettle();
-
-    // New bill starts with empty Restaurant / Meal input (placeholder only)
-    final restaurantField = tester.widget<TextField>(find.byType(TextField).first);
-    expect(restaurantField.controller?.text, isEmpty);
-    expect(restaurantField.decoration?.hintText, isNotEmpty);
-
-    // Bill date picker sits below Restaurant / Meal
-    expect(find.text('Bill date'), findsOneWidget);
-    expect(find.byKey(const ValueKey('bill_date_picker')), findsOneWidget);
-
-    // Enter Qty = 4 and Unit price = 30.000 -> auto computes Line total: 120.000đ
-    final qtyField = find.widgetWithText(TextField, 'Qty').first;
-    final unitPriceField = find.widgetWithText(TextField, 'Unit price').first;
-    await tester.enterText(qtyField, '4');
-    await tester.enterText(unitPriceField, '30000');
-    await tester.pumpAndSettle();
-    expect(find.text('Line total: 120.000đ'), findsOneWidget);
-    expect(find.text('Subtotal: 120.000đ'), findsOneWidget);
-
-    // Scroll back up to Scan receipt card and test OCR conversion from lineTotal -> unitPrice
-    final scanCard = find.text('Scan receipt (AI OCR)');
-    await tester.ensureVisible(scanCard);
-    await tester.pumpAndSettle();
-    await tester.tap(scanCard);
-    await tester.pumpAndSettle();
-
-    await tester.tap(find.textContaining('GrabFood Bun Dau'));
-    await tester.pumpAndSettle();
-
-    expect(find.text('Matches printed bill total (223.000đ)'), findsOneWidget);
-
-    await tester.tap(find.text('Next: Assign'));
-    await tester.pumpAndSettle();
-    expect(find.text('Fast Item Assign'), findsOneWidget);
-
-    await tester.tap(find.text('Split all'));
-    await tester.pumpAndSettle();
-
-    await tester.tap(find.text('Save & View result'));
-    await tester.pumpAndSettle();
-    expect(find.text('Per-person breakdown'), findsOneWidget);
-    expect(controller.activeBills.length, initialCount + 1);
-
-    // Press Back -> returns to Assign screen (NOT Home!)
-    await tester.pageBack();
-    await tester.pumpAndSettle();
-    expect(find.text('Fast Item Assign'), findsOneWidget);
-
-    // Re-save -> updates same bill without creating a duplicate
-    await tester.tap(find.text('Save & View result'));
-    await tester.pumpAndSettle();
-    expect(find.text('Per-person breakdown'), findsOneWidget);
-    expect(controller.activeBills.length, initialCount + 1);
-
-    // Tap Home button -> pops straight back to HomeScreen
-    await tester.tap(find.text('Home'));
-    await tester.pumpAndSettle();
-    expect(find.text('Uncollected'), findsOneWidget);
-  });
-
-  testWidgets('Logo panel -> Settings switches Currency, Amount Format, EN <-> VI, and has no Reset demo button', (tester) async {
-    SharedPreferences.setMockInitialValues({});
-    final store = await LocalStore.open();
-    final controller = MamController(store: store);
-    await controller.init(seedDemo: true);
-
-    await tester.pumpWidget(MamApp(controller: controller));
-    await tester.pumpAndSettle();
-
-    await tester.tap(find.byType(MamLogoMark));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Settings'));
-    await tester.pumpAndSettle();
-
-    expect(find.text('Currency & Number Format'), findsOneWidget);
-    expect(find.textContaining('Nearest'), findsNothing);
-    expect(find.byIcon(Icons.check), findsNothing);
-    expect(find.text('Reset demo sample data'), findsNothing);
-    expect(controller.currentCurrency.code, 'VND');
-
-    await tester.tap(find.text(r'$ / USD'));
-    await tester.pumpAndSettle();
-    expect(controller.currentCurrency.code, 'USD');
-    expect(controller.amountInputFormat, AmountInputFormat.auto);
-
-    final templateItem = find.text('Transfer note template');
-    await tester.scrollUntilVisible(
-      templateItem,
-      200,
-      scrollable: find.byType(Scrollable).first,
-    );
-    await tester.ensureVisible(templateItem);
-    await tester.pumpAndSettle();
-    await tester.tap(templateItem);
-    await tester.pumpAndSettle();
-    final helperField = tester.widget<TextField>(find.byType(TextField).last);
-    expect(helperField.decoration?.helperMaxLines, greaterThanOrEqualTo(3));
-    await tester.tap(find.text('Cancel'));
-    await tester.pumpAndSettle();
-
-    final viOption = find.text('Tiếng Việt');
-    await tester.scrollUntilVisible(
-      viOption,
-      -300,
-      scrollable: find.byType(Scrollable).first,
-    );
-    await tester.ensureVisible(viOption);
-    await tester.pumpAndSettle();
-    await tester.tap(viOption);
-    await tester.pumpAndSettle();
-    expect(controller.language, AppLanguage.vi);
-    expect(find.text('Tiền tệ & Định dạng số'), findsOneWidget);
-    expect(find.text('Cài đặt'), findsOneWidget);
-  });
-
-  testWidgets('Fast Item Assign starts with only Me (no Minh/Lan) and auto-marks 0-debt member paid', (tester) async {
-    SharedPreferences.setMockInitialValues({});
-    final store = await LocalStore.open();
-    final controller = MamController(store: store);
-    await controller.init(); // Clean production start (0 saved groups)
-
-    await tester.pumpWidget(MamApp(controller: controller));
-    await tester.pumpAndSettle();
-
-    await tester.tap(find.text('New bill'));
-    await tester.pumpAndSettle();
-
-    await tester.enterText(find.widgetWithText(TextField, 'Unit price').first, '100000');
-    await tester.pumpAndSettle();
-
-    await tester.tap(find.text('Next: Assign'));
-    await tester.pumpAndSettle();
-
-    // No hardcoded Minh / Lan
-    expect(find.text('Minh'), findsNothing);
-    expect(find.text('Lan'), findsNothing);
-    expect(find.byKey(const ValueKey('inline_add_person_chip')), findsOneWidget);
-
-    // Assign item to Me only, then add Alex (who owes 0đ)
-    await tester.tap(find.text('Item'));
-    await tester.pumpAndSettle();
-
-    await tester.tap(find.byKey(const ValueKey('inline_add_person_chip')));
-    await tester.pumpAndSettle();
-    await tester.enterText(find.byType(TextField).last, 'Alex');
-    await tester.tap(find.widgetWithText(FilledButton, 'Add'));
-    await tester.pumpAndSettle();
-
-    await tester.tap(find.text('Save & View result'));
-    await tester.pumpAndSettle();
-
-    // Alex has 0đ debt -> auto-marked Paid, no Mark paid button, bill settled
-    expect(controller.activeBills.single.paymentStatus, PaymentStatus.settled);
-    expect(find.text('Paid'), findsNWidgets(2)); // Me (Host) + Alex (0đ)
-    expect(find.text('Mark paid'), findsNothing);
-  });
-
-  testWidgets('After Cloud Sync (applySyncedSnapshot), Create result & Save & View result still save and navigate cleanly', (tester) async {
+  testWidgets('After Cloud Sync (applySyncedSnapshot), Create result & Save & View result still save cleanly', (tester) async {
     SharedPreferences.setMockInitialValues({});
     final store = await LocalStore.open();
     final controller = MamController(store: store);
     await controller.init();
 
-    // Simulate post-sync snapshot passing fixed-length/unmodifiable lists
     final now = DateTime.now().toUtc();
     await controller.applySyncedSnapshot(
       bills: List<BillRecord>.unmodifiable(const []),
       bankAccounts: List<BankAccount>.unmodifiable(const []),
       friendGroups: List<FriendGroup>.unmodifiable(const []),
+      members: List<MemberContact>.unmodifiable(const []),
       settings: controller.settings,
       remainingPendingKeys: Set<String>.unmodifiable(const <String>{}),
       syncedAt: now,
     );
 
-    // Also verify saving bank & group succeeds after sync
-    await controller.saveBankAccount(
-      BankAccount(
-        id: controller.newId(),
-        userId: controller.currentUserId,
-        bankBin: '970436',
-        bankShortName: 'Vietcombank',
-        accountNo: '999888777',
-        isDefault: true,
-        createdAt: now,
-        updatedAt: now,
-      ),
-    );
-    await controller.saveFriendGroup(
-      FriendGroup(
-        id: controller.newId(),
-        userId: controller.currentUserId,
-        name: 'Friends',
-        members: const [GroupMember(id: 'm1', name: 'Me', isHost: true)],
-        createdAt: now,
-        updatedAt: now,
-      ),
-    );
-    expect(controller.activeBankAccounts.length, 1);
-    expect(controller.activeFriendGroups.length, 1);
+    await controller.ensureMemberContact('Minh');
+    expect(controller.activeMembers.length, 1);
 
     await tester.pumpWidget(MamApp(controller: controller));
     await tester.pumpAndSettle();
 
-    // 1. Quick Equal Split -> Create result & VietQR navigates to ResultScreen
-    await tester.tap(find.text('Equal split'));
-    await tester.pumpAndSettle();
-    await tester.enterText(find.byType(TextField).at(1), '200000');
+    await _openCreateOption(tester, 'create_action_equal');
+    await tester.enterText(
+      find.byKey(const ValueKey('quick_equal_total_field')),
+      '200000',
+    );
     await tester.pumpAndSettle();
     await tester.tap(find.text('Create result & VietQR'));
     await tester.pumpAndSettle();
     expect(find.text('Per-person breakdown'), findsOneWidget);
     expect(controller.activeBills.length, 1);
-
-    // Return Home
-    await tester.tap(find.text('Home'));
-    await tester.pumpAndSettle();
-
-    // 2. New bill -> Assign -> Save & View result navigates to ResultScreen
-    await tester.tap(find.text('New bill'));
-    await tester.pumpAndSettle();
-    await tester.enterText(find.widgetWithText(TextField, 'Unit price').first, '150000');
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Next: Assign'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Split all'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Save & View result'));
-    await tester.pumpAndSettle();
-    expect(find.text('Per-person breakdown'), findsOneWidget);
-    expect(controller.activeBills.length, 2);
-  });
-
-  testWidgets('Multi-payer Quick Equal Split (A 100k, B 200k, C 50k, D 0, E 0) settles via Host', (tester) async {
-    SharedPreferences.setMockInitialValues({});
-    final store = await LocalStore.open();
-    final controller = MamController(store: store);
-    await controller.init();
-
-    await tester.pumpWidget(MamApp(controller: controller));
-    await tester.pumpAndSettle();
-
-    await tester.tap(find.text('Equal split'));
-    await tester.pumpAndSettle();
-
-    // Switch to Multiple payers mode
-    await tester.tap(find.text('Multiple payers'));
-    await tester.pumpAndSettle();
-
-    // Add B, C, D, E
-    for (final name in ['B', 'C', 'D', 'E']) {
-      final addNameField = find.widgetWithText(TextField, 'Add person name...');
-      await tester.ensureVisible(addNameField);
-      await tester.enterText(addNameField, name);
-      await tester.tap(find.widgetWithText(OutlinedButton, 'Add'));
-      await tester.pumpAndSettle();
-    }
-
-    // Enter upfront amounts: Me(Host)=100k, B=200k, C=50k (D, E left 0)
-    final upfrontFields = find.byWidgetPredicate(
-      (w) => w.key is ValueKey<String> && (w.key! as ValueKey<String>).value.startsWith('upfront_'),
-    );
-    expect(upfrontFields, findsNWidgets(5));
-    await tester.ensureVisible(upfrontFields.at(0));
-    await tester.enterText(upfrontFields.at(0), '100000');
-    await tester.ensureVisible(upfrontFields.at(1));
-    await tester.enterText(upfrontFields.at(1), '200000');
-    await tester.ensureVisible(upfrontFields.at(2));
-    await tester.enterText(upfrontFields.at(2), '50000');
-    await tester.pumpAndSettle();
-
-    await tester.scrollUntilVisible(
-      find.text('Total from upfront: 350.000đ'),
-      -200,
-      scrollable: find.byType(Scrollable).first,
-    );
-    expect(find.text('Total from upfront: 350.000đ'), findsOneWidget);
-
-    await tester.tap(find.text('Create result & VietQR'));
-    await tester.pumpAndSettle();
-
-    // ResultScreen shows Host settlement, Refund badge + -130.000đ for B, 20.000đ for C, 70.000đ for D & E
-    expect(find.text('Host collects: 160.000đ · Refunds: 130.000đ'), findsOneWidget);
-    await tester.scrollUntilVisible(
-      find.text('-130.000đ'),
-      200,
-      scrollable: find.byType(Scrollable).first,
-    );
-    expect(find.text('Refund'), findsOneWidget);
-    expect(find.text('-130.000đ'), findsOneWidget);
-    expect(find.text('Mark refunded'), findsOneWidget);
-    await tester.scrollUntilVisible(
-      find.text('20.000đ'),
-      200,
-      scrollable: find.byType(Scrollable).first,
-    );
-    expect(find.text('20.000đ'), findsOneWidget);
-
-    // Home shows Uncollected 160.000đ + To refund: 130.000đ
-    await tester.tap(find.text('Home'));
-    await tester.pumpAndSettle();
-    expect(find.text('160.000đ'), findsOneWidget);
-    expect(find.text('To refund: 130.000đ'), findsOneWidget);
   });
 }

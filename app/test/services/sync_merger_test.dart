@@ -61,5 +61,28 @@ void main() {
       expect(merged.single.isDeleted, isTrue);
       expect(merged.single.deletedAt, t2);
     });
+
+    test('merges MemberContact records by updatedAt including soft-deletes', () {
+      final local = [
+        MemberContact(id: 'm1', userId: 'u1', name: 'Minh', createdAt: t1, updatedAt: t1),
+        MemberContact(id: 'm2', userId: 'u1', name: 'Lan', createdAt: t1, updatedAt: t3),
+      ];
+      final remote = [
+        MemberContact(id: 'm1', userId: 'u1', name: 'Minh Pro', createdAt: t1, updatedAt: t2),
+        MemberContact(id: 'm2', userId: 'u1', name: 'Lan Old', createdAt: t1, updatedAt: t2),
+        MemberContact(id: 'm3', userId: 'u1', name: 'Hùng', createdAt: t1, updatedAt: t2, deletedAt: t2),
+      ];
+
+      final merged = SyncMerger.mergeByUpdatedAt<MemberContact>(
+        local: local,
+        remote: remote,
+        idOf: (m) => m.id,
+        updatedAtOf: (m) => m.updatedAt,
+      );
+      final byId = {for (final m in merged) m.id: m};
+      expect(byId['m1']!.name, 'Minh Pro');
+      expect(byId['m2']!.name, 'Lan');
+      expect(byId['m3']!.isDeleted, isTrue);
+    });
   });
 }

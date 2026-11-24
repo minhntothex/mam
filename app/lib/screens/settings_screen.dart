@@ -15,10 +15,12 @@ class SettingsScreen extends StatelessWidget {
     super.key,
     required this.controller,
     this.syncAuthSectionBuilder,
+    this.embeddedInTab = false,
   });
 
   final MamController controller;
   final Widget Function(BuildContext context)? syncAuthSectionBuilder;
+  final bool embeddedInTab;
 
   @override
   Widget build(BuildContext context) {
@@ -53,7 +55,10 @@ class SettingsScreen extends StatelessWidget {
         };
 
         return Scaffold(
-          appBar: AppBar(title: Text(s.settings)),
+          appBar: AppBar(
+            automaticallyImplyLeading: !embeddedInTab,
+            title: Text(s.settings),
+          ),
           body: ListView(
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 40),
             children: [
@@ -712,66 +717,118 @@ class SettingsScreen extends StatelessWidget {
     final membersCtrl = TextEditingController(
       text: existing?.members.map((m) => m.name).join(', ') ?? '',
     );
+    final savedMembers = controller.activeMembers;
 
     await showDialog<void>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(existing == null ? s.addGroupTitle : s.editGroupTitle),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: nameCtrl,
-              decoration: InputDecoration(labelText: s.groupNameLabel),
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) => AlertDialog(
+          title: Text(existing == null ? s.addGroupTitle : s.editGroupTitle),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                TextField(
+                  controller: nameCtrl,
+                  decoration: InputDecoration(labelText: s.groupNameLabel),
+                ),
+                const SizedBox(height: 10),
+                TextField(
+                  controller: membersCtrl,
+                  decoration: InputDecoration(
+                    labelText: s.membersLabel,
+                    hintText: '${s.me}, ...',
+                    helperText: s.firstMemberIsHost,
+                    helperMaxLines: 2,
+                  ),
+                ),
+                if (savedMembers.isNotEmpty) ...[
+                  const SizedBox(height: 10),
+                  Text(
+                    s.fromDirectoryLabel,
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: ctx.mam.muted,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Wrap(
+                    spacing: 6,
+                    runSpacing: 6,
+                    children: [
+                      for (final contact in savedMembers)
+                        ActionChip(
+                          label: Text(contact.name),
+                          onPressed: () {
+                            final current = membersCtrl.text
+                                .split(',')
+                                .map((e) => e.trim())
+                                .where((e) => e.isNotEmpty)
+                                .toList();
+                            final exists = current.any(
+                              (n) =>
+                                  MamController.normalizePersonKey(n) ==
+                                  MamController.normalizePersonKey(contact.name),
+                            );
+                            if (!exists) {
+                              current.add(contact.name);
+                              membersCtrl.text = current.join(', ');
+                              setDialogState(() {});
+                            }
+                          },
+                        ),
+                    ],
+                  ),
+                ],
+              ],
             ),
-            const SizedBox(height: 10),
-            TextField(
-              controller: membersCtrl,
-              decoration: InputDecoration(
-                labelText: s.membersLabel,
-                hintText: '${s.me}, ...',
-                helperText: s.firstMemberIsHost,
-                helperMaxLines: 2,
-              ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: Text(s.cancel),
+            ),
+            FilledButton(
+              onPressed: () async {
+                final title = nameCtrl.text.trim();
+                final names = membersCtrl.text
+                    .split(',')
+                    .map((e) => e.trim())
+                    .where((e) => e.isNotEmpty)
+                    .toList();
+                if (title.isEmpty || names.isEmpty) return;
+                final now = DateTime.now().toUtc();
+                final groupMembers = <GroupMember>[];
+                for (var i = 0; i < names.length; i++) {
+                  final matched = i == 0
+                      ? controller.findMemberByName(names[i])
+                      : await controller.ensureMemberContact(names[i]);
+                  groupMembers.add(
+                    GroupMember(
+                      id: 'gm_$i',
+                      name: matched?.name ?? names[i],
+                      isHost: i == 0,
+                      contactId: matched?.id,
+                    ),
+                  );
+                }
+                final group = FriendGroup(
+                  id: existing?.id ?? controller.newId(),
+                  userId: controller.currentUserId,
+                  name: title,
+                  members: groupMembers,
+                  createdAt: existing?.createdAt ?? now,
+                  updatedAt: now,
+                );
+                await controller.saveFriendGroup(group);
+                if (ctx.mounted) Navigator.pop(ctx);
+              },
+              child: Text(s.save),
             ),
           ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: Text(s.cancel),
-          ),
-          FilledButton(
-            onPressed: () async {
-              final title = nameCtrl.text.trim();
-              final names = membersCtrl.text
-                  .split(',')
-                  .map((e) => e.trim())
-                  .where((e) => e.isNotEmpty)
-                  .toList();
-              if (title.isEmpty || names.isEmpty) return;
-              final now = DateTime.now().toUtc();
-              final group = FriendGroup(
-                id: existing?.id ?? controller.newId(),
-                userId: controller.currentUserId,
-                name: title,
-                members: [
-                  for (var i = 0; i < names.length; i++)
-                    GroupMember(
-                      id: 'gm_$i',
-                      name: names[i],
-                      isHost: i == 0,
-                    ),
-                ],
-                createdAt: existing?.createdAt ?? now,
-                updatedAt: now,
-              );
-              await controller.saveFriendGroup(group);
-              if (ctx.mounted) Navigator.pop(ctx);
-            },
-            child: Text(s.save),
-          ),
-        ],
       ),
     );
     nameCtrl.dispose();

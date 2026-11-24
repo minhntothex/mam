@@ -1,8 +1,10 @@
+import 'package:flutter/services.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 
 import '../core/calculator.dart';
 import '../core/currency.dart';
+import '../core/export_png.dart';
 import '../core/formatters.dart';
 import '../core/vietqr.dart';
 import '../l10n/mam_strings.dart';
@@ -96,6 +98,30 @@ class SummaryReceiptCard extends StatelessWidget {
               color: MamReceiptColors.ink,
             ),
           ),
+          if (bill.payload.tripName != null &&
+              bill.payload.tripName!.trim().isNotEmpty) ...[
+            const SizedBox(height: 4),
+            Text(
+              bill.payload.tripName!.trim(),
+              style: const TextStyle(
+                fontSize: 11.5,
+                fontWeight: FontWeight.w700,
+                color: MamReceiptColors.primary,
+              ),
+            ),
+          ],
+          if (bill.payload.note != null &&
+              bill.payload.note!.trim().isNotEmpty) ...[
+            const SizedBox(height: 4),
+            Text(
+              bill.payload.note!.trim(),
+              style: const TextStyle(
+                fontSize: 11.5,
+                fontStyle: FontStyle.italic,
+                color: MamReceiptColors.muted,
+              ),
+            ),
+          ],
           const SizedBox(height: 12),
           const _DashedDivider(),
           const SizedBox(height: 12),
@@ -447,6 +473,330 @@ class PersonQrCard extends StatelessWidget {
       ),
     );
   }
+}
+
+class CombinedPersonQrCard extends StatelessWidget {
+  const CombinedPersonQrCard({
+    super.key,
+    required this.headerTitle,
+    required this.personName,
+    required this.amountVnd,
+    required this.transferNote,
+    required this.bank,
+    this.lines = const [],
+  });
+
+  final String headerTitle;
+  final String personName;
+  final int amountVnd;
+  final String transferNote;
+  final BankAccountSnapshot bank;
+  final List<({String label, int amount})> lines;
+
+  @override
+  Widget build(BuildContext context) {
+    final s = context.s;
+    final dynamicQr = VietQrGenerator.generate(
+      bankBin: bank.bankBin,
+      accountNo: bank.accountNo,
+      amount: amountVnd,
+      transferNote: transferNote,
+    );
+
+    return Container(
+      width: 340,
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: MamReceiptColors.paper,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: MamReceiptColors.border),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Row(
+            children: [
+              const MamLogoMark(size: 20),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  headerTitle,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w600,
+                    color: MamReceiptColors.muted,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Text(
+            s.shareOfPerson(personName),
+            style: const TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w700,
+              color: MamReceiptColors.ink,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            formatVnd(amountVnd),
+            style: kTabularStyle.copyWith(
+              fontSize: 28,
+              fontWeight: FontWeight.w800,
+              color: MamReceiptColors.primary,
+              letterSpacing: -0.6,
+            ),
+          ),
+          const SizedBox(height: 14),
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: MamReceiptColors.border, width: 1.5),
+            ),
+            child: QrImageView(
+              data: dynamicQr,
+              size: 184,
+              padding: EdgeInsets.zero,
+              backgroundColor: Colors.white,
+            ),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            '${bank.bankShortName} · ${bank.accountNo}',
+            style: kTabularStyle.copyWith(
+              fontSize: 13.5,
+              fontWeight: FontWeight.w700,
+              color: MamReceiptColors.ink,
+            ),
+          ),
+          if (bank.accountName != null && bank.accountName!.isNotEmpty)
+            Text(
+              bank.accountName!,
+              style: const TextStyle(
+                fontSize: 12,
+                color: MamReceiptColors.muted,
+              ),
+            ),
+          const SizedBox(height: 6),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+            decoration: BoxDecoration(
+              color: MamReceiptColors.subtle,
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Text(
+              s.notePrefix(transferNote),
+              style: const TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: MamReceiptColors.ink,
+              ),
+            ),
+          ),
+          if (lines.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            const _DashedDivider(),
+            const SizedBox(height: 8),
+            ...lines.take(5).map(
+                  (line) => Padding(
+                    padding: const EdgeInsets.only(bottom: 3),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            line.label,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              fontSize: 11.5,
+                              color: MamReceiptColors.muted,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          formatSignedMoney(
+                            line.amount,
+                            currency: CurrencyRegistry.vnd,
+                          ),
+                          style: kTabularStyle.copyWith(
+                            fontSize: 11.5,
+                            color: MamReceiptColors.muted,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+            if (lines.length > 5)
+              Text(
+                s.moreItemsCount(lines.length - 5),
+                style: const TextStyle(
+                  fontSize: 11,
+                  color: MamReceiptColors.muted,
+                ),
+              ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+Future<void> openCombinedPersonQrModal(
+  BuildContext context, {
+  required String headerTitle,
+  required String personName,
+  required int amountVnd,
+  required String rawTransferNote,
+  required BankAccountSnapshot? bank,
+  List<({String label, int amount})> lines = const [],
+}) async {
+  final s = context.s;
+  if (bank == null) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(s.addBankFirst)),
+    );
+    return;
+  }
+
+  final boundaryKey = GlobalKey();
+  final transferNote = VietQrGenerator.normalizeTransferNote(rawTransferNote);
+  var exporting = false;
+  final p = context.mam;
+
+  await showModalBottomSheet<void>(
+    context: context,
+    isScrollControlled: true,
+    backgroundColor: p.ground,
+    builder: (ctx) => StatefulBuilder(
+      builder: (ctx, setModalState) => SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      s.personQrTitle(personName),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                  IconButton(
+                    onPressed: () => Navigator.pop(ctx),
+                    icon: const Icon(Icons.close_rounded),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Center(
+                child: RepaintBoundary(
+                  key: boundaryKey,
+                  child: CombinedPersonQrCard(
+                    headerTitle: headerTitle,
+                    personName: personName,
+                    amountVnd: amountVnd,
+                    transferNote: transferNote,
+                    bank: bank,
+                    lines: lines,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 14),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: () async {
+                        await Clipboard.setData(
+                          ClipboardData(text: bank.accountNo),
+                        );
+                        if (ctx.mounted) {
+                          ScaffoldMessenger.of(ctx).showSnackBar(
+                            SnackBar(content: Text(s.copiedAccNo)),
+                          );
+                        }
+                      },
+                      icon: const Icon(Icons.copy_rounded, size: 16),
+                      label: Text(s.copyAccNo),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: () async {
+                        await Clipboard.setData(
+                          ClipboardData(text: transferNote),
+                        );
+                        if (ctx.mounted) {
+                          ScaffoldMessenger.of(ctx).showSnackBar(
+                            SnackBar(content: Text(s.copiedNote)),
+                          );
+                        }
+                      },
+                      icon: const Icon(Icons.notes_rounded, size: 16),
+                      label: Text(s.copyNote),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              SizedBox(
+                width: double.infinity,
+                child: FilledButton.icon(
+                  onPressed: exporting
+                      ? null
+                      : () async {
+                          setModalState(() => exporting = true);
+                          try {
+                            final slug = VietQrGenerator.normalizeTransferNote(
+                              personName,
+                              maxLength: 16,
+                            ).replaceAll(' ', '_');
+                            await ReceiptPngExporter.shareBoundaryAsPng(
+                              boundaryKey: boundaryKey,
+                              fileName:
+                                  'mam_qr_${slug.isEmpty ? 'person' : slug}.png',
+                              shareText:
+                                  '$personName: ${formatVnd(amountVnd)} ($transferNote)',
+                            );
+                          } catch (e) {
+                            if (ctx.mounted) {
+                              ScaffoldMessenger.of(ctx).showSnackBar(
+                                SnackBar(content: Text(s.exportError(e))),
+                              );
+                            }
+                          } finally {
+                            if (ctx.mounted) {
+                              setModalState(() => exporting = false);
+                            }
+                          }
+                        },
+                  icon: const Icon(Icons.ios_share_rounded, size: 18),
+                  label: Text(
+                    exporting ? s.exportingPng : s.sharePersonQrBtn,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    ),
+  );
 }
 
 class _ReceiptPersonRow extends StatelessWidget {

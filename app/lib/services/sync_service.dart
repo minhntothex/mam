@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../models/bill_models.dart';
@@ -49,7 +50,12 @@ class SyncService {
     if (client == null) {
       throw StateError('Supabase chưa được cấu hình');
     }
-    await client.auth.signUp(email: email, password: password);
+    final redirectTo = kIsWeb ? '${Uri.base.origin}${Uri.base.path}' : null;
+    await client.auth.signUp(
+      email: email,
+      password: password,
+      emailRedirectTo: redirectTo,
+    );
     attachToController();
     if (currentUser != null) {
       await syncAll();
@@ -117,6 +123,21 @@ class SyncService {
         }
       }
 
+      final membersToPush = controller.allMembers
+          .where(
+            (m) => isFirstSync || remainingPending.contains('member:${m.id}'),
+          )
+          .map((m) => m.copyWith(userId: uid))
+          .toList(growable: false);
+      if (membersToPush.isNotEmpty) {
+        await client.from('members').upsert(
+              membersToPush.map((m) => m.toJson()).toList(growable: false),
+            );
+        for (final m in membersToPush) {
+          remainingPending.remove('member:${m.id}');
+        }
+      }
+
       if (isFirstSync || remainingPending.contains('settings')) {
         await client
             .from('user_settings')
@@ -142,6 +163,9 @@ class SyncService {
               .from('friend_groups')
               .select()
               .gt('updated_at', sinceIso);
+      final remoteMembersRaw = sinceIso == null
+          ? await client.from('members').select()
+          : await client.from('members').select().gt('updated_at', sinceIso);
       final remoteSettingsRaw =
           await client.from('user_settings').select().eq('user_id', uid).maybeSingle();
 
@@ -153,6 +177,11 @@ class SyncService {
           .toList(growable: false);
       final remoteGroups = (remoteGroupsRaw as List<dynamic>)
           .map((e) => FriendGroup.fromJson(Map<String, dynamic>.from(e as Map)))
+          .toList(growable: false);
+      final remoteMembers = (remoteMembersRaw as List<dynamic>)
+          .map(
+            (e) => MemberContact.fromJson(Map<String, dynamic>.from(e as Map)),
+          )
           .toList(growable: false);
 
       // 3. Merge via Last-Write-Wins
@@ -178,6 +207,14 @@ class SyncService {
         idOf: (g) => g.id,
         updatedAtOf: (g) => g.updatedAt,
       );
+      final mergedMembers = SyncMerger.mergeByUpdatedAt<MemberContact>(
+        local: controller.allMembers
+            .map((m) => m.copyWith(userId: uid))
+            .toList(),
+        remote: remoteMembers,
+        idOf: (m) => m.id,
+        updatedAtOf: (m) => m.updatedAt,
+      );
 
       var mergedSettings = controller.settings.copyWith(userId: uid);
       if (remoteSettingsRaw != null) {
@@ -193,6 +230,7 @@ class SyncService {
         bills: mergedBills,
         bankAccounts: mergedBanks,
         friendGroups: mergedGroups,
+        members: mergedMembers,
         settings: mergedSettings,
         remainingPendingKeys: remainingPending,
         syncedAt: DateTime.now().toUtc(),

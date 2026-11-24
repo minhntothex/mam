@@ -92,8 +92,8 @@ class MamStrings {
       isVi ? '$paidCount/$total đã trả' : '$paidCount/$total paid';
 
   String get emptyAll => t(
-        'No bills yet. Tap "New bill" or "Equal split" to get started.',
-        'Chưa có hóa đơn nào. Bấm "Tạo bill mới" hoặc "Chia đều" để bắt đầu.',
+        'No bills yet. Tap "+" below to create your first bill.',
+        'Chưa có hóa đơn nào. Bấm nút "+" bên dưới để tạo hóa đơn đầu tiên.',
       );
   String get emptyPending => t(
         'All caught up! No pending bills left.',
@@ -448,8 +448,8 @@ class MamStrings {
   String get pickPhotoTitle =>
       t('Choose receipt from gallery', 'Chọn ảnh hóa đơn từ máy');
   String get pickPhotoSubConfigured => t(
-        'Auto-extracted via Gemini 2.5 Flash',
-        'Trích xuất tự động bằng Gemini 2.5 Flash',
+        'Auto-extracted via Gemini Flash',
+        'Trích xuất tự động bằng Gemini Flash',
       );
   String get pickPhotoSubUnconfigured => t(
         'Requires Supabase OCR proxy (try demo presets below)',
@@ -467,6 +467,112 @@ class MamStrings {
         'Please sign in under Settings before scanning with AI OCR.',
         'Vui lòng đăng nhập trong Cài đặt trước khi scan OCR.',
       );
+  String get ocrScanningTitle => t(
+        'Reading receipt with AI...',
+        'Đang đọc hóa đơn bằng AI...',
+      );
+  String get ocrScanningSub => t(
+        'Extracting items, totals & currency. Please wait a moment.',
+        'Đang trích xuất món ăn, tổng tiền & tiền tệ. Vui lòng đợi giây lát.',
+      );
+  String get ocrErrorTitle => t('Could not scan receipt', 'Không thể quét hóa đơn');
+  String get ocrRetryHint =>
+      t('Choose another photo or try again below.', 'Chọn ảnh khác hoặc thử lại bên dưới.');
+
+  // Bottom Navigation & Create Action Sheet
+  String get navHome => t('Home', 'Trang chủ');
+  String get navMembers => t('Members', 'Danh bạ');
+  String get navSync => t('Sync', 'Đồng bộ');
+  String get navSettings => t('Settings', 'Cài đặt');
+  String get createActionTooltip => t('Create bill', 'Tạo hóa đơn');
+  String get createSheetTitle => t('Create new', 'Tạo mới');
+  String get createEqualSub =>
+      t('Split evenly or with multiple upfront payers', 'Chia đều nhanh hoặc nhiều người ứng trước');
+  String get createNewBillSub =>
+      t('Enter items manually & assign per person', 'Nhập từng món & gán cho từng người');
+  String get createScanTitle => t('Scan receipt', 'Quét hóa đơn');
+  String get createScanSub =>
+      t('Snap or pick a receipt photo for AI OCR', 'Chụp hoặc chọn ảnh bill để AI tự đọc');
+  String get syncSignInPrompt => t(
+        'Sign in under Settings to sync across devices.',
+        'Đăng nhập trong Cài đặt để đồng bộ giữa các thiết bị.',
+      );
+  String get syncAlreadyRunning => t('Sync in progress...', 'Đang đồng bộ...');
+  String get syncDoneSnack => t('Synced with cloud', 'Đã đồng bộ dữ liệu');
+
+  // Persistent Members Directory (Danh bạ thành viên)
+  String get membersTitle => t('Members', 'Danh bạ thành viên');
+  String get addMemberBtn => t('Add member', 'Thêm người');
+  String get addMemberTitle => t('Add member', 'Thêm thành viên');
+  String get editMemberTitle => t('Rename member', 'Đổi tên thành viên');
+  String get memberNameLabel => t('Member name', 'Tên thành viên');
+  String get searchMembersHint => t('Search members...', 'Tìm thành viên...');
+  String get emptyMembers => t(
+        'No saved members yet. Add friends here or when splitting a bill.',
+        'Chưa có thành viên nào. Thêm bạn bè tại đây hoặc ngay khi chia bill.',
+      );
+  String get fromDirectoryLabel => t('From contacts', 'Chọn từ danh bạ');
+  String get pickOrAddMembersTitle =>
+      t('Select or add members', 'Chọn hoặc thêm thành viên');
+  String get savedMembersHint =>
+      t('Tap to include in this bill', 'Chạm để thêm vào bill này');
+  String get newMemberQuickHint =>
+      t('Add new person (saved to contacts)...', 'Thêm người mới (tự lưu danh bạ)...');
+  String get deleteMemberTitle => t('Remove member?', 'Xóa thành viên?');
+  String deleteMemberConfirm(String name) => isVi
+      ? 'Xóa "$name" khỏi danh bạ? Lịch sử các bill cũ vẫn được giữ nguyên.'
+      : 'Remove "$name" from contacts? Existing bill history will be preserved.';
+  String get memberClearedBadge => t('Settled', 'Đã chốt');
+  String memberOwesLabel(String amount) =>
+      isVi ? 'Còn nợ $amount' : 'Owes $amount';
+  String memberRefundLabel(String amount) =>
+      isVi ? 'Cần hoàn $amount' : 'Refund $amount';
+  String memberPendingBillsCount(int count) =>
+      isVi ? '$count bill chưa chốt' : '$count pending ${count == 1 ? 'bill' : 'bills'}';
+
+  // Notes, Trips & Edit Quick Equal
+  String get noteLabel => t('Note (optional)', 'Ghi chú (tùy chọn)');
+  String get noteHint =>
+      t('e.g. Birthday dinner, table 5...', 'vd: Sinh nhật phòng, bàn 5...');
+  String get tripLabel =>
+      t('Trip / Event (optional)', 'Chuyến đi / Sự kiện (tùy chọn)');
+  String get tripHint =>
+      t('e.g. Da Lat 24/11', 'vd: Đà Lạt 24/11');
+  String get saveChangesBtn => t('Save changes', 'Lưu thay đổi');
+
+  // Per-Person Debt Ledger (Uncollected) & Combined VietQR
+  String get viewByPersonHint => t('View by person', 'Xem theo người');
+  String get personLedgerTitle =>
+      t('Unsettled by person', 'Công nợ theo người');
+  String get noUnsettledPeople =>
+      t('Everyone is settled!', 'Mọi người đã tất toán hết!');
+  String get combinedQrBtn => t('Combined QR', 'QR gộp');
+  String get markAllPaidBtn => t('Mark all paid', 'Đã trả hết');
+  String get markAllRefundedBtn => t('Mark all refunded', 'Đã hoàn hết');
+  String markedAllPaidSnack(String name, int billCount) => isVi
+      ? 'Đã chốt tất cả $billCount bill của $name'
+      : 'Settled all $billCount ${billCount == 1 ? 'bill' : 'bills'} for $name';
+  String combinedBillsTitle(int count) =>
+      isVi ? 'Gộp $count hóa đơn' : 'Combined ($count ${count == 1 ? 'bill' : 'bills'})';
+  String combinedTransferNote(String name, int count) =>
+      '$name thanh toan $count bill';
+  String get totalToCollectLabel => t('Total to collect', 'Tổng cần thu');
+  String get totalToRefundLabel => t('Total to refund', 'Tổng cần hoàn');
+
+  // Trip / Event Settlement
+  String get tripsHeading => t('Trips', 'Chuyến đi');
+  String get tripSettlementTitle => t('Trip Settlement', 'Tổng kết chuyến đi');
+  String tripBillsProgress(int settled, int total) =>
+      isVi ? '$settled/$total bill đã xong' : '$settled/$total bills settled';
+  String get tripTotalSpend => t('Total spend', 'Tổng chi chuyến đi');
+  String get tripPerPersonSection =>
+      t('Consolidated settlement', 'Tất toán gộp theo người');
+  String get tripBillsSection => t('Bills in this trip', 'Hóa đơn trong chuyến');
+  String tripNetTotalLabel(String formatted) =>
+      isVi ? 'Tổng cả chuyến: $formatted' : 'Trip total: $formatted';
+  String get tripAllSettledPerson => t('All settled', 'Đã tất toán');
+  String get emptyTripBills =>
+      t('No bills in this trip yet.', 'Chưa có hóa đơn nào trong chuyến đi này.');
 }
 
 class MamStringsScope extends InheritedWidget {

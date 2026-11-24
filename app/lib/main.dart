@@ -3,6 +3,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'data/local_store.dart';
 import 'l10n/mam_strings.dart';
+import 'models/bill_models.dart';
 import 'screens/home_screen.dart';
 import 'services/ocr_service.dart';
 import 'services/supabase_config.dart';
@@ -39,26 +40,69 @@ Future<void> main() async {
   );
 }
 
-class MamApp extends StatelessWidget {
+class MamApp extends StatefulWidget {
   const MamApp({
     super.key,
     required this.controller,
     this.syncService,
+    this.onOpenScanOcr,
   });
 
   final MamController controller;
   final SyncService? syncService;
+  final Future<OcrScanResult?> Function(BuildContext context)? onOpenScanOcr;
+
+  @override
+  State<MamApp> createState() => _MamAppState();
+}
+
+class _MamAppState extends State<MamApp> with WidgetsBindingObserver {
+  static const Duration _resumeSyncCooldown = Duration(seconds: 15);
+
+  late final SyncService _effectiveSync;
+  late final OcrService _ocrService;
+  DateTime? _lastResumeSyncAt;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    _effectiveSync =
+        widget.syncService ?? SyncService(controller: widget.controller);
+    _ocrService = OcrService();
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state != AppLifecycleState.resumed) return;
+    if (widget.controller.signedInEmail == null) return;
+    if (widget.controller.syncStatus == SyncStatus.syncing) return;
+
+    final now = DateTime.now().toUtc();
+    if (_lastResumeSyncAt != null &&
+        now.difference(_lastResumeSyncAt!) < _resumeSyncCooldown) {
+      return;
+    }
+    _lastResumeSyncAt = now;
+    widget.controller.triggerSync();
+  }
 
   @override
   Widget build(BuildContext context) {
-    final effectiveSync = syncService ?? SyncService(controller: controller);
-    final ocrService = OcrService();
+    final scanHandler =
+        widget.onOpenScanOcr ?? (ctx) => _ocrService.openScanSheet(ctx);
 
     return ListenableBuilder(
-      listenable: controller,
+      listenable: widget.controller,
       builder: (context, _) {
         return MamStringsScope(
-          strings: controller.strings,
+          strings: widget.controller.strings,
           child: MaterialApp(
             title: 'Mâm',
             debugShowCheckedModeBanner: false,
@@ -67,11 +111,11 @@ class MamApp extends StatelessWidget {
               child: child ?? const SizedBox.shrink(),
             ),
             home: HomeScreen(
-              controller: controller,
-              onOpenScanOcr: (ctx) => ocrService.openScanSheet(ctx),
+              controller: widget.controller,
+              onOpenScanOcr: scanHandler,
               syncAuthSectionBuilder: (_) => SyncAuthCard(
-                controller: controller,
-                syncService: effectiveSync,
+                controller: widget.controller,
+                syncService: _effectiveSync,
               ),
             ),
           ),

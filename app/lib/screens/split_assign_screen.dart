@@ -20,6 +20,8 @@ class SplitAssignScreen extends StatefulWidget {
     required this.items,
     required this.adjustments,
     this.currencyCode,
+    this.note,
+    this.tripName,
   });
 
   final MamController controller;
@@ -29,6 +31,8 @@ class SplitAssignScreen extends StatefulWidget {
   final List<BillItem> items;
   final BillAdjustments adjustments;
   final String? currencyCode;
+  final String? note;
+  final String? tripName;
 
   @override
   State<SplitAssignScreen> createState() => _SplitAssignScreenState();
@@ -65,6 +69,8 @@ class _SplitAssignScreenState extends State<SplitAssignScreen> {
               name: m.name,
               isHost: m.isHost,
               paid: m.isHost,
+              contactId: m.contactId ??
+                  widget.controller.findMemberByName(m.name)?.id,
             ),
           )
           .toList();
@@ -90,6 +96,8 @@ class _SplitAssignScreenState extends State<SplitAssignScreen> {
           widget.controller.defaultBankAccount?.toSnapshot(),
       transferNoteTemplate: widget.existingBill?.payload.transferNoteTemplate ??
           widget.controller.settings.defaultTransferTemplate,
+      note: widget.note ?? widget.existingBill?.payload.note,
+      tripName: widget.tripName ?? widget.existingBill?.payload.tripName,
     );
   }
 
@@ -218,26 +226,67 @@ class _SplitAssignScreenState extends State<SplitAssignScreen> {
     );
   }
 
-  Future<void> _addPersonDialog() async {
-    final s = context.s;
-    final name = await showDialog<String>(
-      context: context,
-      builder: (_) => _AddPersonDialog(
-        title: s.addPersonDialogTitle,
-        hintText: s.personNameHint,
-        cancelLabel: s.cancel,
-        addLabel: s.add,
-      ),
+  bool _hasContactInBill(MemberContact contact) {
+    final norm = MamController.normalizePersonKey(contact.name);
+    return _participants.any(
+      (p) =>
+          p.contactId == contact.id ||
+          MamController.normalizePersonKey(p.name) == norm,
     );
-    if (name == null || name.isEmpty) return;
+  }
+
+  void _addContactToBill(MemberContact contact) {
+    if (_hasContactInBill(contact)) return;
     final newPerson = Participant(
-      id: 'p_${DateTime.now().microsecondsSinceEpoch}',
-      name: name,
+      id: 'p_${DateTime.now().microsecondsSinceEpoch}_${contact.id.substring(0, contact.id.length >= 4 ? 4 : contact.id.length)}',
+      name: contact.name,
+      contactId: contact.id,
     );
     setState(() {
       _participants.add(newPerson);
       _selectedPersonId = newPerson.id;
     });
+  }
+
+  void _removeContactFromBill(MemberContact contact) {
+    final norm = MamController.normalizePersonKey(contact.name);
+    final idx = _participants.indexWhere(
+      (p) =>
+          !p.isHost &&
+          (p.contactId == contact.id ||
+              MamController.normalizePersonKey(p.name) == norm),
+    );
+    if (idx < 0 || _participants.length <= 1) return;
+    setState(() {
+      final removed = _participants.removeAt(idx);
+      if (_selectedPersonId == removed.id) {
+        _selectedPersonId = _participants.first.id;
+      }
+    });
+  }
+
+  Future<void> _addPersonDialog() async {
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      builder: (_) => _AddParticipantsSheet(
+        controller: widget.controller,
+        isContactSelected: _hasContactInBill,
+        onToggleContact: (contact, selected) {
+          if (selected) {
+            _addContactToBill(contact);
+          } else {
+            _removeContactFromBill(contact);
+          }
+        },
+        onAddNewName: (name) async {
+          final contact = await widget.controller.ensureMemberContact(name);
+          if (!mounted) return;
+          if (_hasContactInBill(contact)) return;
+          _addContactToBill(contact);
+        },
+      ),
+    );
   }
 
   Future<void> _openUpfrontSheet() async {
@@ -292,6 +341,8 @@ class _SplitAssignScreenState extends State<SplitAssignScreen> {
                             name: m.name,
                             isHost: m.isHost,
                             paid: m.isHost,
+                            contactId: m.contactId ??
+                                widget.controller.findMemberByName(m.name)?.id,
                           ),
                         )
                         .toList();
@@ -925,24 +976,24 @@ class _UpfrontPaymentsSheetState extends State<_UpfrontPaymentsSheet> {
   }
 }
 
-class _AddPersonDialog extends StatefulWidget {
-  const _AddPersonDialog({
-    required this.title,
-    required this.hintText,
-    required this.cancelLabel,
-    required this.addLabel,
+class _AddParticipantsSheet extends StatefulWidget {
+  const _AddParticipantsSheet({
+    required this.controller,
+    required this.isContactSelected,
+    required this.onToggleContact,
+    required this.onAddNewName,
   });
 
-  final String title;
-  final String hintText;
-  final String cancelLabel;
-  final String addLabel;
+  final MamController controller;
+  final bool Function(MemberContact contact) isContactSelected;
+  final void Function(MemberContact contact, bool selected) onToggleContact;
+  final Future<void> Function(String name) onAddNewName;
 
   @override
-  State<_AddPersonDialog> createState() => _AddPersonDialogState();
+  State<_AddParticipantsSheet> createState() => _AddParticipantsSheetState();
 }
 
-class _AddPersonDialogState extends State<_AddPersonDialog> {
+class _AddParticipantsSheetState extends State<_AddParticipantsSheet> {
   final TextEditingController _ctrl = TextEditingController();
 
   @override
@@ -951,26 +1002,114 @@ class _AddPersonDialogState extends State<_AddPersonDialog> {
     super.dispose();
   }
 
+  Future<void> _submitNew() async {
+    final name = _ctrl.text.trim();
+    if (name.isEmpty) return;
+    await widget.onAddNewName(name);
+    if (mounted) Navigator.pop(context);
+  }
+
   @override
   Widget build(BuildContext context) {
-    return AlertDialog(
-      title: Text(widget.title),
-      content: TextField(
-        controller: _ctrl,
-        autofocus: true,
-        decoration: InputDecoration(hintText: widget.hintText),
-        onSubmitted: (v) => Navigator.pop(context, v.trim()),
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: Text(widget.cancelLabel),
-        ),
-        FilledButton(
-          onPressed: () => Navigator.pop(context, _ctrl.text.trim()),
-          child: Text(widget.addLabel),
-        ),
-      ],
+    final p = context.mam;
+    final s = context.s;
+
+    return ListenableBuilder(
+      listenable: widget.controller,
+      builder: (context, _) {
+        final members = widget.controller.activeMembers;
+        return Padding(
+          padding: EdgeInsets.fromLTRB(
+            16,
+            14,
+            16,
+            MediaQuery.of(context).viewInsets.bottom + 18,
+          ),
+          child: SafeArea(
+            top: false,
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          s.pickOrAddMembersTitle,
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                      IconButton(
+                        onPressed: () => Navigator.pop(context),
+                        icon: const Icon(Icons.close_rounded),
+                      ),
+                    ],
+                  ),
+                  if (members.isNotEmpty) ...[
+                    const SizedBox(height: 4),
+                    Text(
+                      s.fromDirectoryLabel,
+                      style: TextStyle(
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w700,
+                        color: p.muted,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        for (var i = 0; i < members.length; i++)
+                          FilterChip(
+                            avatar: CircleAvatar(
+                              backgroundColor: p.participantColor(i),
+                              radius: 6,
+                            ),
+                            label: Text(members[i].name),
+                            selected: widget.isContactSelected(members[i]),
+                            selectedColor: p.primarySoft,
+                            onSelected: (val) {
+                              widget.onToggleContact(members[i], val);
+                              setState(() {});
+                            },
+                          ),
+                      ],
+                    ),
+                    const SizedBox(height: 14),
+                    Divider(height: 1, color: p.border),
+                    const SizedBox(height: 14),
+                  ],
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextField(
+                          controller: _ctrl,
+                          autofocus: members.isEmpty,
+                          textCapitalization: TextCapitalization.words,
+                          decoration: InputDecoration(
+                            hintText: s.newMemberQuickHint,
+                          ),
+                          onSubmitted: (_) => _submitNew(),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      FilledButton(
+                        onPressed: _submitNew,
+                        child: Text(s.add),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 }

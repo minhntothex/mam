@@ -60,6 +60,11 @@ bool matchesBillSearch(BillRecord bill, String rawQuery) {
       ..write(_normalize(bill.payload.note!))
       ..write(' ');
   }
+  if (bill.payload.tripName != null && bill.payload.tripName!.isNotEmpty) {
+    buffer
+      ..write(_normalize(bill.payload.tripName!))
+      ..write(' ');
+  }
 
   final haystack = buffer.toString();
   for (final token in tokens) {

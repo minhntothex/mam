@@ -2,6 +2,7 @@ import 'package:material_ui/material_ui.dart';
 
 import '../core/amount_input_formatter.dart';
 import '../core/calculator.dart';
+import '../core/currency.dart';
 import '../core/formatters.dart';
 import '../l10n/mam_strings.dart';
 import '../models/bill_models.dart';
@@ -10,9 +11,14 @@ import '../theme/mam_theme.dart';
 import 'result_screen.dart';
 
 class QuickEqualScreen extends StatefulWidget {
-  const QuickEqualScreen({super.key, required this.controller});
+  const QuickEqualScreen({
+    super.key,
+    required this.controller,
+    this.existingBill,
+  });
 
   final MamController controller;
+  final BillRecord? existingBill;
 
   @override
   State<QuickEqualScreen> createState() => _QuickEqualScreenState();
@@ -20,6 +26,8 @@ class QuickEqualScreen extends StatefulWidget {
 
 class _QuickEqualScreenState extends State<QuickEqualScreen> {
   late final TextEditingController _titleCtrl;
+  late final TextEditingController _noteCtrl;
+  late final TextEditingController _tripCtrl;
   final TextEditingController _totalCtrl = TextEditingController();
   final TextEditingController _nameCtrl = TextEditingController();
   final Map<String, TextEditingController> _upfrontCtrls = {};
@@ -29,23 +37,61 @@ class _QuickEqualScreenState extends State<QuickEqualScreen> {
   late List<Participant> _participants;
   bool _multiPayer = false;
 
+  CurrencySpec get _currency => CurrencyRegistry.byCode(
+        widget.existingBill?.payload.currencyCode ??
+            widget.controller.currentCurrency.code,
+      );
+
+  AmountInputFormat get _inputFormat => widget.controller.amountInputFormat;
+
   @override
   void initState() {
     super.initState();
+    final existing = widget.existingBill;
     final s = widget.controller.strings;
     final now = DateTime.now();
-    _billDate = DateTime(now.year, now.month, now.day);
-    _titleCtrl = TextEditingController();
-    _roundingMode = widget.controller.settings.defaultRounding;
-    _participants = [
-      Participant(id: 'p_1', name: s.me, isHost: true, paid: true),
-    ];
-    _upfrontCtrls['p_1'] = TextEditingController();
+
+    _titleCtrl = TextEditingController(text: existing?.title ?? '');
+    _noteCtrl = TextEditingController(text: existing?.payload.note ?? '');
+    _tripCtrl = TextEditingController(text: existing?.payload.tripName ?? '');
+    _billDate = existing?.billDate ?? DateTime(now.year, now.month, now.day);
+    _roundingMode = existing?.payload.roundingMode ??
+        widget.controller.settings.defaultRounding;
+
+    if (existing != null && existing.payload.participants.isNotEmpty) {
+      _participants = List<Participant>.from(existing.payload.participants);
+      _multiPayer = _participants.any((p) => p.paidUpfront > 0);
+      for (final p in _participants) {
+        _upfrontCtrls[p.id] = TextEditingController(
+          text: p.paidUpfront > 0
+              ? formatAmountForInput(
+                  p.paidUpfront,
+                  currency: _currency,
+                  format: _inputFormat,
+                )
+              : '',
+        );
+      }
+      if (!_multiPayer && existing.totalAmount > 0) {
+        _totalCtrl.text = formatAmountForInput(
+          existing.totalAmount,
+          currency: _currency,
+          format: _inputFormat,
+        );
+      }
+    } else {
+      _participants = [
+        Participant(id: 'p_1', name: s.me, isHost: true, paid: true),
+      ];
+      _upfrontCtrls['p_1'] = TextEditingController();
+    }
   }
 
   @override
   void dispose() {
     _titleCtrl.dispose();
+    _noteCtrl.dispose();
+    _tripCtrl.dispose();
     _totalCtrl.dispose();
     _nameCtrl.dispose();
     for (final ctrl in _upfrontCtrls.values) {
@@ -78,11 +124,14 @@ class _QuickEqualScreenState extends State<QuickEqualScreen> {
 
   BillPayload _buildPayload(MamStrings s) {
     final total = _effectiveTotalAmount;
+    final existing = widget.existingBill;
     final effectiveParticipants = [
       for (final p in _participants)
         p.copyWith(paidUpfront: _multiPayer ? _upfrontOf(p.id) : 0),
     ];
     final shares = {for (final p in effectiveParticipants) p.id: 1.0};
+    final note = _noteCtrl.text.trim();
+    final tripName = _tripCtrl.text.trim();
     return BillPayload(
       participants: effectiveParticipants,
       items: [
@@ -95,10 +144,45 @@ class _QuickEqualScreenState extends State<QuickEqualScreen> {
         ),
       ],
       roundingMode: _roundingMode,
-      currencyCode: widget.controller.currentCurrency.code,
-      bankAccountSnapshot: widget.controller.defaultBankAccount?.toSnapshot(),
-      transferNoteTemplate: widget.controller.settings.defaultTransferTemplate,
+      currencyCode: _currency.code,
+      bankAccountSnapshot: existing?.payload.bankAccountSnapshot ??
+          widget.controller.defaultBankAccount?.toSnapshot(),
+      transferNoteTemplate: existing?.payload.transferNoteTemplate ??
+          widget.controller.settings.defaultTransferTemplate,
+      note: note.isEmpty ? null : note,
+      tripName: tripName.isEmpty ? null : tripName,
     );
+  }
+
+  bool _hasContact(MemberContact contact) {
+    final norm = MamController.normalizePersonKey(contact.name);
+    return _participants.any(
+      (p) =>
+          p.contactId == contact.id ||
+          MamController.normalizePersonKey(p.name) == norm,
+    );
+  }
+
+  void _toggleContact(MemberContact contact) {
+    final norm = MamController.normalizePersonKey(contact.name);
+    final idx = _participants.indexWhere(
+      (p) =>
+          p.contactId == contact.id ||
+          MamController.normalizePersonKey(p.name) == norm,
+    );
+    if (idx >= 0) {
+      if (_participants.length > 1) {
+        _removeParticipant(idx);
+      }
+      return;
+    }
+    final id = 'p_${DateTime.now().microsecondsSinceEpoch}';
+    setState(() {
+      _participants.add(
+        Participant(id: id, name: contact.name, contactId: contact.id),
+      );
+      _upfrontCtrlFor(id);
+    });
   }
 
   void _applyGroup(FriendGroup group) {
@@ -110,6 +194,8 @@ class _QuickEqualScreenState extends State<QuickEqualScreen> {
               name: m.name,
               isHost: m.isHost,
               paid: m.isHost,
+              contactId: m.contactId ??
+                  widget.controller.findMemberByName(m.name)?.id,
             ),
           )
           .toList();
@@ -126,12 +212,20 @@ class _QuickEqualScreenState extends State<QuickEqualScreen> {
     });
   }
 
-  void _addParticipant() {
+  Future<void> _addParticipant() async {
     final name = _nameCtrl.text.trim();
     if (name.isEmpty) return;
+    final contact = await widget.controller.ensureMemberContact(name);
+    if (!mounted) return;
+    if (_hasContact(contact)) {
+      _nameCtrl.clear();
+      return;
+    }
     final id = 'p_${DateTime.now().microsecondsSinceEpoch}';
     setState(() {
-      _participants.add(Participant(id: id, name: name));
+      _participants.add(
+        Participant(id: id, name: contact.name, contactId: contact.id),
+      );
       _upfrontCtrlFor(id);
       _nameCtrl.clear();
     });
@@ -154,7 +248,7 @@ class _QuickEqualScreenState extends State<QuickEqualScreen> {
         for (var j = 0; j < _participants.length; j++)
           _participants[j].copyWith(
             isHost: j == index,
-            paid: j == index,
+            paid: j == index ? true : _participants[j].paid,
           ),
       ];
     });
@@ -190,26 +284,32 @@ class _QuickEqualScreenState extends State<QuickEqualScreen> {
     }
     if (_participants.isEmpty) return;
 
+    final existing = widget.existingBill;
     final now = DateTime.now().toUtc();
     final title = _titleCtrl.text.trim().isEmpty
         ? defaultMealTitle(isVi: s.isVi)
         : _titleCtrl.text.trim();
 
     final record = BillRecord(
-      id: widget.controller.newId(),
+      id: existing?.id ?? widget.controller.newId(),
       userId: widget.controller.currentUserId,
       title: title,
       billDate: _billDate,
       mode: BillMode.quickEqual,
       totalAmount: total,
       payload: _buildPayload(s),
-      createdAt: now,
+      createdAt: existing?.createdAt ?? now,
       updatedAt: now,
+      archivedAt: existing?.archivedAt,
     );
 
     try {
       final saved = await widget.controller.saveBill(record);
       if (!mounted) return;
+      if (existing != null) {
+        Navigator.of(context).pop();
+        return;
+      }
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(
           builder: (_) => ResultScreen(
@@ -230,8 +330,8 @@ class _QuickEqualScreenState extends State<QuickEqualScreen> {
   Widget build(BuildContext context) {
     final p = context.mam;
     final s = context.s;
-    final currency = widget.controller.currentCurrency;
-    final inputFormat = widget.controller.amountInputFormat;
+    final currency = _currency;
+    final inputFormat = _inputFormat;
     final amountFormatter = AmountTextInputFormatter(
       currency: currency,
       format: inputFormat,
@@ -244,10 +344,15 @@ class _QuickEqualScreenState extends State<QuickEqualScreen> {
     final perPerson =
         preview.breakdowns.isNotEmpty ? preview.breakdowns.first.finalAmount : 0;
     final groups = widget.controller.activeFriendGroups;
+    final savedMembers = widget.controller.activeMembers;
+    final activeTrips = widget.controller.activeTripNames;
     final zeroHint = currency.decimalDigits > 0 ? '0.00' : '0';
+    final isEditing = widget.existingBill != null;
 
     return Scaffold(
-      appBar: AppBar(title: Text(s.quickEqualTitle)),
+      appBar: AppBar(
+        title: Text(isEditing ? s.editBillTitle : s.quickEqualTitle),
+      ),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 100),
         children: [
@@ -341,6 +446,7 @@ class _QuickEqualScreenState extends State<QuickEqualScreen> {
                     ),
                     const SizedBox(height: 6),
                     TextField(
+                      key: const ValueKey('quick_equal_total_field'),
                       controller: _totalCtrl,
                       keyboardType: TextInputType.number,
                       inputFormatters: [amountFormatter],
@@ -408,6 +514,48 @@ class _QuickEqualScreenState extends State<QuickEqualScreen> {
                         ],
                       ),
                     ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    key: const ValueKey('quick_equal_note_field'),
+                    controller: _noteCtrl,
+                    decoration: InputDecoration(
+                      labelText: s.noteLabel,
+                      hintText: s.noteHint,
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  TextField(
+                    key: const ValueKey('quick_equal_trip_field'),
+                    controller: _tripCtrl,
+                    decoration: InputDecoration(
+                      labelText: s.tripLabel,
+                      hintText: s.tripHint,
+                      prefixIcon: Icon(
+                        Icons.luggage_outlined,
+                        size: 18,
+                        color: p.muted,
+                      ),
+                    ),
+                    onChanged: (_) => setState(() {}),
+                  ),
+                  if (activeTrips.isNotEmpty) ...[
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 6,
+                      runSpacing: 6,
+                      children: [
+                        for (final trip in activeTrips)
+                          ActionChip(
+                            avatar: const Icon(Icons.luggage_outlined, size: 15),
+                            label: Text(trip),
+                            onPressed: () {
+                              _tripCtrl.text = trip;
+                              setState(() {});
+                            },
+                          ),
+                      ],
+                    ),
+                  ],
                 ],
               ),
             ),
@@ -438,6 +586,31 @@ class _QuickEqualScreenState extends State<QuickEqualScreen> {
                           onPressed: () => _applyGroup(g),
                         );
                       }).toList(),
+                    ),
+                  ],
+                  if (savedMembers.isNotEmpty) ...[
+                    const SizedBox(height: 8),
+                    Text(
+                      s.fromDirectoryLabel,
+                      style: TextStyle(
+                        fontSize: 11.5,
+                        fontWeight: FontWeight.w600,
+                        color: p.muted,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Wrap(
+                      spacing: 6,
+                      runSpacing: 6,
+                      children: [
+                        for (final contact in savedMembers)
+                          FilterChip(
+                            label: Text(contact.name),
+                            selected: _hasContact(contact),
+                            selectedColor: p.primarySoft,
+                            onSelected: (_) => _toggleContact(contact),
+                          ),
+                      ],
                     ),
                   ],
                   const SizedBox(height: 10),
@@ -582,6 +755,7 @@ class _QuickEqualScreenState extends State<QuickEqualScreen> {
                       Expanded(
                         child: TextField(
                           controller: _nameCtrl,
+                          textCapitalization: TextCapitalization.words,
                           decoration: InputDecoration(hintText: s.addPersonHint),
                           onSubmitted: (_) => _addParticipant(),
                         ),
@@ -727,8 +901,10 @@ class _QuickEqualScreenState extends State<QuickEqualScreen> {
           ),
           child: FilledButton.icon(
             onPressed: _submit,
-            icon: const Icon(Icons.qr_code_2_rounded),
-            label: Text(s.createResultQr),
+            icon: Icon(
+              isEditing ? Icons.check_rounded : Icons.qr_code_2_rounded,
+            ),
+            label: Text(isEditing ? s.saveChangesBtn : s.createResultQr),
           ),
         ),
       ),

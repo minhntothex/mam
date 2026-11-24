@@ -186,22 +186,84 @@ final class BankAccount {
   }
 }
 
+final class MemberContact {
+  const MemberContact({
+    required this.id,
+    required this.userId,
+    required this.name,
+    required this.createdAt,
+    required this.updatedAt,
+    this.deletedAt,
+  });
+
+  final String id;
+  final String userId;
+  final String name;
+  final DateTime createdAt;
+  final DateTime updatedAt;
+  final DateTime? deletedAt;
+
+  bool get isDeleted => deletedAt != null;
+
+  factory MemberContact.fromJson(Map<String, dynamic> json) {
+    return MemberContact(
+      id: json['id'] as String,
+      userId: json['user_id'] as String,
+      name: (json['name'] as String?)?.trim() ?? '',
+      createdAt: _parseDateTime(json['created_at']),
+      updatedAt: _parseDateTime(json['updated_at']),
+      deletedAt: _parseNullableDateTime(json['deleted_at']),
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'user_id': userId,
+        'name': name,
+        'created_at': createdAt.toUtc().toIso8601String(),
+        'updated_at': updatedAt.toUtc().toIso8601String(),
+        'deleted_at': deletedAt?.toUtc().toIso8601String(),
+      };
+
+  MemberContact copyWith({
+    String? id,
+    String? userId,
+    String? name,
+    DateTime? createdAt,
+    DateTime? updatedAt,
+    Object? deletedAt = _unset,
+  }) {
+    return MemberContact(
+      id: id ?? this.id,
+      userId: userId ?? this.userId,
+      name: name ?? this.name,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+      deletedAt:
+          identical(deletedAt, _unset) ? this.deletedAt : deletedAt as DateTime?,
+    );
+  }
+}
+
 final class GroupMember {
   const GroupMember({
     required this.id,
     required this.name,
     this.isHost = false,
+    this.contactId,
   });
 
   final String id;
   final String name;
   final bool isHost;
+  final String? contactId;
 
   factory GroupMember.fromJson(Map<String, dynamic> json) {
     return GroupMember(
       id: json['id'] as String,
       name: json['name'] as String,
       isHost: (json['isHost'] as bool?) ?? false,
+      contactId: json['contactId'] as String?,
     );
   }
 
@@ -209,17 +271,21 @@ final class GroupMember {
         'id': id,
         'name': name,
         'isHost': isHost,
+        if (contactId != null) 'contactId': contactId,
       };
 
   GroupMember copyWith({
     String? id,
     String? name,
     bool? isHost,
+    Object? contactId = _unset,
   }) {
     return GroupMember(
       id: id ?? this.id,
       name: name ?? this.name,
       isHost: isHost ?? this.isHost,
+      contactId:
+          identical(contactId, _unset) ? this.contactId : contactId as String?,
     );
   }
 }
@@ -478,6 +544,7 @@ final class Participant {
     this.paid = false,
     this.paidAt,
     this.paidUpfront = 0,
+    this.contactId,
   });
 
   final String id;
@@ -486,6 +553,7 @@ final class Participant {
   final bool paid;
   final DateTime? paidAt;
   final int paidUpfront;
+  final String? contactId;
 
   factory Participant.fromJson(Map<String, dynamic> json) {
     final isHost = (json['isHost'] as bool?) ?? false;
@@ -497,6 +565,7 @@ final class Participant {
       paid: (json['paid'] as bool?) ?? isHost,
       paidAt: _parseNullableDateTime(json['paidAt']),
       paidUpfront: upfront > 0 ? upfront : 0,
+      contactId: json['contactId'] as String?,
     );
   }
 
@@ -507,6 +576,7 @@ final class Participant {
         'paid': paid,
         if (paidAt != null) 'paidAt': paidAt!.toUtc().toIso8601String(),
         if (paidUpfront > 0) 'paidUpfront': paidUpfront,
+        if (contactId != null) 'contactId': contactId,
       };
 
   Participant copyWith({
@@ -516,6 +586,7 @@ final class Participant {
     bool? paid,
     Object? paidAt = _unset,
     int? paidUpfront,
+    Object? contactId = _unset,
   }) {
     return Participant(
       id: id ?? this.id,
@@ -524,6 +595,8 @@ final class Participant {
       paid: paid ?? this.paid,
       paidAt: identical(paidAt, _unset) ? this.paidAt : paidAt as DateTime?,
       paidUpfront: paidUpfront ?? this.paidUpfront,
+      contactId:
+          identical(contactId, _unset) ? this.contactId : contactId as String?,
     );
   }
 }
@@ -704,6 +777,7 @@ final class BillPayload {
     this.bankAccountSnapshot,
     this.transferNoteTemplate = '{name} tra tien {title}',
     this.note,
+    this.tripName,
   });
 
   final List<Participant> participants;
@@ -714,12 +788,15 @@ final class BillPayload {
   final BankAccountSnapshot? bankAccountSnapshot;
   final String transferNoteTemplate;
   final String? note;
+  final String? tripName;
 
   factory BillPayload.fromJson(Map<String, dynamic> json) {
     final rawParticipants = (json['participants'] as List<dynamic>?) ?? const [];
     final rawItems = (json['items'] as List<dynamic>?) ?? const [];
     final rawAdjustments = json['adjustments'];
     final rawBank = json['bankAccountSnapshot'];
+    final rawNote = (json['note'] as String?)?.trim();
+    final rawTrip = (json['tripName'] as String?)?.trim();
 
     return BillPayload(
       participants: rawParticipants
@@ -739,7 +816,8 @@ final class BillPayload {
           : null,
       transferNoteTemplate: (json['transferNoteTemplate'] as String?) ??
           '{name} tra tien {title}',
-      note: json['note'] as String?,
+      note: (rawNote == null || rawNote.isEmpty) ? null : rawNote,
+      tripName: (rawTrip == null || rawTrip.isEmpty) ? null : rawTrip,
     );
   }
 
@@ -753,7 +831,9 @@ final class BillPayload {
         if (bankAccountSnapshot != null)
           'bankAccountSnapshot': bankAccountSnapshot!.toJson(),
         'transferNoteTemplate': transferNoteTemplate,
-        if (note != null) 'note': note,
+        if (note != null && note!.trim().isNotEmpty) 'note': note!.trim(),
+        if (tripName != null && tripName!.trim().isNotEmpty)
+          'tripName': tripName!.trim(),
       };
 
   BillPayload copyWith({
@@ -765,6 +845,7 @@ final class BillPayload {
     Object? bankAccountSnapshot = _unset,
     String? transferNoteTemplate,
     Object? note = _unset,
+    Object? tripName = _unset,
   }) {
     return BillPayload(
       participants: participants ?? this.participants,
@@ -777,6 +858,8 @@ final class BillPayload {
           : bankAccountSnapshot as BankAccountSnapshot?,
       transferNoteTemplate: transferNoteTemplate ?? this.transferNoteTemplate,
       note: identical(note, _unset) ? this.note : note as String?,
+      tripName:
+          identical(tripName, _unset) ? this.tripName : tripName as String?,
     );
   }
 }
@@ -819,6 +902,7 @@ final class OcrScanResult {
   const OcrScanResult({
     this.title,
     this.billDate,
+    this.currencyCode,
     required this.items,
     this.taxAmount = 0,
     this.serviceChargeAmount = 0,
@@ -830,6 +914,7 @@ final class OcrScanResult {
 
   final String? title;
   final DateTime? billDate;
+  final String? currencyCode;
   final List<OcrScanItem> items;
   final int taxAmount;
   final int serviceChargeAmount;
@@ -840,10 +925,13 @@ final class OcrScanResult {
 
   factory OcrScanResult.fromJson(Map<String, dynamic> json) {
     final rawItems = (json['items'] as List<dynamic>?) ?? const [];
+    final rawCurrency = (json['currencyCode'] as String?)?.trim().toUpperCase();
     return OcrScanResult(
       title: json['title'] as String?,
       billDate:
           json['billDate'] == null ? null : _parseDateOnly(json['billDate']),
+      currencyCode:
+          (rawCurrency == null || rawCurrency.isEmpty) ? null : rawCurrency,
       items: rawItems
           .map((e) => OcrScanItem.fromJson(Map<String, dynamic>.from(e as Map)))
           .toList(growable: false),
@@ -861,6 +949,7 @@ final class OcrScanResult {
   Map<String, dynamic> toJson() => {
         if (title != null) 'title': title,
         if (billDate != null) 'billDate': _formatDateOnly(billDate!),
+        if (currencyCode != null) 'currencyCode': currencyCode,
         'items': items.map((i) => i.toJson()).toList(growable: false),
         'taxAmount': taxAmount,
         'serviceChargeAmount': serviceChargeAmount,

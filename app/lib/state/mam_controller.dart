@@ -4,6 +4,7 @@ import 'package:uuid/uuid.dart';
 import '../core/bill_query.dart';
 import '../core/calculator.dart';
 import '../core/currency.dart';
+import '../core/vietqr.dart';
 import '../data/local_store.dart';
 import '../l10n/mam_strings.dart';
 import '../models/bill_models.dart';
@@ -31,6 +32,7 @@ class MamController extends ChangeNotifier {
   List<BillRecord> _bills = const [];
   List<BankAccount> _bankAccounts = const [];
   List<FriendGroup> _friendGroups = const [];
+  List<MemberContact> _members = const [];
   UserSettings _settings = UserSettings(
     userId: LocalStore.localDemoUserId,
     updatedAt: DateTime.fromMillisecondsSinceEpoch(0, isUtc: true),
@@ -62,6 +64,7 @@ class MamController extends ChangeNotifier {
   List<BillRecord> get allBills => List.unmodifiable(_bills);
   List<BankAccount> get allBankAccounts => List.unmodifiable(_bankAccounts);
   List<FriendGroup> get allFriendGroups => List.unmodifiable(_friendGroups);
+  List<MemberContact> get allMembers => List.unmodifiable(_members);
 
   List<BillRecord> get activeBills {
     final list = _bills.where((b) => !b.isDeleted).toList()
@@ -94,6 +97,61 @@ class MamController extends ChangeNotifier {
 
   List<FriendGroup> get activeFriendGroups =>
       _friendGroups.where((g) => !g.isDeleted).toList(growable: false);
+
+  List<MemberContact> get activeMembers {
+    final list = _members.where((m) => !m.isDeleted).toList()
+      ..sort(
+        (a, b) => normalizePersonKey(a.name).compareTo(normalizePersonKey(b.name)),
+      );
+    return List.unmodifiable(list);
+  }
+
+  MemberContact? findMemberById(String id) {
+    for (final m in _members) {
+      if (m.id == id && !m.isDeleted) return m;
+    }
+    return null;
+  }
+
+  MemberContact? findMemberByName(String rawName) {
+    final key = normalizePersonKey(rawName);
+    if (key.isEmpty) return null;
+    for (final m in _members) {
+      if (!m.isDeleted && normalizePersonKey(m.name) == key) return m;
+    }
+    return null;
+  }
+
+  /// Distinct non-empty trip names across non-archived active bills, ordered by
+  /// the most recently updated bill in each trip.
+  List<String> get activeTripNames {
+    final seen = <String, String>{};
+    final sortedBills = activeBills.where((b) => !b.isArchived).toList()
+      ..sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
+    for (final bill in sortedBills) {
+      final raw = bill.payload.tripName?.trim();
+      if (raw == null || raw.isEmpty) continue;
+      final key = normalizePersonKey(raw);
+      if (key.isEmpty) continue;
+      seen.putIfAbsent(key, () => raw);
+    }
+    return List.unmodifiable(seen.values);
+  }
+
+  List<BillRecord> billsForTrip(String tripName) {
+    final key = normalizePersonKey(tripName);
+    if (key.isEmpty) return const [];
+    return activeBills
+        .where(
+          (b) =>
+              b.payload.tripName != null &&
+              normalizePersonKey(b.payload.tripName!) == key,
+        )
+        .toList(growable: false);
+  }
+
+  static String normalizePersonKey(String raw) =>
+      VietQrGenerator.removeVietnameseDiacritics(raw).toLowerCase().trim();
 
   /// Sum of unpaid positive net amounts owed by non-host participants across
   /// pending bills, grouped by currency code so multi-currency bills never mix.
@@ -149,6 +207,7 @@ class MamController extends ChangeNotifier {
     _bills = List<BillRecord>.from(snapshot.bills);
     _bankAccounts = List<BankAccount>.from(snapshot.bankAccounts);
     _friendGroups = List<FriendGroup>.from(snapshot.friendGroups);
+    _members = List<MemberContact>.from(snapshot.members);
     _settings = snapshot.settings;
     _pendingSyncKeys = Set<String>.from(snapshot.pendingSyncKeys);
     _lastSyncedAt = snapshot.lastSyncedAt;
@@ -203,6 +262,7 @@ class MamController extends ChangeNotifier {
     required List<BillRecord> bills,
     required List<BankAccount> bankAccounts,
     required List<FriendGroup> friendGroups,
+    List<MemberContact>? members,
     required UserSettings settings,
     required Set<String> remainingPendingKeys,
     required DateTime syncedAt,
@@ -210,6 +270,9 @@ class MamController extends ChangeNotifier {
     _bills = List<BillRecord>.from(bills);
     _bankAccounts = List<BankAccount>.from(bankAccounts);
     _friendGroups = List<FriendGroup>.from(friendGroups);
+    if (members != null) {
+      _members = List<MemberContact>.from(members);
+    }
     _settings = settings;
     _pendingSyncKeys = Set<String>.from(remainingPendingKeys);
     _lastSyncedAt = syncedAt;
@@ -222,6 +285,7 @@ class MamController extends ChangeNotifier {
         bills: _bills,
         bankAccounts: _bankAccounts,
         friendGroups: _friendGroups,
+        members: _members,
         settings: _settings,
         pendingSyncKeys: _pendingSyncKeys,
         lastSyncedAt: _lastSyncedAt,
@@ -310,6 +374,67 @@ class MamController extends ChangeNotifier {
 
     final updatedPayload = bill.payload.copyWith(participants: updatedParticipants);
     await saveBill(bill.copyWith(payload: updatedPayload));
+  }
+
+  /// Marks multiple `(billId, participantId)` targets as paid/unpaid in a
+  /// single local persist + single sync trigger.
+  Future<int> markPersonPaidAcrossBills(
+    List<({String billId, String participantId})> targets, {
+    bool paid = true,
+  }) async {
+    if (targets.isEmpty) return 0;
+    final byBill = <String, Set<String>>{};
+    for (final t in targets) {
+      byBill.putIfAbsent(t.billId, () => <String>{}).add(t.participantId);
+    }
+
+    final now = DateTime.now().toUtc();
+    var updatedBillCount = 0;
+
+    for (final entry in byBill.entries) {
+      final idx = _bills.indexWhere((b) => b.id == entry.key);
+      if (idx < 0) continue;
+      final bill = _bills[idx];
+      var changed = false;
+      final updatedParticipants = bill.payload.participants.map((p) {
+        if (!entry.value.contains(p.id) || p.isHost || p.paid == paid) {
+          return p;
+        }
+        changed = true;
+        return p.copyWith(
+          paid: paid,
+          paidAt: paid ? now : null,
+        );
+      }).toList(growable: false);
+      if (!changed) continue;
+
+      final updatedPayload =
+          bill.payload.copyWith(participants: updatedParticipants);
+      final calc = BillCalculator.calculate(updatedPayload);
+      final normalizedPayload = BillCalculator.normalizeParticipantPaidStates(
+        updatedPayload,
+        calc: calc,
+      );
+      _bills[idx] = bill.copyWith(
+        userId: _currentUserId,
+        totalAmount: calc.computedGrandTotal,
+        paymentStatus: BillCalculator.computePaymentStatus(
+          normalizedPayload,
+          calc: calc,
+        ),
+        payload: normalizedPayload,
+        updatedAt: now,
+      );
+      _markPending('bill:${bill.id}');
+      updatedBillCount++;
+    }
+
+    if (updatedBillCount > 0) {
+      await _persistBills();
+      notifyListeners();
+      _triggerSyncBestEffort();
+    }
+    return updatedBillCount;
   }
 
   Future<void> updateBillRounding(String billId, RoundingMode mode) async {
@@ -416,6 +541,66 @@ class MamController extends ChangeNotifier {
     _markPending('group:$id');
     await Future.wait([
       store.saveFriendGroups(_friendGroups),
+      store.savePendingSyncKeys(_pendingSyncKeys),
+    ]);
+    notifyListeners();
+    _triggerSyncBestEffort();
+  }
+
+  /// Returns an existing active contact matching [rawName] (case & diacritic
+  /// insensitive), or creates and persists a new [MemberContact].
+  Future<MemberContact> ensureMemberContact(String rawName) async {
+    final trimmed = rawName.trim();
+    final existing = findMemberByName(trimmed);
+    if (existing != null) return existing;
+
+    final now = DateTime.now().toUtc();
+    final contact = MemberContact(
+      id: newId(),
+      userId: _currentUserId,
+      name: trimmed,
+      createdAt: now,
+      updatedAt: now,
+    );
+    await saveMemberContact(contact);
+    return contact;
+  }
+
+  Future<void> saveMemberContact(MemberContact contact) async {
+    final trimmed = contact.name.trim();
+    if (trimmed.isEmpty) return;
+    final now = DateTime.now().toUtc();
+    final normalized = contact.copyWith(
+      userId: _currentUserId,
+      name: trimmed,
+      updatedAt: now,
+    );
+    final idx = _members.indexWhere((m) => m.id == normalized.id);
+    if (idx >= 0) {
+      _members[idx] = normalized;
+    } else {
+      _members.add(normalized);
+    }
+    _markPending('member:${normalized.id}');
+    await Future.wait([
+      store.saveMembers(_members),
+      store.savePendingSyncKeys(_pendingSyncKeys),
+    ]);
+    notifyListeners();
+    _triggerSyncBestEffort();
+  }
+
+  Future<void> deleteMemberContact(String id) async {
+    final idx = _members.indexWhere((m) => m.id == id);
+    if (idx < 0) return;
+    final now = DateTime.now().toUtc();
+    _members[idx] = _members[idx].copyWith(
+      deletedAt: now,
+      updatedAt: now,
+    );
+    _markPending('member:$id');
+    await Future.wait([
+      store.saveMembers(_members),
       store.savePendingSyncKeys(_pendingSyncKeys),
     ]);
     notifyListeners();
